@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红人和视频数据收集器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>红人和视频数据收集器</h1>
+
+        <div class="form-container">
+            <div class="form-column">
+                <h2>提交红人链接</h2>
+                <form id="influencerForm">
+                    <label for="influencerLinks">红人链接（每行一个）:</label>
+                    <textarea id="influencerLinks" name="influencerLinks" placeholder="请输入红人链接，每行一个" required></textarea>
+                    <button type="submit">提交红人</button>
+                    <button type="button" id="resetInfluencerForm">重置</button>
+                </form>
+                <div id="responseMessageInfluencer" class="response-message"></div>
+            </div>
+            <div class="form-column">
+                <h2>提交视频链接</h2>
+                <form id="videoForm">
+                    <label for="videoLinks">视频链接（每行一个）:</label>
+                    <textarea id="videoLinks" name="videoLinks" placeholder="请输入视频链接，每行一个" required></textarea>
+                    <button type="submit">提交视频</button>
+                    <button type="button" id="resetVideoForm">重置</button>
+                </form>
+                <div id="responseMessageVideo" class="response-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
