@@ -1,10 +1,12 @@
-from flask import Blueprint, request, jsonify, current_app
-import re
-import pandas as pd
 import datetime
-from utils import determine_platform
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+import re
+
+import pandas as pd
+from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
+
+from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
 
@@ -113,12 +115,16 @@ class Video:
             if platform_from_link != platform:
                 return jsonify({'message': f'提交的链接平台 ({platform_from_link}) 与选择的平台 ({platform}) 不匹配。'}), 400
 
+
             # Check for duplicate link
             if link in submitted_video_links:
                 return jsonify({'message': f'{link} 该视频链接已提交过。'}), 400
 
             # Add link to submitted_video_links
             submitted_video_links[link] = platform
+
+            # noteMessage = run_spider.run_spider(link, {})
+            # print(noteMessage)
 
             # Collect data to DataFrame
             video_data = {

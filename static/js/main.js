@@ -4,6 +4,13 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     var links = document.getElementById('influencerLinks').value.trim().split('\n');
     var responseMessage = document.getElementById('responseMessageInfluencer');
     responseMessage.innerHTML = '';
+    // 建立 WebSocket 连接
+    var socket = io.connect('http://172.16.11.245:5000');
+
+    // 处理 WebSocket 消息
+    socket.on('progress', function(data) {
+        responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
+    });
 
     // 检查本次提交中的重复链接
     var uniqueLinks = new Set();
@@ -15,20 +22,20 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
             uniqueLinks.add(link);
         }
     });
-
-    if (duplicateLinks.length > 0) {
-        duplicateLinks.forEach(link => {
-            responseMessage.innerHTML += `<p>提交链接 ${link} 时出错：该红人链接在本次提交中重复。</p>`;
-        });
-        responseMessage.style.color = 'red';
-        return;
-    }
+    // 测试
+    // if (duplicateLinks.length > 0) {
+    //     duplicateLinks.forEach(link => {
+    //         responseMessage.innerHTML += `<p>提交链接 ${link} 时出错：该红人链接在本次提交中重复。</p>`;
+    //     });
+    //     responseMessage.style.color = 'red';
+    //     return;
+    // }
 
     // 提交非重复链接
     links.forEach(link => {
         responseMessage.innerHTML += `<p>红人链接 ${link} 提交成功。<br>数据抓取中...</p>`;
 
-        fetch('http://172.16.11.236:5000/influencer/submit_link', {
+        fetch('http://172.16.11.245:5000/influencer/submit_link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -55,7 +62,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
 // 更新红人板块
 // 在页面加载时获取平台列表
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('http://172.16.11.236:5000/update/get_platforms')
+    fetch('http://172.16.11.245:5000/update/get_platforms')
         .then(response => response.json())
         .then(data => {
             if (data.platforms) {
@@ -79,7 +86,7 @@ document.getElementById('updatePlatform').addEventListener('change', function() 
     datalist.innerHTML = ''; // 清空现有选项
 
     if (platform) {
-        fetch('http://172.16.11.236:5000/update/get_influencers', {
+        fetch('http://172.16.11.245:5000/update/get_influencers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -127,7 +134,7 @@ document.getElementById('updateInfluencerForm').addEventListener('submit', funct
     var responseMessage = document.getElementById('responseMessageUpdateInfluencer');
     responseMessage.innerHTML = '正在提交...';
 
-    fetch('http://172.16.11.236:5000/update/influencer', {
+    fetch('http://172.16.11.245:5000/update/influencer', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -174,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 // 更新数据库表格的函数
 function updateInfluencerTable() {
-    fetch('http://172.16.11.236:5000/update/get_influencer_data', {
+    fetch('http://172.16.11.245:5000/update/get_influencer_data', {
         method: 'GET'
     })
     .then(response => response.json())

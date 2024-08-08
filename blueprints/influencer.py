@@ -1,11 +1,16 @@
-from flask import Blueprint, request, jsonify
 import re
+
+from flask import Blueprint, request, jsonify
+
+from base import ReadDatabase
+# from app import app_socketIo
 from utils import determine_platform
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+
 influencer_bp = Blueprint('influencer', __name__)
 
 # 用于存储用户提交的红人链接
 submitted_influencer_links = {}
+
 
 class Influencer:
     @staticmethod
@@ -31,16 +36,22 @@ class Influencer:
 
             # Check for duplicate link
             if link in submitted_influencer_links:
-                return jsonify({'message': f'{link} 该红人链接已提交过。'}), 400
+                return jsonify({'message': f'{link} 。'}), 400
 
             # Add link to submitted_influencer_links
             submitted_influencer_links[link] = platform
 
             # Simulate data fetching
-            message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'
-            message += '\n数据抓取成功。\n存储数据中...'
-            message += '\n数据存储成功。'
-
+            # message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'
+            # message += '\n数据抓取成功。\n存储数据中...'
+            # message += '\n数据存储成功。'
+            message = ""
+            # while True:
+            #     if notice_flag is True:
+            #         for i in range(spider_notice.qsize()):
+            #             message += f"{spider_notice.get()} \n"
+            #         break
+            # spider.run_spider.notice_flag = False
             return jsonify({'message': message}), 200
 
         except Exception as e:
