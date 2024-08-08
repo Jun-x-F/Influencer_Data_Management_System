@@ -1,0 +1,23 @@
+2024-07-29 18:16:04,487 - app - ERROR - 内部服务器错误: name 'form_data' is not defined
+2024-07-29 18:21:57,394 - app - ERROR - 内部服务器错误: A secret key is required to use CSRF.
+2024-07-29 18:21:58,257 - app - ERROR - 内部服务器错误: A secret key is required to use CSRF.
+2024-07-29 18:22:11,272 - app - ERROR - 内部服务器错误: A secret key is required to use CSRF.
+2024-07-30 17:28:54,874 - app - ERROR - 内部服务器错误: 没有这个数据库
+2024-07-30 19:01:25,612 - app - ERROR - 获取平台信息失败: (pymysql.err.OperationalError) (1049, "Unknown database 'marketing'")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-07-30 23:49:41,464 - app - ERROR - 内部服务器错误: "['id', 'user_id', '地区', '国家编码', '评级', '红人全名', '红人主页地址', '红人头像地址', '粉丝数量', '平均点赞数量', '平均评论数量', '平均播放量', '平均参与率', '联系方式1', '地址信息1', '标签功能1', '联系方式2', '地址信息2', '标签功能2', '联系方式3', '地址信息3', '标签功能3'] not in index"
+2024-07-30 23:55:57,755 - app - ERROR - 内部服务器错误: "['id', 'user_id', '地区', '评级', '红人全名', '红人主页地址', '红人头像地址', '粉丝数量', '平均点赞数量', '平均评论数量', '平均播放量', '平均参与率', '联系方式1', '地址信息1', '标签功能1', '联系方式2', '地址信息2', '标签功能2', '联系方式3', '地址信息3', '标签功能3'] not in index"
+2024-07-31 00:07:57,504 - app - ERROR - 内部服务器错误: "['id', 'user_id', '地区', '评级', '红人全名', '红人主页地址', '红人头像地址', '粉丝数量', '平均点赞数量', '平均评论数量', '平均播放量', '平均参与率', '联系方式1', '联系方式2', '联系方式3'] not in index"
+2024-07-31 10:46:34,161 - app - ERROR - 内部服务器错误: (pymysql.err.OperationalError) (1054, "Unknown column '邮箱' in 'field list'")
+[SQL: INSERT INTO celebrity_profile (`平台`, `红人名称`, `邮箱`, `WhatsApp`, `Discord`, `地址信息1`, `地址信息2`, `地址信息3`, `标签功能1`, `标签功能2`, `标签功能3`, `国家`, `国家编码`, `更新日期`) VALUES (%(平台)s, %(红人名称)s, %(邮箱)s, %(WhatsApp)s, %(Discord)s, %(地址信息1)s, %(地址信息2)s, %(地址信息3)s, %(标签功能1)s, %(标签功能2)s, %(标签功能3)s, %(国家)s, %(国家编码)s, %(更新日期)s)]
+[parameters: {'平台': 'ins', '红人名称': 'jolin_cai', '邮箱': '', 'WhatsApp': '', 'Discord': '', '地址信息1': '', '地址信息2': '', '地址信息3': '', '标签功能1': '', '标签功能2': '', '标签功能3': 'test', '国家': '', '国家编码': '', '更新日期': datetime.date(2024, 7, 31)}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-05 15:43:36,599 - app - ERROR - 获取平台信息失败: (pymysql.err.ProgrammingError) (1146, "Table 'marketing.celebrity_profile' doesn't exist")
+[SQL: SELECT DISTINCT 平台 FROM celebrity_profile]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2024-08-05 15:44:04,183 - app - ERROR - 获取平台信息失败: (pymysql.err.ProgrammingError) (1146, "Table 'marketing.celebrity_profile' doesn't exist")
+[SQL: SELECT DISTINCT 平台 FROM celebrity_profile]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2024-08-05 15:44:51,970 - app - ERROR - 获取平台信息失败: (pymysql.err.ProgrammingError) (1146, "Table 'marketing.celebrity_profile' doesn't exist")
+[SQL: SELECT DISTINCT 平台 FROM celebrity_profile]
+(Background on this error at: https://sqlalche.me/e/20/f405)
