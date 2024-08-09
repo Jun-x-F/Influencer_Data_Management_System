@@ -15,6 +15,7 @@ from blueprints.video import video_bp, submitted_video_links
 from forms import ProjectForm
 from spider import run_spider
 from spider.spider_notice import spider_notice, spider_notice_bp
+from spider.template.class_dict_template import FIFODict
 
 app = Flask(__name__)
 CORS(app)  # 允许所有跨域请求
@@ -42,16 +43,22 @@ def index():
     return render_template('index.html', form=project_form)
 
 
+def process_links(_queue: FIFODict, flag: int) -> None:
+    """公共代码，执行任务，传入的_queue不是同一个"""
+    if _queue:
+        send_id, links = _queue.dequeue()
+        spider_notice.use_id = send_id
+        for link in links:
+            run_spider.run_spider(link, {}, flag, send_id)
+        spider_notice.finish_notice(send_id)
+
+
 def background_task():
     """单独一个线程执行任务"""
     while True:
         # chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrome-user-data"
-        if submitted_video_links:
-            link, send_id = submitted_video_links.popitem()
-            run_spider.run_spider(link, {}, 2, send_id)
-        if submitted_influencer_links:
-            link, send_id = submitted_influencer_links.popitem()
-            run_spider.run_spider(link, {}, 1, send_id)
+        process_links(submitted_video_links, 2)
+        process_links(submitted_influencer_links, 1)
         time.sleep(1)
 
 

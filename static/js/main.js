@@ -27,7 +27,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     // 提交非重复链接
     links.forEach(link => {
         responseMessage.innerHTML += `<p style="font-size: 14px">链接 ${link} 提交成功...</p>`;
-
+        responseMessage.style.color = 'black';
         fetch('http://172.16.11.245:5000/influencer/submit_link', {
             method: 'POST',
             headers: {

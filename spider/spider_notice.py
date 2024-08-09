@@ -11,6 +11,7 @@ from typing import Optional
 
 from flask import Blueprint, request, jsonify
 
+from blueprints.influencer import submitted_influencer_links
 from spider import run_spider
 
 spider_notice_bp = Blueprint('notice', __name__)
@@ -22,6 +23,7 @@ class Notice:
         self.notice_info = {}
         self.work_id_time = {}
         self.del_id_info = {}
+        self.use_id = None
 
     def to_notice(self, _id: str) -> Optional[str]:
         """获取队列里面的数据"""
@@ -62,7 +64,6 @@ class Notice:
         if work_info is None:
             return False, last_message
         isSuccess = work_info.get("isSuccess", False)
-        print(_id, isSuccess)
         if isSuccess is True:
             while True:
                 # 最后一次将所有数据统一返回
@@ -75,7 +76,6 @@ class Notice:
 
     def clean_none_notice(self) -> None:
         """清除掉没有人使用的id"""
-        print(self.work_id_time, self.notice_info)
         for _id, work_info in self.work_id_time.items():
             updateTime = work_info.get("更新时间")
             time_diff = datetime.now() - updateTime
@@ -92,6 +92,8 @@ def post_spider_notice():
     if isSuccess:
         return jsonify({"message": last_message, "isSuccess": isSuccess, "status": "finish"}), 200
     return_message = spider_notice.to_notice(return_id)
+    if return_id != spider_notice.use_id:
+        return jsonify({"message": f"排队处理中...队列目前有{submitted_influencer_links.total_size()}个请求", "isSuccess": False, "status": "wait"}), 200
     if return_message is None:
         return jsonify({"message": "wait working", "status": "wait"}), 200
     if return_message == "clean":

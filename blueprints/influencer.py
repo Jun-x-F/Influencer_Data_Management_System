@@ -1,15 +1,16 @@
 import re
+from collections import deque
 
 from flask import Blueprint, request, jsonify
 
 from base import ReadDatabase
-# from app import app_socketIo
+from spider.template.class_dict_template import FIFODict
 from utils import determine_platform
 
 influencer_bp = Blueprint('influencer', __name__)
 
 # 用于存储用户提交的红人链接
-submitted_influencer_links = {}
+submitted_influencer_links = FIFODict()
 
 
 class Influencer:
@@ -35,12 +36,12 @@ class Influencer:
             if not platform:
                 return jsonify({'message': '不支持的平台。'}), 400
 
-            # Check for duplicate link
-            if link in submitted_influencer_links:
-                return jsonify({'message': f'{link} 。'}), 400
-
             # Add link to submitted_influencer_links
-            submitted_influencer_links[link] = send_id
+            send_id_links: deque = submitted_influencer_links.get(send_id, deque())
+            if link in send_id_links:
+                return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
+            send_id_links.append(link)
+            submitted_influencer_links[send_id] = send_id_links
 
             # Simulate data fetching
             # message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'

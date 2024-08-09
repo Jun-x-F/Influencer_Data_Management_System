@@ -130,7 +130,6 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         retryDb.set_value(url, json.dumps(cur))
     spider_notice.add_notice(_id, f"链接{url} 执行结果为 {message.get('message')}")
-    spider_notice.finish_notice(_id)
     return message
 
 #
