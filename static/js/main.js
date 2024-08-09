@@ -57,6 +57,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
             .then(data => {
                 if (data.status === 'clean' || data.isSuccess) {
                     clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
+                    updateInfluencerTable()
                 }
                 responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
             })
