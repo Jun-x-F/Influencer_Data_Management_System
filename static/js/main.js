@@ -1,16 +1,9 @@
 document.getElementById('influencerForm').addEventListener('submit', function(event) {
     event.preventDefault();
-
+    var uniqueId = uuid.v4();
     var links = document.getElementById('influencerLinks').value.trim().split('\n');
     var responseMessage = document.getElementById('responseMessageInfluencer');
     responseMessage.innerHTML = '';
-    // 建立 WebSocket 连接
-    var socket = io.connect('http://172.16.11.245:5000');
-
-    // 处理 WebSocket 消息
-    socket.on('progress', function(data) {
-        responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
-    });
 
     // 检查本次提交中的重复链接
     var uniqueLinks = new Set();
@@ -33,30 +26,48 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
 
     // 提交非重复链接
     links.forEach(link => {
-        responseMessage.innerHTML += `<p>红人链接 ${link} 提交成功。<br>数据抓取中...</p>`;
+        responseMessage.innerHTML += `<p style="font-size: 14px">链接 ${link} 提交成功...</p>`;
 
         fetch('http://172.16.11.245:5000/influencer/submit_link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ link: link })
+            body: JSON.stringify({ link: link, id: uniqueId })
         })
         .then(response => response.json())
-        .then(data => {
-            responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
-            // 提交成功后，更新表格
-    updateInfluencerTable();
-        })
         .catch(error => {
             console.error('Error:', error);
             responseMessage.innerHTML += `<p>提交链接 ${link} 时出错，请重试。</p>`;
             responseMessage.style.color = 'red';
+
         });
     });
 
+    // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider
+    const intervalId = setInterval(() => {
+        fetch('http://172.16.11.245:5000/notice/spider', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({id: uniqueId})
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'clean' || data.isSuccess) {
+                    clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
+                }
+                responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                responseMessage.innerHTML += `<p style="font-size: 14px">访问 http://172.16.11.245:5000/notice/spider 时出错，请重试。</p>`;
+                responseMessage.style.color = 'red';
+                clearInterval(intervalId);
+            });
+    }, 5000);
 });
-
 
 
 // 更新红人板块
@@ -295,7 +306,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
 
 // 在页面加载时获取项目和负责人信息
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('http://172.16.11.236:5000/video/get_project_info')
+    fetch('http://172.16.11.245:5000/video/get_project_info')
         .then(response => response.json())
         .then(data => {
             if (data.projects) {

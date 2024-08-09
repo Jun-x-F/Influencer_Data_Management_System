@@ -95,6 +95,7 @@ class Video:
             manager = data.get('manager')
             cost = data.get('cost')
             product = data.get('product')
+            send_id = data.get('send_id')
 
             # Validate input
             if not link:
@@ -121,7 +122,7 @@ class Video:
                 return jsonify({'message': f'{link} 该视频链接已提交过。'}), 400
 
             # Add link to submitted_video_links
-            submitted_video_links[link] = platform
+            submitted_video_links[link] = send_id
 
             # noteMessage = run_spider.run_spider(link, {})
             # print(noteMessage)

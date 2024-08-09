@@ -19,6 +19,7 @@ class Influencer:
         try:
             data = request.json
             link = data.get('link')
+            send_id = data.get('id')
 
             # Validate input
             if not link:
@@ -39,7 +40,7 @@ class Influencer:
                 return jsonify({'message': f'{link} 。'}), 400
 
             # Add link to submitted_influencer_links
-            submitted_influencer_links[link] = platform
+            submitted_influencer_links[link] = send_id
 
             # Simulate data fetching
             # message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'
