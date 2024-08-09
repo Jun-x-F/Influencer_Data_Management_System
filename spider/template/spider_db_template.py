@@ -1,7 +1,7 @@
 """
 数据库表结构
 @ProjectName: DataAnalysis
-@FileName：spider_template.py
+@FileName：spider_db_template.py
 @IDE：PyCharm
 @Author：Libre
 @Time：2024/7/25 下午5:33

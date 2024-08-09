@@ -15,8 +15,8 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, 
 from sqlalchemy import update, and_
 
 from log.logger import LoguruLogger
-from spider.db_template.spider_template import Base, InfluencersVideoProjectData
 from spider.sql.mysql import Connect
+from spider.template.spider_db_template import Base, InfluencersVideoProjectData
 from tool.grading_criteria import convert_words_to_numbers
 
 log = LoguruLogger(console=True, isOpenError=True)

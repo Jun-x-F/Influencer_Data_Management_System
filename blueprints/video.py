@@ -1,17 +1,19 @@
 import datetime
 import re
+from collections import deque
 
 import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+from spider.template.class_dict_template import FIFODict
 from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
 
 # 用于存储用户提交的视频链接
-submitted_video_links = {}
+submitted_video_links = FIFODict()
 
 class Video:
     @staticmethod
@@ -87,7 +89,6 @@ class Video:
     def submit_link():
         try:
             data = request.json
-            print(data)
             link = data.get('link')
             platform = data.get('platform')
             influencer_name = data.get('influencerName')
@@ -108,7 +109,6 @@ class Video:
 
             # Determine platform based on URL
             platform_from_link = determine_platform(link)
-            print(platform_from_link,platform)
             if not platform_from_link:
                 return jsonify({'message': '不支持的平台。'}), 400
 
@@ -117,13 +117,12 @@ class Video:
                 return jsonify({'message': f'提交的链接平台 ({platform_from_link}) 与选择的平台 ({platform}) 不匹配。'}), 400
 
 
-            # Check for duplicate link
-            if link in submitted_video_links:
-                return jsonify({'message': f'{link} 该视频链接已提交过。'}), 400
-
-            # Add link to submitted_video_links
-            submitted_video_links[link] = send_id
-
+            # add submitted_video_links link
+            send_id_links: deque = submitted_video_links.get(send_id, deque())
+            if link in send_id_links:
+                return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
+            send_id_links.append(link)
+            submitted_video_links[send_id] = send_id_links
             # noteMessage = run_spider.run_spider(link, {})
             # print(noteMessage)
 
