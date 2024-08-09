@@ -1,2 +1,9 @@
 # Ignore all files in the AppData directory
 .idea/
+
+# Dependency directories
+include/
+Lib/
+Scripts/
+
+requirements.txt
