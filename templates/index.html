@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红人和视频数据收集器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>红人和视频数据收集器</h1>
+
+        <!-- 红人板块 -->
+        <section class="form-container">
+            <div class="form-column">
+                <h2>提交红人链接</h2>
+                <form id="influencerForm"  style="display: flex;">
+                    <div style="flex: 1;">
+                        <label for="influencerLinks">红人链接（每行一个）:</label>
+                        <textarea id="influencerLinks" name="influencerLinks" placeholder="请输入红人链接，每行一个" required class="full-width"></textarea>
+                        <div class="form-row">
+                            <button type="submit" class="btn-primary">提交红人</button>
+                            <button type="button" id="resetInfluencerForm" class="btn-secondary">重置</button>
+
+                        </div>
+                    </div>
+
+            <!-- 右侧结果显示框 -->
+            <div class="response-message" id="responseMessageInfluencer" style="flex: 1; margin-left: 20px;">
+                <!-- 提交结果内容将显示在这里 -->
+
+                        </div>
+                </form>
+            </div>
+
+
+
+            <div class="form-column">
+                <h2>更新红人信息</h2>
+                <form id="updateInfluencerForm">
+                    <div class="form-row">
+                        <div>
+                            <label for="updatePlatform">平台:</label>
+                            <select id="updatePlatform" name="platform" required>
+                                <option value="">选择平台</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="updateInfluencerName">红人名称:</label>
+                            <select id="updateInfluencerName" name="influencerName" required>
+                                <option value="">选择红人</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="email">邮箱:</label>
+                            <input type="email" id="email" name="email" placeholder="邮箱">
+                        </div>
+                        <div>
+                            <label for="whatsapp">WhatsApp:</label>
+                            <input type="text" id="whatsapp" name="whatsapp" placeholder="WhatsApp">
+                        </div>
+                        <div>
+                            <label for="discord">Discord:</label>
+                            <input type="text" id="discord" name="discord" placeholder="Discord">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="address1">地址信息1:</label>
+                            <input type="text" id="address1" name="address1" placeholder="地址1">
+                        </div>
+                        <div>
+                            <label for="address2">地址信息2:</label>
+                            <input type="text" id="address2" name="address2" placeholder="地址2">
+                        </div>
+                        <div>
+                            <label for="address3">地址信息3:</label>
+                            <input type="text" id="address3" name="address3" placeholder="地址3">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="tag1">标签功能1:</label>
+                            <input type="text" id="tag1" name="tag1" placeholder="标签1">
+                        </div>
+                        <div>
+                            <label for="tag2">标签功能2:</label>
+                            <input type="text" id="tag2" name="tag2" placeholder="标签2">
+                        </div>
+                        <div>
+                            <label for="tag3">标签功能3:</label>
+                            <input type="text" id="tag3" name="tag3" placeholder="标签3">
+                         </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="country">国家:</label>
+                            <input list="countries" id="country" name="country" placeholder="国家" oninput="fillCountryDetails('name')">
+                            <datalist id="countries"></datalist>
+                        </div>
+                        <div>
+                            <label for="country_code">国家编码:</label>
+                            <input list="country_codes" id="country_code" name="country_code" placeholder="国家编码" oninput="fillCountryDetails('code')">
+                            <datalist id="country_codes"></datalist>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <button type="submit" class="btn-primary">提交</button>
+                        <button type="button" id="resetUpdateInfluencerForm" class="btn-secondary">重置</button>
+                    </div>
+                </form>
+<!--                <div class="response-container">-->
+    <div id="responseMessageUpdateInfluencer" class="response-message"></div>
+
+            </div>
+
+
+
+            <!-- 红人数据表格 -->
+            <div class="form-column">
+            <div id="influencerTableContainer">
+    <table id="influencerTable">
+        <thead>
+            <tr>
+                <th>平台</th>
+                <th>红人名称</th>
+                <th>邮箱</th>
+                <th>WhatsApp</th>
+                <th>Discord</th>
+                <th>地址信息1</th>
+                <th>地址信息2</th>
+                <th>地址信息3</th>
+                <th>标签功能1</th>
+                <th>标签功能2</th>
+                <th>标签功能3</th>
+                <th>国家</th>
+                <th>国家编码</th>
+                <th>更新日期</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 数据将通过 JavaScript 动态插入 -->
+        </tbody>
+    </table>
+</div>
+     </div>
+
+        </section>
+
+        <!-- 视频板块 -->
+<section class="form-container" style="position: relative;">
+    <!-- 新增数据按钮 -->
+<!--    <button id="addVideoDataButton" style="position: absolute; top: 0; right: 0; z-index: 1000;">新增数据</button>-->
+    <button id="addVideoDataButton" class="add-video-data-btn">新增数据</button>
+    <div class="form-column">
+        <h2>提交视频链接</h2>
+        <form id="videoForm">
+            <div id="linkFieldsContainer">
+                <div class="linkFields">
+                    <label for="videoLinks">视频链接:</label>
+                    <textarea id="videoLinks" class="videoLinks" placeholder="请输入视频链接"></textarea>
+
+                    <div class="form-row">
+                        <div>
+                            <label for="videoUniqueId">唯一id:</label>
+                            <select id="videoUniqueId" class="videoUniqueId" required>
+                                <option value="">选择唯一id</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoProjectName">项目:</label>
+                            <select id="videoProjectName" class="videoProjectName">
+                                <option value="">选择项目</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoManager">负责人:</label>
+                            <select id="videoManager" class="videoManager">
+                                <option value="">选择负责人</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div>
+                            <label for="videoProgress">合作进度:</label>
+                            <input type="text" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                        </div>
+                        <div>
+                            <label for="videoLogisticsProgress">物流进度:</label>
+                            <input type="text" id="videoLogisticsProgress" class="videoLogisticsProgress" placeholder="请输入物流进度">
+                        </div>
+                        <div>
+                            <label for="videoLogisticsNumber">物流单号:</label>
+                            <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div>
+                            <label for="videocost">花费:</label>
+                            <input type="number" id="videocost" class="videocost" placeholder="请输入花费">
+                        </div>
+                        <div>
+                            <label for="videoproduct">产品:</label>
+                            <input type="text" id="videoproduct" class="videoproduct" placeholder="请输入产品名称">
+                        </div>
+                        <div>
+                            <label for="videoestimatedViews">预估观看量:</label>
+                            <input type="number" id="videoestimatedViews" name="videoestimatedViews" placeholder="预估观看量">
+                        </div>
+                        <div>
+                            <label for="videoestimatedLaunchDate">预估上线时间:</label>
+                            <input type="date" id="videoestimatedLaunchDate" name="videoestimatedLaunchDate" placeholder="预估上线时间">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="addLink" class="btn-secondary">添加更多链接</button>
+            <button type="submit" class="btn-primary">提交视频</button>
+            <button type="button" id="resetVideoForm" class="btn-secondary">重置</button>
+
+            <!-- 用于显示提交结果的元素 -->
+            <div id="responseMessageVideo" class="response-message"></div>
+
+        </form>
+    </div>
+
+    <!-- 视频数据表格 -->
+    <div class="form-column">
+        <h2>视频数据表</h2>
+        <div id="videoTableContainer">
+            <table id="videoTable" border="1">
+                <thead>
+                    <tr>
+                        <th>唯一id</th>
+                        <th>项目</th>
+                        <th>负责人</th>
+                        <th>平台</th>
+                        <th>红人名称</th>
+                        <th>发布时间</th>
+                        <th>播放量</th>
+                        <th>点赞数</th>
+                        <th>评论数</th>
+                        <th>收藏数</th>
+                        <th>转发数</th>
+                        <th>参与率</th>
+                        <th>花费</th>
+                        <th>币种</th>
+                        <th>产品</th>
+                        <th>物流进度</th>
+                        <th>物流单号</th>
+                        <th>预估观看量</th>
+                        <th>预估上线时间</th>
+                        <th>更新日期</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 数据将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新增数据表单 -->
+<!--    <div id="addVideoDataForm" style="display: none; position: absolute; top: 60px; right: 20px; background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">-->
+    <!-- 新增数据表单 -->
+            <div id="addVideoDataForm" class="modal">
+                <div class="modal-content">
+                    <span class="close" id="closeAddVideoForm">&times;</span>
+                    <form id="addVideoData">
+                        <label for="addprojectName">项目:</label>
+                        <input type="text" id="addprojectName" name="项目" required><br>
+
+                        <label for="addmanager">负责人:</label>
+                        <input type="text" id="addmanager" name="负责人" required><br>
+
+                        <label for="addcost">花费:</label>
+                        <input type="number" id="addcost" name="花费"><br>
+
+                        <label for="addcurrency">币种:</label>
+                        <input type="text" id="addcurrency" name="币种"><br>
+
+                        <label for="addproduct">产品:</label>
+                        <input type="text" id="addproduct" name="产品"><br>
+
+                        <label for="addProgress">合作进度:</label>
+                        <input type="text" id="addProgress" name="合作进度"><br>
+
+                        <label for="addestimatedViews">预估观看量:</label>
+                        <input type="number" id="addestimatedViews" name="预估观看量"><br>
+
+                        <label for="addestimatedLaunchDate">预估上线时间:</label>
+                        <input type="date" id="addestimatedLaunchDate" name="预估上线时间"><br>
+
+                        <button type="submit" class="btn-primary">提交</button>
+                        <button type="button" id="cancelAddVideoData" class="btn-secondary">取消</button>
+                    </form>
+                </div>
+            </div>
+</section>
+
+
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+</body>
+</html>
