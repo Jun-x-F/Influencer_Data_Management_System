@@ -75,3 +75,21 @@ class InfluencersVideoProjectData(Base):
     brand = Column('品牌', VARCHAR(255), nullable=True, comment='品牌')
     estimatedViews = Column('预估观看量', Integer, nullable=True, comment='预估观看量')
     estimatedGoLiveTime = Column('预估上线时间', VARCHAR(255), nullable=True, comment='预估上线时间')
+
+
+class InfluencersVideoProjectDataByDate(Base):
+    __tablename__ = 'influencers_video_project_data_by_date'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    platform = Column('平台', VARCHAR(255), nullable=True, comment='平台')
+    type = Column('类型', VARCHAR(30), nullable=True, comment='数据类型')
+    user_name = Column("红人名称", VARCHAR(255), nullable=True, comment='姓名')
+    video_url = Column("视频链接", Text, nullable=True, comment='视频链接')
+    releasedTime = Column('发布时间', DateTime, nullable=True, comment='发布时间')
+    views = Column('播放量', Integer, nullable=True, comment='播放量')
+    likes = Column('点赞数', Integer, nullable=True, comment='点赞数')
+    comments = Column('评论数', Integer, nullable=True, comment='评论数')
+    collections = Column('收藏数', Integer, nullable=True, comment='收藏数')
+    forward = Column('转发数', Integer, nullable=True, comment='转发数')
+    engagement_rate = Column('参与率', Float, nullable=True, comment='参与率')
+    updated_at = Column('更新日期', Date, default=date.today)

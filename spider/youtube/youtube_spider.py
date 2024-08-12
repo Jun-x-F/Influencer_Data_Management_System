@@ -13,12 +13,10 @@ from queue import Queue
 from typing import Optional, List
 
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, ElementHandle, Route
-from sqlalchemy import update, and_
 
 from log.logger import global_log
-from spider.sql.mysql import Connect
+from spider.sql.data_inner_db import inner_CelebrityProfile
 from spider.template.exception_template import RetryableError
-from spider.template.spider_db_template import Base, CelebrityProfile
 from tool.download_file import download_image_file
 from tool.grading_criteria import convert_words_to_numbers, grade_criteria
 
@@ -45,12 +43,6 @@ class Task:
         self.like = 0
         self.view = 0
         self.comment = 0
-        # 数据库配置文件
-        # 配置连接池
-        # 创建表
-        self.db = Connect(2, "marketing")
-        self.db.create_session()
-        Base.metadata.create_all(self.db.engine)
 
     def _close_data(self):
         self.response_data = {}
@@ -63,37 +55,6 @@ class Task:
         self.like = 0
         self.view = 0
         self.comment = 0
-
-    def _data_To_db(self) -> None:
-        """更新数据"""
-        try:
-            if self.db.check_connection() is not True:
-                self.db.reconnect_session()
-            db_history_data = (self.db.session.query(CelebrityProfile)
-                               .filter(
-                and_(
-                    CelebrityProfile.platform == self.finish_data.get("platform"),
-                    CelebrityProfile.user_name == self.finish_data.get("user_name"),
-                    )
-            ).first())
-            if db_history_data:
-                self.db.session.execute(
-                    update(CelebrityProfile)
-                    .where(and_(
-                        CelebrityProfile.platform == self.finish_data.get("platform"),
-                        CelebrityProfile.user_name == self.finish_data.get("user_name"),
-                        ))
-                    .values(self.finish_data)
-                )
-            else:
-                instagram_profile = CelebrityProfile(
-                    **self.finish_data
-                )
-                self.db.session.add(instagram_profile)
-            self.db.session.commit()
-        except Exception as e:
-            self.db.session.rollback()
-            raise ValueError(f"data -> {self.finish_data} exception -> {e} ")
 
     def get_country_item(self):
         self.page.query_selector('//yt-description-preview-view-model').click()
@@ -324,7 +285,7 @@ class Task:
                 / self.finish_data["average_views"])
 
         self.finish_data["level"] = grade_criteria("youtube", self.finish_data["average_views"])
-        self._data_To_db()
+        inner_CelebrityProfile(self.finish_data)
         self._close_data()
 
     def run(self, url):

@@ -12,11 +12,9 @@ from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Route
-from sqlalchemy import update, and_
 
 from log.logger import global_log
-from spider.sql.mysql import Connect
-from spider.template.spider_db_template import Base, InfluencersVideoProjectData
+from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from tool.grading_criteria import convert_words_to_numbers
 
 
@@ -35,13 +33,6 @@ class Task:
         self.response_data = {}
         self.response_sort_data = []
         self.finish_data = {}
-
-        # 数据库配置文件
-        # 配置连接池
-        # 创建表
-        self.db = Connect(2, "marketing")
-        self.db.create_session()
-        Base.metadata.create_all(self.db.engine)
 
     def _close(self):
         self.response_data = {}
@@ -150,37 +141,6 @@ class Task:
                 self.finish_data["comments"] = comment_count
                 break
 
-    def _data_To_db(self) -> None:
-        """更新数据"""
-        try:
-            if not self.db.check_connection():
-                self.db.reconnect_session()
-            db_history_data = (self.db.session.query(InfluencersVideoProjectData)
-                               .filter(
-                and_(
-                    InfluencersVideoProjectData.platform == self.finish_data.get("platform"),
-                    InfluencersVideoProjectData.user_name == self.finish_data.get("user_name"),
-                )
-            ).first())
-            if db_history_data:
-                self.db.session.execute(
-                    update(InfluencersVideoProjectData)
-                    .where(and_(
-                        InfluencersVideoProjectData.platform == self.finish_data.get("platform"),
-                        InfluencersVideoProjectData.user_name == self.finish_data.get("user_name"),
-                    ))
-                    .values(self.finish_data)
-                )
-            else:
-                instagram_profile = InfluencersVideoProjectData(
-                    **self.finish_data
-                )
-                self.db.session.add(instagram_profile)
-            self.db.session.commit()
-        except Exception as e:
-            global_log.error(f"Failed to log to database: {e}")
-            self.db.session.rollback()
-
     def convert_date(self, date_str: str) -> str:
         # 定义日期格式列表
         date_formats = [
@@ -288,7 +248,8 @@ class Task:
         except Exception:
             self.finish_data["engagement_rate"] = 0
 
-        self._data_To_db()
+        inner_InfluencersVideoProjectData(self.finish_data)
+        inner_InfluencersVideoProjectDataByDate(self.finish_data)
         self._close()
 
     def run(self, _url):
