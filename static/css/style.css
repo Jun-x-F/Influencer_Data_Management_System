@@ -1,6 +1,6 @@
 /* 全局样式 */
 body {
-    font-family: 'Roboto', sans-serif;
+    /*font-family: 'Roboto', sans-serif;*/
     background-color: #f4f4f4;
     margin: 0;
     padding: 0;
@@ -80,22 +80,71 @@ h1, h2 {
 .form-row > div {
     flex: 1;
     min-width: 250px;
+    margin-top: 15px;
 }
 
+.form-row > div.currency-container {
+    flex: 0 0 auto; /* 不允许父容器伸展 */
+    width: 100px; /* 设置选择框的宽度 */
+}
+
+.currency-container select {
+    width: 100%; /* 使选择框充满父容器 */
+}
+
+/* 确保最后一个 `div` 没有右边距，避免布局不对齐 */
+.form-row > div:last-child {
+    margin-right: 0;
+}
+
+/*input[type="text"],*/
+/*input[type="email"],*/
+/*input[type="number"],*/
+/*input[type="date"],*/
+/*textarea,*/
+/*select {*/
+/*    width: 100%;*/
+/*    padding: 8px;*/
+/*    margin: 5px 0;*/
+/*    box-sizing: border-box;*/
+/*    border: 1px solid #ccc;*/
+/*    border-radius: 4px;*/
+/*}*/
+
+/* 确保 select, datalist input 和 input 元素的大小一致 */
+select,
 input[type="text"],
-input[type="email"],
 input[type="number"],
+input[type="email"],
 input[type="date"],
 textarea,
-select {
-    width: 100%;
-    padding: 8px;
-    margin: 5px 0;
-    box-sizing: border-box;
+input[list] {
+    width: 100%; /* 确保宽度一致 */
+    padding: 10px; /* 确保内边距一致 */
+    font-size: 14px; /* 确保字体大小一致 */
+    line-height: 1.5; /* 确保行高一致 */
+    border-radius: 5px; /* 如果需要圆角，确保一致 */
+    box-sizing: border-box; /* 确保padding不会影响元素大小 */
+    height: auto; /* 让高度自动调整 */
     border: 1px solid #ccc;
-    border-radius: 4px;
 }
 
+/* 添加额外的样式来控制特定的元素 */
+select {
+    -webkit-appearance: none; /* 关闭浏览器默认样式，使其更加一致 */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+input[list] {
+    -webkit-appearance: none; /* 针对 datalist 关闭默认样式 */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#videoLinks {
+    height: 45px; /* 让高度自动调整 */
+}
 textarea {
     resize: vertical;
 }
@@ -142,8 +191,9 @@ textarea {
 #videoTable thead th {
     position: sticky;
     top: 0;
-    background-color: #f4f4f4;
-    z-index: 10; /* 确保表头在最前面 */
+    /*background-color: #f4f4f4;*/
+    background-color: rgba(244, 244, 244, 0.9); /* 添加透明度 */
+    z-index: 5; /* 调低 z-index，确保其他重要内容可以覆盖表头 */
 }
 
 #influencerTable,
@@ -155,8 +205,8 @@ textarea {
 #influencerTable th, #influencerTable td,
 #videoTable th, #videoTable td {
     padding: 8px 12px;
-    text-align: left;
     border: 1px solid #ddd;
+    line-height: 1.2; /* 统一设置行高 */
 }
 
 #influencerTable th, #videoTable th {
@@ -224,7 +274,7 @@ textarea {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1;
+    z-index: 1000; /* 增加 z-index 确保弹窗优先显示 */
     left: 0;
     top: 0;
     width: 100%;
@@ -234,12 +284,14 @@ textarea {
 }
 
 .modal-content {
+    z-index: 1010; /* 确保模态框内容位于表头之上 */
     background-color: #fefefe;
     margin: 10% auto;
     padding: 20px;
     border: 1px solid #888;
     width: 50%;
     border-radius: 10px;
+
 }
 
 .close {
@@ -268,3 +320,23 @@ textarea {
         flex-direction: column;
     }
 }
+
+.highlighted {
+    background-color: #eab5ff; /* 高亮显示的颜色，例如浅橙色 */
+}
+/* 添加更多链接按钮颜色 */
+.btn-secondary.custom-btn {
+    background-color: #007BFF; /* 选择你喜欢的颜色 */
+    border-color: #007BFF;
+    color: white;
+}
+/* 视频数据表头分颜色 */
+.group1 {
+            background-color: #f0f8ff; /* 第一组表头的颜色，例如浅蓝色 */
+        }
+
+.group2 {
+    background-color: #f5f5f5; /* 第二组表头的颜色，例如浅灰色 */
+}
+
+

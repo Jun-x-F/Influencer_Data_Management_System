@@ -74,4 +74,4 @@ if __name__ == '__main__':
     thread_cleanNoneNotice = threading.Thread(target=cleanNoneNotice, daemon=True)
     thread_background_task.start()
     thread_cleanNoneNotice.start()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)

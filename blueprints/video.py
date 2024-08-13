@@ -53,18 +53,62 @@ class Video:
     def get_project_info():
         try:
             DATABASE = 'marketing'
-            sql = 'SELECT DISTINCT 项目, 负责人, 花费, 产品 FROM influencers_video_project_data'
+            sql = 'SELECT DISTINCT 品牌,项目, 负责人 FROM influencers_video_project_data'
             current_app.logger.info(f"执行SQL查询: {sql}")
             project_info_df = ReadDatabase(DATABASE, sql).vm()
             current_app.logger.info(f"查询结果: {project_info_df}")
+
+            # 替换 NaN 或 None 值
+            project_info_df = project_info_df.fillna('')
+
+            brand = project_info_df['品牌'].tolist()
             projects = project_info_df['项目'].tolist()
             managers = project_info_df['负责人'].tolist()
-            costs = project_info_df['花费'].tolist()
-            products = project_info_df['产品'].tolist()
-            return jsonify({'projects': projects, 'managers': managers, 'costs': costs, 'products': products}), 200
+
+
+            return jsonify({'brand': brand,'projects': projects, 'managers': managers}), 200
         except Exception as e:
             current_app.logger.error(f"获取项目信息失败: {e}")
             return jsonify({'message': f'获取项目信息失败: {e}'}), 500
+
+    @staticmethod
+    @video_bp.route('/get_unique_ids', methods=['GET'])
+    def get_unique_ids():
+        try:
+            DATABASE = 'marketing'
+            sql = 'SELECT id FROM influencers_video_project_data'
+            current_app.logger.info(f"执行SQL查询: {sql}")
+            unique_ids_df = ReadDatabase(DATABASE, sql).vm()
+            current_app.logger.info(f"查询结果: {unique_ids_df}")
+
+            unique_ids = unique_ids_df['id'].tolist()
+            return jsonify({'uniqueIds': unique_ids}), 200
+        except Exception as e:
+            current_app.logger.error(f"获取唯一ID失败: {e}")
+            return jsonify({'message': f'获取唯一ID失败: {e}'}), 500
+
+    @staticmethod
+    @video_bp.route('/get_project_and_manager', methods=['POST'])
+    def get_project_and_manager():
+        try:
+            data = request.json
+            unique_id = data.get('uniqueId')
+            DATABASE = 'marketing'
+            sql = f"SELECT 品牌, 项目, 负责人 FROM influencers_video_project_data WHERE id='{unique_id}'"
+            current_app.logger.info(f"执行SQL查询: {sql}")
+            result_df = ReadDatabase(DATABASE, sql).vm()
+            current_app.logger.info(f"查询结果: {result_df}")
+
+            if not result_df.empty:
+                brand = result_df['品牌'].iloc[0] if pd.notna(result_df['品牌'].iloc[0]) else ''
+                project = result_df['项目'].iloc[0] if pd.notna(result_df['项目'].iloc[0]) else ''
+                manager = result_df['负责人'].iloc[0] if pd.notna(result_df['负责人'].iloc[0]) else ''
+                return jsonify({'brand': brand, 'project': project, 'manager': manager}), 200
+            else:
+                return jsonify({'message': '未找到匹配的项目、品牌和负责人信息'}), 404
+        except Exception as e:
+            current_app.logger.error(f"获取项目、品牌和负责人信息失败: {e}")
+            return jsonify({'message': f'获取项目、品牌和负责人信息失败: {e}'}), 500
 
     @staticmethod
     @video_bp.route('/get_video_data', methods=['GET'])
@@ -83,19 +127,23 @@ class Video:
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
     @staticmethod
     @video_bp.route('/submit_link', methods=['POST'])
     def submit_link():
         try:
             data = request.json
             link = data.get('link')
-            platform = data.get('platform')
-            influencer_name = data.get('influencerName')
+            unique_id = data.get('uniqueId')
             project_name = data.get('projectName')
+            brand = data.get('brand')
             manager = data.get('manager')
+            progress = data.get('progress')
+            logistics_number = data.get('logisticsNumber')
             cost = data.get('cost')
+            currency = data.get('currency')  # 接收币种
             product = data.get('product')
+            estimated_views = data.get('estimatedViews')
+            estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = data.get('send_id')
 
             # Validate input
@@ -116,25 +164,30 @@ class Video:
             if platform_from_link != platform:
                 return jsonify({'message': f'提交的链接平台 ({platform_from_link}) 与选择的平台 ({platform}) 不匹配。'}), 400
 
-
-            # add submitted_video_links link
+            # Add submitted_video_links link
             send_id_links: deque = submitted_video_links.get(send_id, deque())
             if link in send_id_links:
                 return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
             send_id_links.append(link)
             submitted_video_links[send_id] = send_id_links
-            # noteMessage = run_spider.run_spider(link, {})
-            # print(noteMessage)
 
             # Collect data to DataFrame
             video_data = {
+                '唯一id': [unique_id],
+                '品牌': [brand],
                 '项目': [project_name],
                 '负责人': [manager],
+                '合作进度': [progress],
+                '物流单号': [logistics_number],
                 '花费': [cost],
+                '币种': [currency],  # 添加币种
                 '产品': [product],
+                '预估观看量': [estimated_views],
+                '预估上线时间': [estimated_launch_date],
                 '视频链接': [link],
                 '更新日期': [datetime.date.today()]
             }
+
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
@@ -191,7 +244,6 @@ class Video:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
 
-
     @staticmethod
     @video_bp.route('/add_video_data', methods=['POST'])
     def add_video_data():
@@ -199,6 +251,7 @@ class Video:
         sql_t = 'influencers_video_project_data'
         try:
             data = request.json  # 假设你是通过 JSON 发送数据
+            brand = data.get('品牌')
             project_name = data.get('项目')
             manager = data.get('负责人')
             cost = data.get('花费')
@@ -209,6 +262,7 @@ class Video:
 
             # 处理空字符串，将其转换为 None
             video_data = {
+                '品牌': [brand or None],
                 '项目': [project_name or None],
                 '负责人': [manager or None],
                 '花费': [cost or None],
@@ -221,8 +275,8 @@ class Video:
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
             # 添加缺失的列，初始化为空值
-            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数', '转发数', '参与率',
-                           '更新日期', '项目', '负责人', '合作进度', '物流进度', '物流单号', '花费', '产品', '预估观看量', '预估上线时间']
+            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数', '转发数', '参与率','视频链接'
+                           '更新日期','品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号', '花费', '产品', '预估观看量', '预估上线时间']
             # 将缺失的列添加到 DataFrame 中，并将其初始化为 None（或 np.nan）
             for col in all_columns:
                 if col not in df.columns:

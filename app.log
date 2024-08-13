@@ -224,3 +224,106 @@ Traceback (most recent call last):
   File "D:\wzhData\BaiduSyncdisk\project\python\Influencer_Data_Management_System\spider\spider_notice.py", line 38, in clean_id_notice
     del self.notice_info[_id]
 KeyError: '71063f53-f084-42d4-a4de-255c58f308f0'
+2024-08-12 15:31:13,043 - app - ERROR - 获取唯一ID失败: (pymysql.err.OperationalError) (1054, "Unknown column '唯一id' in 'field list'")
+[SQL: SELECT 唯一id FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 15:33:52,086 - app - ERROR - 获取唯一ID失败: (pymysql.err.OperationalError) (1054, "Unknown column '唯一id' in 'field list'")
+[SQL: SELECT 唯一id FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 15:34:10,643 - app - ERROR - 获取唯一ID失败: (pymysql.err.OperationalError) (1054, "Unknown column '唯一id' in 'field list'")
+[SQL: SELECT 唯一id FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 15:42:38,642 - app - ERROR - 获取唯一ID失败: (pymysql.err.OperationalError) (1054, "Unknown column '唯一id' in 'field list'")
+[SQL: SELECT 唯一id FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 15:43:45,180 - app - ERROR - 获取唯一ID失败: (pymysql.err.OperationalError) (1054, "Unknown column '唯一id' in 'field list'")
+[SQL: SELECT 唯一id FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 15:43:55,784 - app - ERROR - 获取唯一ID失败: '唯一id'
+2024-08-12 16:18:43,458 - app - ERROR - 获取唯一ID失败: '唯一id'
+2024-08-12 16:23:10,073 - app - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask_cors\extension.py", line 178, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\app.py", line 43, in index
+    return render_template('index.html', form=project_form)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\templates\index.html", line 7, in top-level template code
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ time.time() }}">
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 487, in getattr
+    return getattr(obj, attribute)
+jinja2.exceptions.UndefinedError: 'time' is undefined
+2024-08-12 16:23:25,568 - app - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask_cors\extension.py", line 178, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\app.py", line 43, in index
+    return render_template('index.html', form=project_form)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\templates\index.html", line 7, in top-level template code
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ time.time() }}">
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 487, in getattr
+    return getattr(obj, attribute)
+jinja2.exceptions.UndefinedError: 'time' is undefined
+2024-08-12 16:23:43,664 - app - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask_cors\extension.py", line 178, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\app.py", line 43, in index
+    return render_template('index.html', form=project_form)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\templates\index.html", line 7, in top-level template code
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ time.time() }}">
+  File "E:\py_flie\marketing\Influencer_Data_Management_System\Lib\site-packages\jinja2\environment.py", line 487, in getattr
+    return getattr(obj, attribute)
+jinja2.exceptions.UndefinedError: 'time' is undefined
+2024-08-12 17:44:39,957 - app - ERROR - 获取项目信息失败: (pymysql.err.OperationalError) (1054, "Unknown column '负责' in 'field list'")
+[SQL: SELECT DISTINCT 项目, 负责 FROM influencers_video_project_data]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-12 17:45:04,980 - app - ERROR - 获取项目信息失败: '花费'
+2024-08-12 17:45:57,762 - app - ERROR - 获取项目信息失败: '花费'
