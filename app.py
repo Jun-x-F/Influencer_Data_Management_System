@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template
 from flask_cors import CORS
 
+from blueprints.get_file import image_bp
 from blueprints.influencer import influencer_bp, submitted_influencer_links
 from blueprints.project_information import project_information_bp
 from blueprints.update import update_bp
@@ -35,7 +36,7 @@ app.register_blueprint(video_bp, url_prefix='/video')
 app.register_blueprint(update_bp, url_prefix='/update')
 app.register_blueprint(project_information_bp, url_prefix='/project_information')
 app.register_blueprint(spider_notice_bp, url_prefix='/notice')
-
+app.register_blueprint(image_bp, url_prefix='/image')
 
 @app.route('/')
 def index():
