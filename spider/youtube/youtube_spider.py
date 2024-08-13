@@ -7,19 +7,18 @@
 """
 import random
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from typing import Optional, List
 
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, ElementHandle, Route
-from sqlalchemy import update, and_
 
-from log.logger import LoguruLogger
-from spider.sql.mysql import Connect
-from spider.template.spider_db_template import Base, CelebrityProfile
+from log.logger import global_log
+from spider.sql.data_inner_db import inner_CelebrityProfile
+from spider.template.exception_template import RetryableError
+from tool.download_file import download_image_file
 from tool.grading_criteria import convert_words_to_numbers, grade_criteria
-
-log = LoguruLogger(console=True, isOpenError=True)
 
 
 class Task:
@@ -39,18 +38,11 @@ class Task:
         self.finish_data = {}
         self.all_urls_list = []
         self.urls_list = Queue()
-        self.close_comment = False
         self.close_comment_flag = 10
         self.max_len = 0
         self.like = 0
         self.view = 0
         self.comment = 0
-        # 数据库配置文件
-        # 配置连接池
-        # 创建表
-        self.db = Connect(2, "marketing")
-        self.db.create_session()
-        Base.metadata.create_all(self.db.engine)
 
     def _close_data(self):
         self.response_data = {}
@@ -58,43 +50,11 @@ class Task:
         self.finish_data = {}
         self.all_urls_list = []
         self.urls_list = Queue()
-        self.close_comment = False
         self.close_comment_flag = 10
         self.max_len = 0
         self.like = 0
         self.view = 0
         self.comment = 0
-
-    def _data_To_db(self) -> None:
-        """更新数据"""
-        try:
-            if self.db.check_connection() is not True:
-                self.db.reconnect_session()
-            db_history_data = (self.db.session.query(CelebrityProfile)
-                               .filter(
-                and_(
-                    CelebrityProfile.platform == self.finish_data.get("platform"),
-                    CelebrityProfile.user_name == self.finish_data.get("user_name"),
-                )
-            ).first())
-            if db_history_data:
-                self.db.session.execute(
-                    update(CelebrityProfile)
-                    .where(and_(
-                        CelebrityProfile.platform == self.finish_data.get("platform"),
-                        CelebrityProfile.user_name == self.finish_data.get("user_name"),
-                    ))
-                    .values(self.finish_data)
-                )
-            else:
-                instagram_profile = CelebrityProfile(
-                    **self.finish_data
-                )
-                self.db.session.add(instagram_profile)
-            self.db.session.commit()
-        except Exception as e:
-            self.db.session.rollback()
-            raise ValueError(f"data -> {self.finish_data} exception -> {e} ")
 
     def get_country_item(self):
         self.page.query_selector('//yt-description-preview-view-model').click()
@@ -119,7 +79,11 @@ class Task:
         self.finish_data["full_name"] = full_name
         self.finish_data["follower_count"] = follower_count
         self.finish_data["region"] = get_country_item.strip()
-
+        print(self.finish_data["profile_picture_url"])
+        download_image_head_url = download_image_file(self.finish_data["profile_picture_url"],
+                                                      self.finish_data["user_name"])
+        global_log.info(download_image_head_url)
+        self.finish_data["profile_picture_url"] = download_image_head_url
         self.page.wait_for_timeout(self.human_wait_time / 2)
         self.page.query_selector('//tp-yt-paper-dialog[@role="dialog"]//button[@aria-label="关闭"]').click()
         self.page.wait_for_timeout(self.human_wait_time)
@@ -177,7 +141,7 @@ class Task:
         else:
             route.continue_()  # 继续其他请求
 
-    def process_page(self, page_url):
+    def process_page(self, page_url, threading_event: threading.Event):
 
         """页面处理"""
         with (sync_playwright() as _playwright):
@@ -219,7 +183,7 @@ class Task:
                 like_button_view_model = page.query_selector(
                     '//like-button-view-model//div[@class="yt-spec-button-shape-next__button-text-content"]')
                 if like_button_view_model:
-                    log.info("url: " + page_url + "点赞：" + like_button_view_model.text_content())
+                    global_log.info("url: " + page_url + "点赞：" + like_button_view_model.text_content())
                     # //like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button
                     # aria-label="与另外 433 人一起赞此视频"
                     like_count_str = like_button_view_model.text_content()
@@ -234,7 +198,7 @@ class Task:
                     like_count = self.extract_number(like_count_str)
                 view_info = page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
                 if view_info:
-                    log.info("观看量：" + view_info.text_content())
+                    global_log.info("观看量：" + view_info.text_content())
                     view_info_str = view_info.text_content().split("次观看")[0]
                     view_count = self.extract_number(view_info_str)
                 # 滚动到页面底部
@@ -246,34 +210,34 @@ class Task:
                     page.wait_for_timeout(self.human_wait_time)
 
                     if page.query_selector('//*[text()="评论已关闭。"]') is not None:
-                        self.close_comment = True
+                        threading_event.set()
                         return
 
                     commend_info = page.query_selector('//div[@id="leading-section"]//span')
                     if commend_info is not None:
                         if "评论" in commend_info.text_content():
                             commend_info = page.query_selector('//div[@id="leading-section"]//span[2]')
-                        log.info("评论：" + commend_info.text_content())
+                        global_log.info("评论：" + commend_info.text_content())
                         comment_count = self.extract_number(commend_info.text_content())
                         break
 
-                if self.close_comment is False and like_count is not None \
+                if like_count is not None \
                         and view_count is not None \
                         and comment_count is not None:
                     self.like += like_count
                     self.view += view_count
                     self.comment += comment_count
                 else:
-                    raise ValueError(f"like_count:{like_count}, "
-                                     f"view_count:{view_count}, "
-                                     f"comment_count:{comment_count}")
+                    raise RetryableError(f"like_count:{like_count}, "
+                                         f"view_count:{view_count}, "
+                                         f"comment_count:{comment_count}")
             except Exception:
                 raise
 
     def work(self, _url):
         if "videos" not in _url:
             _url = _url.removesuffix('/') + "/videos"
-        log.info(_url)
+        global_log.info(_url)
         self.page.goto(_url, wait_until="domcontentloaded")
         self.page.wait_for_timeout(self.human_wait_time)
         get_profile_pic_item = self.page.query_selector('//yt-avatar-shape//img').get_attribute("src")
@@ -284,23 +248,31 @@ class Task:
         # 增加并发速 5 -> 稳定
         while self.urls_list.empty() is False:
             with ThreadPoolExecutor(max_workers=10) as executor:
+
                 future_to_url = {}
                 """映射 Future 对象到任务"""
                 for _ in range(self.urls_list.qsize()):  # 最多提交10个任务
+                    # 每一个线程都有独立的线程任务
+                    threading_event = threading.Event()
                     url = self.urls_list.get()
-                    future_to_url[executor.submit(self.process_page, url)] = url
+                    future_to_url[executor.submit(self.process_page, url, threading_event)] = url
 
                 for future in as_completed(future_to_url):
+                    retry_url = future_to_url[future]
                     try:
-                        future.result()  # 确保获取任务的结果并处理异常
+                        # 超时5分钟
+                        future.result(timeout=60 * 5)  # 确保获取任务的结果并处理异常
+                    except RetryableError:
+                        print(retry_url)
+                        self.urls_list.put(retry_url)
                     except Exception as e:
                         raise
 
                     # 跳过本轮计算 -> 自动归为False
-                    if self.close_comment:
+                    if threading_event.is_set():
                         self.close_comment_flag = self.close_comment_flag + 1
                         self.urls_list.put(self.all_urls_list[self.close_comment_flag])
-                        self.close_comment = False
+                        threading_event.clear()
                         continue
 
         self.finish_data["index_url"] = _url
@@ -313,7 +285,7 @@ class Task:
                 / self.finish_data["average_views"])
 
         self.finish_data["level"] = grade_criteria("youtube", self.finish_data["average_views"])
-        self._data_To_db()
+        inner_CelebrityProfile(self.finish_data)
         self._close_data()
 
     def run(self, url):

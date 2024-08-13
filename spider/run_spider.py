@@ -10,7 +10,7 @@ import json
 
 from playwright.sync_api import sync_playwright
 
-from log.logger import LoguruLogger
+from log.logger import global_log
 from spider.ins import ins_post_feel_spider
 from spider.ins import ins_spider
 from spider.spider_notice import spider_notice
@@ -21,16 +21,14 @@ from spider.youtube import youtube_spider
 from spider.youtube import youtube_video_spider
 from tool.get_ws import get_ws_id
 
-log = LoguruLogger(console=True, isOpenError=True)
 
-
-@log.log_exceptions
+@global_log.log_exceptions
 def work(url: str, cur: dict, flag, _id) -> int:
     if "youtube" in url:
         if flag == 1:
             spider_notice.add_notice(_id, "判断为获取YouTube红人信息，开始解析浏览器ws_id")
             ws = get_ws_id()
-            log.info(ws)
+            global_log.info(ws)
             spider_notice.add_notice(_id, f"浏览器ws_id为{ws}，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.connect_over_cdp(ws)
@@ -56,7 +54,7 @@ def work(url: str, cur: dict, flag, _id) -> int:
         if flag == 1:
             spider_notice.add_notice(_id, "判断为获取TikTok红人信息，开始解析浏览器ws_id")
             ws = get_ws_id()
-            log.info(ws)
+            global_log.info(ws)
             spider_notice.add_notice(_id, f"浏览器ws_id为{ws}，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.connect_over_cdp(ws)
@@ -82,11 +80,11 @@ def work(url: str, cur: dict, flag, _id) -> int:
         if flag == 1:
             spider_notice.add_notice(_id, "判断为获取Instagram红人信息，开始解析浏览器ws_id")
             ws = get_ws_id()
-            log.info(ws)
+            global_log.info(ws)
             spider_notice.add_notice(_id, f"浏览器ws_id为{ws}，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.connect_over_cdp(ws)
-                log.info(browser)
+                global_log.info(browser)
                 context = browser.contexts[0]
                 context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
@@ -124,7 +122,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
             message["code"] = code
             message["message"] = "链接解析失败"
     except Exception as e:
-        log.error(f"{url} 异常: {e}")
+        global_log.error(f"{url} 异常: {e}")
         message["code"] = 500
         message["message"] = "爬虫异常, 检查日志"
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

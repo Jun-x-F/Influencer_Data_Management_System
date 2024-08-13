@@ -22,5 +22,6 @@ def download_image_file(image: str, file_name: str):
         with open(os.path.join(image_file_path, file_name + ".jpeg"), 'wb') as f:
             for chunk in response.iter_content(1024):
                 f.write(chunk)
+        return f"http://172.16.11.245:5000/image/{file_name}.jpeg"
     else:
         raise "下载失败"

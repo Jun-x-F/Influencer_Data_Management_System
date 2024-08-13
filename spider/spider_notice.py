@@ -12,7 +12,7 @@ from typing import Optional
 from flask import Blueprint, request, jsonify
 
 from blueprints.influencer import submitted_influencer_links
-from spider import run_spider
+from log.logger import global_log
 
 spider_notice_bp = Blueprint('notice', __name__)
 
@@ -80,7 +80,7 @@ class Notice:
             updateTime = work_info.get("更新时间")
             time_diff = datetime.now() - updateTime
             if time_diff > timedelta(hours=1):
-                run_spider.log.info(f"清除 send_id:{_id}")
+                global_log.info(f"清除 send_id:{_id}")
                 self.clean_id_notice(_id)
 
 

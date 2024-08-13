@@ -19,6 +19,7 @@ def get_image(image_name):
     try:
         path = os.path.join(image_file_path, image_name)
         mimetype = "image/jpeg"
-        return send_file(str(path), mimetype=mimetype)
+        # 缓存一天
+        return send_file(str(path), mimetype=mimetype, max_age=86400)
     except Exception as e:
         abort(404, description="Image not found")
