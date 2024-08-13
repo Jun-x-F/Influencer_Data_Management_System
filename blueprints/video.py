@@ -160,9 +160,7 @@ class Video:
             if not platform_from_link:
                 return jsonify({'message': '不支持的平台。'}), 400
 
-            # Check if platform matches
-            if platform_from_link != platform:
-                return jsonify({'message': f'提交的链接平台 ({platform_from_link}) 与选择的平台 ({platform}) 不匹配。'}), 400
+
 
             # Add submitted_video_links link
             send_id_links: deque = submitted_video_links.get(send_id, deque())
