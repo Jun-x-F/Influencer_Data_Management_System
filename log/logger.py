@@ -273,5 +273,32 @@ class LoguruLogger:
         return exception_info
 
 
-# 全局日志
-global_log = LoguruLogger(console=True, isOpenError=True)
+log = LoguruLogger()
+
+
+@log.log_exceptions
+def test():
+    raise TypeError
+
+
+@log.log_exceptions_async
+async def test_exception_logging():
+    raise ValueError("这是一个测试异常")
+
+
+# @log.log_exceptions_async
+async def test_message_exception_logging():
+    log.error("测试")
+
+
+# 示例用法
+if __name__ == "__main__":
+    log.debug("This is a debug message")
+    log.info("This is an info message")
+    log.warning("This is a warning message")
+    # test()
+    # asyncio.run(test_exception_logging())
+    # asyncio.run(test_message_exception_logging())
+#     # 运行异步任务
+#     # asyncio.run(main())
+#     log.critical("This is a critical message")

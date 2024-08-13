@@ -10,9 +10,14 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
+from sqlalchemy import and_, update
 
-from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
+from log.logger import LoguruLogger
+from spider.sql.mysql import Connect
+from spider.template.spider_db_template import Base, InfluencersVideoProjectData
 from tool.TimeUtils import TimeUtils
+
+log = LoguruLogger(console=True, isOpenError=True)
 
 
 class Task:
@@ -28,8 +33,45 @@ class Task:
             self.page = self.context.new_page()
         self.finish_data = {}
 
+        # 配置连接池
+        # 创建表
+        self.db = Connect(2, "marketing")
+        self.db.create_session()
+        Base.metadata.create_all(self.db.engine)
+
     def _close_data(self):
         self.finish_data = {}
+
+    def _data_To_db(self) -> None:
+        """更新数据"""
+        try:
+            if not self.db.check_connection():
+                self.db.reconnect_session()
+            db_history_data = (self.db.session.query(InfluencersVideoProjectData)
+                               .filter(
+                and_(
+                    InfluencersVideoProjectData.platform == self.finish_data.get("platform"),
+                    InfluencersVideoProjectData.user_name == self.finish_data.get("user_name"),
+                )
+            ).first())
+            if db_history_data:
+                self.db.session.execute(
+                    update(InfluencersVideoProjectData)
+                    .where(and_(
+                        InfluencersVideoProjectData.platform == self.finish_data.get("platform"),
+                        InfluencersVideoProjectData.user_name == self.finish_data.get("user_name"),
+                    ))
+                    .values(self.finish_data)
+                )
+            else:
+                instagram_profile = InfluencersVideoProjectData(
+                    **self.finish_data
+                )
+                self.db.session.add(instagram_profile)
+            self.db.session.commit()
+        except Exception as e:
+            log.error(f"Failed to log to database: {e}")
+            self.db.session.rollback()
 
     def work(self, _url):
         self.page.goto("https://www.tiktok.com", wait_until="domcontentloaded")
@@ -62,8 +104,7 @@ class Task:
         self.finish_data["collections"] = stats.get("collectCount")
         self.finish_data["engagement_rate"] = ((self.finish_data["likes"] + self.finish_data["comments"])
                                                / self.finish_data["views"])
-        inner_InfluencersVideoProjectData(self.finish_data)
-        inner_InfluencersVideoProjectDataByDate(self.finish_data)
+        self._data_To_db()
         self._close_data()
 
     def run(self, _url):

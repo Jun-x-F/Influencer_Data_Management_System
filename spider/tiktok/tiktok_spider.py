@@ -8,10 +8,14 @@
 from typing import Optional
 
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, Response
+from sqlalchemy import update, and_
 
-from spider.sql.data_inner_db import inner_CelebrityProfile
-from tool.download_file import download_image_file
+from log.logger import LoguruLogger
+from spider.sql.mysql import Connect
+from spider.template.spider_db_template import Base, CelebrityProfile
 from tool.grading_criteria import grade_criteria
+
+log = LoguruLogger(console=True, isOpenError=True)
 
 
 class Task:
@@ -30,11 +34,47 @@ class Task:
         self.response_sort_data = []
         self.finish_data = {}
 
+        # 配置连接池
+        # 创建表
+        self.db = Connect(2, "marketing")
+        self.db.create_session()
+        Base.metadata.create_all(self.db.engine)
+
     def _close_data(self):
         self.response_data = {}
         self.response_sort_data = []
         self.finish_data = {}
 
+    def _data_To_db(self) -> None:
+        """更新数据"""
+        try:
+            if not self.db.check_connection():
+                self.db.reconnect_session()
+            db_history_data = (self.db.session.query(CelebrityProfile)
+                               .filter(
+                and_(
+                    CelebrityProfile.platform == self.finish_data.get("platform"),
+                    CelebrityProfile.user_id == self.finish_data.get("user_id"),
+                )
+            ).first())
+            if db_history_data:
+                self.db.session.execute(
+                    update(CelebrityProfile)
+                    .where(and_(
+                        CelebrityProfile.platform == self.finish_data.get("platform"),
+                        CelebrityProfile.user_id == self.finish_data.get("user_id"),
+                    ))
+                    .values(self.finish_data)
+                )
+            else:
+                instagram_profile = CelebrityProfile(
+                    **self.finish_data
+                )
+                self.db.session.add(instagram_profile)
+            self.db.session.commit()
+        except Exception as e:
+            log.error(f"Failed to log to database: {e}")
+            self.db.session.rollback()
 
     def verify_bar_close(self) -> None:
         """关闭验证，并更新"""
@@ -80,13 +120,10 @@ class Task:
             if is_need_get_author:
                 author_info = item.get("author")
                 # avatarLarger nickname uniqueId
+                self.finish_data["profile_picture_url"] = author_info.get("avatarLarger")
                 self.finish_data["full_name"] = author_info.get("nickname")
                 self.finish_data["user_name"] = author_info.get("uniqueId")
                 self.finish_data["user_id"] = author_info.get("id")
-                download_image_head_url = download_image_file(author_info.get("avatarLarger"),
-                                                              author_info.get("uniqueId"))
-                print(download_image_head_url)
-                self.finish_data["profile_picture_url"] = download_image_head_url
                 is_need_get_author = False
             stats = item.get("stats")
             views_list.append(stats.get("playCount", 0))
@@ -99,8 +136,7 @@ class Task:
         self.finish_data["average_engagement_rate"] = \
             ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
              / self.finish_data["average_views"])
-        self.finish_data["level"] = grade_criteria(self.finish_data["platform"],self.finish_data["average_views"])
-
+        self.finish_data["level"] = grade_criteria(self.finish_data["platform"], self.finish_data["average_views"])
 
     def work(self, _url) -> None:
         """代码执行层"""
@@ -123,8 +159,7 @@ class Task:
                 break
 
         self._get_page_response_elements()
-        inner_CelebrityProfile(self.finish_data, isById=True)
-        self._close_data()
+        self._data_To_db()
 
     def run(self, url):
         self.work(url)

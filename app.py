@@ -38,7 +38,6 @@ app.register_blueprint(project_information_bp, url_prefix='/project_information'
 app.register_blueprint(spider_notice_bp, url_prefix='/notice')
 app.register_blueprint(image_bp, url_prefix='/image')
 
-
 @app.route('/')
 def index():
     project_form = ProjectForm()
@@ -76,4 +75,4 @@ if __name__ == '__main__':
     thread_cleanNoneNotice = threading.Thread(target=cleanNoneNotice, daemon=True)
     thread_background_task.start()
     thread_cleanNoneNotice.start()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)

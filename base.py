@@ -6,11 +6,14 @@
 # @Project : share_class
 
 
+from sqlalchemy.types import DATE,CHAR,VARCHAR,NVARCHAR, Float, Integer,BigInteger
+from sqlalchemy import String, SmallInteger, Integer, BigInteger, Float, Boolean, DateTime, Interval, DATE,DateTime,Text,text
+import sqlalchemy
 import pandas as pd
-from sqlalchemy import DATE
+import pymysql
+
 from sqlalchemy import String, BigInteger, Float, Boolean, SmallInteger, Integer, DateTime, Interval, text, Text
 from sqlalchemy.connectors import pyodbc
-from sqlalchemy.types import NVARCHAR
 
 # 共享的数据库主机配置
 SHARED_DB_CONFIG = {

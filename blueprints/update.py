@@ -1,12 +1,9 @@
-import datetime
-
-import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
-from sqlalchemy import text
-
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from utils import sanitize_input
-
+from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+import pandas as pd
+import datetime
+from sqlalchemy import text
 pd.set_option('display.max_columns', None)
 update_bp = Blueprint('update', __name__)
 
@@ -150,7 +147,6 @@ class UpdateInfluencer:
             data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
             # 处理空值和特殊值
             # 处理 NaN 和 inf 值
-            print(data)
             data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
             data = data.fillna('')
             result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表

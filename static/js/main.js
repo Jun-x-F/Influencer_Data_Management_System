@@ -28,7 +28,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     links.forEach(link => {
         responseMessage.innerHTML += `<p style="font-size: 14px">链接 ${link} 提交成功...</p>`;
         responseMessage.style.color = 'black';
-        fetch('http://172.16.11.245:5000/influencer/submit_link', {
+        fetch('/influencer/submit_link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -46,7 +46,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider
     const intervalId = setInterval(() => {
-        fetch('http://172.16.11.245:5000/notice/spider', {
+        fetch('/notice/spider', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -57,6 +57,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
             .then(data => {
                 if (data.status === 'clean' || data.isSuccess) {
                     clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
+                    updateInfluencerTable()
                 }
                 responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
             })
@@ -73,7 +74,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
 // 更新红人板块
 // 在页面加载时获取平台列表
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('http://172.16.11.245:5000/update/get_platforms')
+    fetch('/update/get_platforms')
         .then(response => response.json())
         .then(data => {
             if (data.platforms) {
@@ -91,35 +92,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 });
 // 当平台选项改变时获取红人信息（针对更新红人表单）
-document.getElementById('updatePlatform').addEventListener('change', function() {
-    var platform = this.value;
-    var datalist = document.getElementById('updateInfluencerName');
-    datalist.innerHTML = ''; // 清空现有选项
+window.onload = function() {
+    var platformSelect = document.getElementById('updatePlatform');
+    var influencerInput = document.getElementById('updateInfluencerName');
+    var datalist = document.getElementById('influencerNames');
 
-    if (platform) {
-        fetch('http://172.16.11.245:5000/update/get_influencers', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ platform: platform })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.influencers) {
-                data.influencers.forEach(function(name) {
-                    var option = document.createElement('option');
-                    option.value = name;
-                    option.text = name;
-                    datalist.appendChild(option);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching influencers:', error);
-        });
+    console.log('Platform Select Element:', platformSelect);
+    console.log('Influencer Input Element:', influencerInput);
+    console.log('Datalist Element:', datalist);
+
+    if (!platformSelect || !influencerInput || !datalist) {
+        console.error('必要的 DOM 元素未找到');
+        return;
     }
-});
+
+    platformSelect.addEventListener('change', function() {
+        var platform = this.value;
+        datalist.innerHTML = ''; // 清空现有选项
+
+        if (platform) {
+            fetch('/update/get_influencers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ platform: platform })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.influencers) {
+                    data.influencers.forEach(function(name) {
+                        var option = document.createElement('option');
+                        option.value = name;
+                        datalist.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('获取红人信息时出错:', error);
+            });
+        }
+    });
+};
+
+
+
+
+
+
 document.getElementById('updateInfluencerForm').addEventListener('submit', function(event) {
     event.preventDefault();
     var platform = document.getElementById('updatePlatform').value;
@@ -145,7 +165,7 @@ document.getElementById('updateInfluencerForm').addEventListener('submit', funct
     var responseMessage = document.getElementById('responseMessageUpdateInfluencer');
     responseMessage.innerHTML = '正在提交...';
 
-    fetch('http://172.16.11.245:5000/update/influencer', {
+    fetch('/update/influencer', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -169,30 +189,33 @@ document.getElementById('updateInfluencerForm').addEventListener('submit', funct
 
     .then(response => response.json())
     .then(data => {
-        responseMessage.innerHTML = data.message;
-        responseMessage.style.color = 'green';
-        // 更新成功后，更新表格
-    updateInfluencerTable();
+        document.getElementById('responseMessageUpdateInfluencer').innerHTML = data.message;
+        document.getElementById('responseMessageUpdateInfluencer').style.color = 'green';
+
+        // 重置表单和datalist
+        document.getElementById('updateInfluencerForm').reset();
+        datalist.innerHTML = '';
     })
-
     .catch(error => {
-        console.error('Error:', error);
-        responseMessage.innerText = '提交时出错，请重试。';
-        responseMessage.style.color = 'red';
+        console.error('提交时出错:', error);
+        document.getElementById('responseMessageUpdateInfluencer').innerText = '提交时出错，请重试。';
+        document.getElementById('responseMessageUpdateInfluencer').style.color = 'red';
     });
-
 });
+
 
 document.getElementById('resetUpdateInfluencerForm').addEventListener('click', function() {
     document.getElementById('updateInfluencerForm').reset();
+    document.getElementById('updateInfluencerName').value = ''; // 确保红人名称没有选中任何选项
     document.getElementById('responseMessageUpdateInfluencer').innerHTML = '';
 });
+
 document.addEventListener('DOMContentLoaded', function() {
     updateInfluencerTable();
 });
 // 更新数据库表格的函数
 function updateInfluencerTable() {
-    fetch('http://172.16.11.245:5000/update/get_influencer_data', {
+    fetch('/update/get_influencer_data', {
         method: 'GET'
     })
     .then(response => response.json())
@@ -201,52 +224,111 @@ function updateInfluencerTable() {
         tableBody.innerHTML = ''; // 清空表格内容
 
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="13">没有数据</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
         } else {
             data.forEach(row => {
                 var date = new Date(row.更新日期);
                 var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
                 const tr = document.createElement('tr');
+                const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
+
                 tr.innerHTML = `
-                    <td>${row.平台}</td>
-                    <td>${row.红人名称}</td>
-                    <td>${row.邮箱}</td>
-                    <td>${row.WhatsApp}</td>
-                    <td>${row.Discord}</td>
-                    <td>${row.地址信息1}</td>
-                    <td>${row.地址信息2}</td>
-                    <td>${row.地址信息3}</td>
-                    <td>${row.标签功能1}</td>
-                    <td>${row.标签功能2}</td>
-                    <td>${row.标签功能3}</td>
-                    <td>${row.国家}</td>
-                    <td>${row.国家编码}</td>
-                    <td>${formattedDate}</td> <!-- 使用格式化后的日期 -->
+                    <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
+                    <td>${row.id || ''}</td>
+                    <td>${row.平台 || ''}</td>
+                    <td>${row.红人名称 || ''}</td>
+                    <td>${row.红人全名 || ''}</td>
+                    <td><a href="${row.红人主页地址}" target="_blank">${row.红人主页地址}</a></td> <!-- 将主页地址变为超链接 -->
+                    <td>${row.地区 || ''}</td>
+                    <td>${row.国家 || ''}</td>
+                    <td>${row.国家编码 || ''}</td>
+                    <td>${row.评级 || ''}</td>
+                    <td>${row.粉丝数量 || ''}</td>
+                    <td>${row.平均点赞数量 || ''}</td>
+                    <td>${row.平均评论数量 || ''}</td>
+                    <td>${row.平均播放量 || ''}</td>
+                    <td>${row.平均参与率 || ''}</td>
+                    <td>${row.邮箱 || ''}</td>
+                    <td>${row.地址信息1 || ''}</td>
+                    <td>${row.标签功能1 || ''}</td>
+                    <td>${row.WhatsApp || ''}</td>
+                    <td>${row.地址信息2 || ''}</td>
+                    <td>${row.标签功能2 || ''}</td>
+                    <td>${row.Discord || ''}</td>
+                    <td>${row.地址信息3 || ''}</td>
+                    <td>${row.标签功能3 || ''}</td>
+                    <td>${formattedDate || ''}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
+        // 应用当前筛选条件
+        var currentPlatform = document.getElementById('updatePlatform').value;
+        var currentInfluencerName = document.getElementById('updateInfluencerName').value;
+        filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
     })
     .catch(error => {
         console.error('Error fetching influencer table data:', error);
     });
 }
+document.addEventListener('DOMContentLoaded', function() {
+    updateInfluencerTable();
+});
+
+// 根据平台和红人名称自动筛选表格
+function filterTableByPlatformAndInfluencerName(platform, influencerName) {
+    const rows = document.querySelectorAll('#influencerTable tbody tr');
+    rows.forEach(row => {
+        const rowPlatform = row.querySelector('td:nth-child(3)').textContent.trim();  // 假设平台在第3列
+        const rowInfluencerName = row.querySelector('td:nth-child(4)').textContent.trim();  // 假设红人名称在第4列
+
+        // 检查平台和红人名称是否匹配
+        if ((platform === "" || rowPlatform === platform) && (influencerName === "" || rowInfluencerName === influencerName)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// 当平台或红人名称改变时，自动筛选表格
+document.getElementById('updatePlatform').addEventListener('change', function() {
+    var platform = this.value;
+    var influencerName = document.getElementById('updateInfluencerName').value;
+    filterTableByPlatformAndInfluencerName(platform, influencerName);
+});
+
+document.getElementById('updateInfluencerName').addEventListener('change', function() {
+    var influencerName = this.value;
+    var platform = document.getElementById('updatePlatform').value;
+    filterTableByPlatformAndInfluencerName(platform, influencerName);
+});
+
+// 确保页面加载完成后调用 updateInfluencerTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateInfluencerTable();
+});
+
+
+
 
 
 
 
 // 更新视频板块
+// 表单提交时
 document.getElementById('videoForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
     var videoLinks = document.getElementById('videoLinks').value.trim();
     var uniqueId = document.getElementById('videoUniqueId').value.trim();
     var projectName = document.getElementById('videoProjectName').value.trim();
+    var brand = document.getElementById('videobrand').value.trim();
     var manager = document.getElementById('videoManager').value.trim();
     var progress = document.getElementById('videoProgress').value.trim();
-    var logisticsProgress = document.getElementById('videoLogisticsProgress').value.trim();
     var logisticsNumber = document.getElementById('videoLogisticsNumber').value.trim();
     var cost = document.getElementById('videocost').value.trim();
+    var currency = document.getElementById('videocurrency').value.trim(); // 获取币种
     var product = document.getElementById('videoproduct').value.trim();
     var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
     var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
@@ -269,7 +351,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     // 提交非重复链接
     uniqueLinks.forEach(link => {
         responseMessage.innerHTML += `<p>视频链接 ${link} 提交成功。<br>数据抓取中...</p>`;
-        fetch('http://172.16.11.236:5000/video/submit_link', {
+        fetch('/video/submit_link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -278,11 +360,12 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
                 link: link,
                 uniqueId: uniqueId,
                 projectName: projectName,
+                brand: brand,
                 manager: manager,
                 progress: progress,
-                logisticsProgress: logisticsProgress,
                 logisticsNumber: logisticsNumber,
                 cost: cost,
+                currency: currency, // 添加币种字段
                 product: product,
                 estimatedViews: estimatedViews,
                 estimatedLaunchDate: estimatedLaunchDate
@@ -304,11 +387,92 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
 });
 
 
-// 在页面加载时获取项目和负责人信息
+// 获取唯一ID数据并自动填充项目、品牌、负责人
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('http://172.16.11.245:5000/video/get_project_info')
+    // 获取唯一ID数据
+    fetch('/video/get_unique_ids')
         .then(response => response.json())
         .then(data => {
+            if (data.uniqueIds) {
+                var videoUniqueIdSelect = document.getElementById('videoUniqueId');
+                data.uniqueIds.forEach(function(id) {
+                    var option = document.createElement('option');
+                    option.value = id;
+                    option.text = id;
+                    videoUniqueIdSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching unique IDs:', error));
+});
+
+// 添加监听器，当选择唯一ID时，自动填充项目和负责人、品牌
+document.getElementById('videoUniqueId').addEventListener('change', function() {
+    var uniqueId = this.value;
+    if (uniqueId) {
+        fetch('/video/get_project_and_manager', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ uniqueId: uniqueId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 使用空字符串作为默认值
+            const project = data.project || '';
+            const brand = data.brand || '';
+            const manager = data.manager || '';
+
+            // 填充表单字段
+            document.getElementById('videoProjectName').value = project;
+            document.getElementById('videobrand').value = brand;
+            document.getElementById('videoManager').value = manager;
+
+            // 调用筛选函数
+            filterTableByProjectBrandAndManager(project, brand, manager);
+
+            // 高亮表格中对应的行
+            highlightRowById(uniqueId);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+});
+function highlightRowById(uniqueId) {
+    // 清除之前高亮的行
+    var rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        row.style.backgroundColor = '';  // 重置背景色
+    });
+
+    // 查找对应的行并更改背景色
+    if (uniqueId) {
+        rows.forEach(row => {
+            var rowId = row.querySelector('td:first-child').textContent.trim();
+            if (rowId === uniqueId) {
+                row.style.backgroundColor = '#d1e7dd';  // 你可以选择你喜欢的颜色
+            }
+        });
+    }
+}
+
+
+
+
+// 在页面加载时获取项目、品牌和负责人信息
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.brands) {
+                var videoBrandSelect = document.getElementById('videobrand');
+                data.brands.forEach(function(brand) {
+                    var option = document.createElement('option');
+                    option.value = brand;
+                    option.text = brand;
+                    videoBrandSelect.appendChild(option);
+                });
+            }
             if (data.projects) {
                 var videoProjectSelect = document.getElementById('videoProjectName');
                 data.projects.forEach(function(project) {
@@ -328,9 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         })
-        .catch(error => {
-            console.error('Error fetching project info:', error);
-        });
+        .catch(error => console.error('Error fetching project info:', error));
 });
 
 // 点击“添加更多链接”
@@ -342,69 +504,87 @@ document.addEventListener('DOMContentLoaded', function() {
         newLinkFields.innerHTML = `
             <hr>
             <div id="linkFieldsContainer">
-            <div class="linkFields">
-                <label for="videoLinks">视频链接:</label>
-                <textarea id="videoLinks" class="videoLinks" placeholder="请输入视频链接"></textarea>
-
-                <div class="form-row">
-                    <div>
-                        <label for="videoUniqueId">唯一id:</label>
-                        <select id="videoUniqueId" class="videoUniqueId" required>
+                <div class="linkFields">
+                    <div class="form-row">
+                        <div>
+                            <label for="videoUniqueId">唯一id:</label>
+                            <select id="videoUniqueId" class="videoUniqueId" required>
                             <option value="">选择唯一id</option>
-                            <!-- 选项将在JavaScript中动态生成 -->
+                            <!-- 选项将在JavaScript中动态生成 1-->
                         </select>
+                        </div>
+                        <div>
+                            <label for="videobrand">品牌:</label>
+                            <select id="videobrand" class="videobrand">
+                                <option value="">选择品牌</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoProjectName">项目:</label>
+                            <select id="videoProjectName" class="videoProjectName">
+                                <option value="">选择项目</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoManager">负责人:</label>
+                            <select id="videoManager" class="videoManager">
+                                <option value="">选择负责人</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label for="videoProjectName">项目:</label>
-                        <select id="videoProjectName" class="videoProjectName">
-                            <option value="">选择项目</option>
-                            <!-- 选项将在JavaScript中动态生成 -->
-                        </select>
-                    </div>
-                    <div>
-                        <label for="videoManager">负责人:</label>
-                        <select id="videoManager" class="videoManager">
-                            <option value="">选择负责人</option>
-                            <!-- 选项将在JavaScript中动态生成 -->
-                        </select>
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div>
-                        <label for="videoProgress">合作进度:</label>
-                        <input type="text" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                    <div class="form-row">
+                        <div>
+                            <label for="videoLinks">视频链接:</label>
+                            <textarea id="videoLinks" class="videoLinks" placeholder="请输入视频链接"></textarea>
+                        </div>
+                        <div>
+                            <label for="videoproduct">产品:</label>
+                            <input type="text" id="videoproduct" class="videoproduct" placeholder="请输入产品名称">
+                        </div>
+                        <div>
+                            <label for="videoProgress">合作进度:</label>
+                            <input type="text" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                        </div>
+                        <div>
+                            <label for="videoLogisticsNumber">物流单号:</label>
+                            <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
+                        </div>
                     </div>
-                    <div>
-                        <label for="videoLogisticsProgress">物流进度:</label>
-                        <input type="text" id="videoLogisticsProgress" class="videoLogisticsProgress" placeholder="请输入物流进度">
-                    </div>
-                    <div>
-                        <label for="videoLogisticsNumber">物流单号:</label>
-                        <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div>
-                        <label for="videocost">花费:</label>
-                        <input type="number" id="videocost" class="videocost" placeholder="请输入花费">
-                    </div>
-                    <div>
-                        <label for="videoproduct">产品:</label>
-                        <input type="text" id="videoproduct" class="videoproduct" placeholder="请输入产品名称">
-                    </div>
-                    <div>
-                        <label for="videoestimatedViews">预估观看量:</label>
-                        <input type="number" id="videoestimatedViews" name="videoestimatedViews" placeholder="预估观看量">
-                    </div>
-                    <div>
-                        <label for="videoestimatedLaunchDate">预估上线时间:</label>
-                        <input type="date" id="videoestimatedLaunchDate" name="videoestimatedLaunchDate" placeholder="预估上线时间">
+                    <div class="form-row">
+                        <div>
+                            <label for="videocost">花费:</label>
+                            <input type="number" id="videocost" class="videocost" placeholder="请输入花费">
+                        </div>
+                        <div>
+                            <label for="videocurrency">币种:</label>
+                            <select id="videocurrency" class="videocurrency">
+                                <option value="">选择币种</option>
+                                <option value="USD">USD - 美元</option>
+                                <option value="EUR">EUR - 欧元</option>
+                                <option value="CNY">CNY - 人民币</option>
+                                <option value="JPY">JPY - 日元</option>
+                                <option value="GBP">GBP - 英镑</option>
+                                <option value="AUD">AUD - 澳元</option>
+                                <option value="CAD">CAD - 加元</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoestimatedLaunchDate">预估上线时间:</label>
+                            <input type="date" id="videoestimatedLaunchDate" name="videoestimatedLaunchDate" placeholder="预估上线时间">
+                        </div>
+                        <div>
+                            <label for="videoestimatedViews">预估观看量:</label>
+                            <input type="number" id="videoestimatedViews" name="videoestimatedViews" placeholder="预估观看量">
+                        </div>
+
                     </div>
                 </div>
             </div>
-        </div>
             <button type="button" class="removeLink">取消</button>
         `;
         container.appendChild(newLinkFields);
@@ -418,6 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateVideoTable();
 });
 // 更新视频数据表格
+// 全局定义 updateVideoTable 函数
 function updateVideoTable() {
     fetch('/video/get_video_data', {
         method: 'GET'
@@ -428,39 +609,105 @@ function updateVideoTable() {
         tableBody.innerHTML = ''; // 清空表格内容
 
         data.forEach(row => {
-                // 格式化日期
             var date = new Date(row.更新日期);
             var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+            var date2 = new Date(row.预估上线时间);
+            var formattedDate2 = date2.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+            var date3 = new Date(row.发布时间);
+            var formattedDate3 = date3.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.id || ''}</td>
+                <td>${row.品牌 || ''}</td>
                 <td>${row.项目 || ''}</td>
                 <td>${row.负责人 || ''}</td>
+                <td>${row.合作进度 || ''}</td>
+                <td>${row.物流进度 || ''}</td>
+                <td>${row.物流单号 || ''}</td>
+                <td>${row.花费 || ''}</td>
+                <td>${row.币种 || ''}</td>
+                <td>${row.产品 || ''}</td>
+                <td>${row.预估观看量 || ''}</td>
+                <td>${formattedDate2}</td>
                 <td>${row.平台 || ''}</td>
+                <td>${row.类型 || ''}</td>
                 <td>${row.红人名称 || ''}</td>
-                <td>${row.发布时间 || ''}</td>
+                <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td> 
+                <td>${formattedDate3}</td>
                 <td>${row.播放量 || ''}</td>
                 <td>${row.点赞数 || ''}</td>
                 <td>${row.评论数 || ''}</td>
                 <td>${row.收藏数 || ''}</td>
                 <td>${row.转发数 || ''}</td>
                 <td>${row.参与率 || ''}</td>
-                <td>${row.花费 || ''}</td>
-                <td>${row.币种 || ''}</td>
-                <td>${row.产品 || ''}</td>
-                <td>${row.物流进度 || ''}</td>
-                <td>${row.物流单号 || ''}</td>
-                <td>${row.预估观看量 || ''}</td>
-                <td>${row.预估上线时间 || ''}</td>
-                <td>${formattedDate}</td> <!-- 使用格式化后的日期 -->
+                <td>${formattedDate}</td>
             `;
             tableBody.appendChild(tr);
         });
+
+        // 应用当前筛选条件
+        var currentProject = document.getElementById('videoProjectName').value;
+        var currentBrand = document.getElementById('videobrand').value;
+        var currentManager = document.getElementById('videoManager').value;
+        if (currentProject || currentBrand || currentManager) {
+            filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager);
+        }
     })
-    .catch(error => {
-        console.error('Error fetching video table data:', error);
+    .catch(error => console.error('Error fetching video table data:', error));
+}
+
+// 确保页面加载完成后调用 updateVideoTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateVideoTable();
+});
+
+
+
+
+// 根据项目、品牌和负责人自动筛选表格
+function filterTableByProjectBrandAndManager(project, brand, manager) {
+    const rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        const rowProject = row.querySelector('td:nth-child(3)').textContent.trim();
+        const rowBrand = row.querySelector('td:nth-child(2)').textContent.trim();
+        const rowManager = row.querySelector('td:nth-child(4)').textContent.trim();
+
+        if (rowProject === project && rowBrand === brand && rowManager === manager) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     });
 }
+// 3. 添加新的筛选功能
+// 如果需要在用户选择项目或负责人时，也可以自动筛选表格，您可以为#videoProjectName和#videoManager添加类似的事件监听器：
+// 添加筛选事件监听器
+document.getElementById('videoProjectName').addEventListener('change', function() {
+    var project = this.value;
+    var brand = document.getElementById('videobrand').value;
+    var manager = document.getElementById('videoManager').value;
+    filterTableByProjectBrandAndManager(project, brand, manager);
+});
+
+document.getElementById('videobrand').addEventListener('change', function() {
+    var brand = this.value;
+    var project = document.getElementById('videoProjectName').value;
+    var manager = document.getElementById('videoManager').value;
+    filterTableByProjectBrandAndManager(project, brand, manager);
+});
+
+document.getElementById('videoManager').addEventListener('change', function() {
+    var manager = this.value;
+    var project = document.getElementById('videoProjectName').value;
+    var brand = document.getElementById('videobrand').value;
+    filterTableByProjectBrandAndManager(project, brand, manager);
+});
+
+// 确保页面加载完成后调用 updateVideoTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateVideoTable();
+});
 
 
 
@@ -717,11 +964,14 @@ function fillCountryDetails(type) {
 
 
 // 视频新增项目
-// 视频新增项目
 document.getElementById('addVideoDataButton').addEventListener('click', function() {
     document.getElementById('addVideoDataForm').style.display = 'block';
 });
-
+// 关闭模态框
+document.getElementById('closeAddVideoForm').onclick = function() {
+    document.getElementById('addVideoDataForm').style.display = 'none';
+};
+// 点击取消按钮关闭模态框
 document.getElementById('cancelAddVideoData').addEventListener('click', function() {
     document.getElementById('addVideoDataForm').style.display = 'none';
 });
@@ -730,6 +980,7 @@ document.getElementById('addVideoData').addEventListener('submit', function(even
     event.preventDefault();
 
     var formData = {
+        "品牌": document.getElementById('addbrand').value,
         "项目": document.getElementById('addprojectName').value,
         "负责人": document.getElementById('addmanager').value,
         "花费": document.getElementById('addcost').value,
@@ -740,7 +991,7 @@ document.getElementById('addVideoData').addEventListener('submit', function(even
         "预估上线时间": document.getElementById('addestimatedLaunchDate').value
     };
 
-    fetch('http://172.16.11.236:5000/video/add_video_data', {
+    fetch('/video/add_video_data', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

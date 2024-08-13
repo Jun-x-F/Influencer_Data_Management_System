@@ -10,12 +10,15 @@ import re
 from typing import Optional, Union
 
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
+from sqlalchemy import update, and_
 
-from log.logger import global_log
-from spider.sql.data_inner_db import inner_CelebrityProfile
-from tool.download_file import download_image_file
+from log.logger import LoguruLogger
+from spider.sql.mysql import Connect
+from spider.template.spider_db_template import Base, CelebrityProfile
 from tool.grading_criteria import grade_criteria
 from tool.ins_code import get_deOne_code
+
+log = LoguruLogger(console=True, isOpenError=True)
 
 
 class Task:
@@ -34,6 +37,13 @@ class Task:
         self.response_sort_data = []
         self.finish_data = {}
 
+        # 数据库配置文件
+        # 配置连接池
+        # 创建表
+        self.db = Connect(2, "marketing")
+        self.db.create_session()
+        Base.metadata.create_all(self.db.engine)
+
     def _close_data(self):
         self.response_data = {}
         self.response_sort_data = []
@@ -44,7 +54,7 @@ class Task:
                 ("accounts/login" in self.page.url and "two_factor" not in self.page.url)):
             if self.page is None:
                 self.page = self.context.new_page()
-            global_log.info("ins任务 开始登录...")
+            log.info("ins任务 开始登录...")
             self.page.goto("https://www.instagram.com/accounts/login/", wait_until="domcontentloaded")
             try:
                 self.page.wait_for_timeout(self.human_wait_time)
@@ -54,9 +64,9 @@ class Task:
                 self.page.wait_for_timeout(self.human_wait_time / 3)
                 self.page.click('//button[@type="submit"]')
             except Exception:
-                global_log.info("ins任务 存在登录...")
+                log.info("ins任务 存在登录...")
         else:
-            global_log.info("ins任务 页面存在...")
+            log.info("ins任务 页面存在...")
         self.page.wait_for_timeout(self.human_wait_time)
         self._check_login()
 
@@ -70,7 +80,7 @@ class Task:
         # //button[text()="保存信息"]
         for _ in range(5):
             if "onetap" in self.page.url and self.page.query_selector('//*[@aria-label="Instagram"]'):
-                global_log.info("登录成功...")
+                log.info("登录成功...")
                 break
             self.page.wait_for_timeout(self.human_wait_time)
 
@@ -97,7 +107,38 @@ class Task:
             return match.group(1)
         return None
 
-    @global_log.log_exceptions
+    def _data_To_db(self) -> None:
+        """更新数据"""
+        try:
+            if self.db.check_connection() is not True:
+                self.db.reconnect_session()
+            db_history_data = (self.db.session.query(CelebrityProfile)
+                               .filter(
+                and_(
+                    CelebrityProfile.platform == self.finish_data.get("platform"),
+                    CelebrityProfile.user_id == self.finish_data.get("user_id"),
+                )
+            ).first())
+            if db_history_data:
+                self.db.session.execute(
+                    update(CelebrityProfile)
+                    .where(and_(
+                        CelebrityProfile.platform == self.finish_data.get("platform"),
+                        CelebrityProfile.user_id == self.finish_data.get("user_id"),
+                    ))
+                    .values(self.finish_data)
+                )
+            else:
+                instagram_profile = CelebrityProfile(
+                    **self.finish_data
+                )
+                self.db.session.add(instagram_profile)
+            self.db.session.commit()
+        except Exception as e:
+            log.error(f"Failed to log to database: {e}")
+            self.db.session.rollback()
+
+    @log.log_exceptions
     def _get_user_info(self, response: Response):
         url = response.url
         if url == "https://www.instagram.com/graphql/query":
@@ -129,10 +170,7 @@ class Task:
             self.finish_data["user_id"] = user_id
             # self.finish_data["city"] = city_name
             self.finish_data["full_name"] = full_name
-            download_image_head_url = download_image_file(profile_pic_url,
-                                                          self.finish_data["user_name"])
-            print(download_image_head_url)
-            self.finish_data["profile_picture_url"] = download_image_head_url
+            self.finish_data["profile_picture_url"] = profile_pic_url
             self.finish_data["follower_count"] = follower_count
 
     def _fetch_same_info(self, param: str) -> None:
@@ -155,7 +193,7 @@ class Task:
                     "play_count": play_count
                 })
 
-    @global_log.log_exceptions
+    @log.log_exceptions
     def _calculate_average(self) -> tuple[Union[float, int], Union[float, int], Union[float, int]]:
         recent_10_data = self.response_sort_data[:10]
         # 提取所有字段的值
@@ -170,8 +208,8 @@ class Task:
 
         return avg_like_count, avg_comment_count, avg_play_count
 
-
     def work(self, _url):
+        print(_url)
         user_name = self.extract_username(_url)
         self.finish_data["user_name"] = user_name
         self.finish_data["platform"] = "instagram"
@@ -183,7 +221,7 @@ class Task:
         self.page.wait_for_timeout(self.human_wait_time)
         # 获取国家信息
         self.page.wait_for_selector(f'//h2/*[text()="{user_name}"]').click()
-        self.page.wait_for_timeout(self.human_wait_time/2)
+        self.page.wait_for_timeout(self.human_wait_time / 2)
         region = self.page.wait_for_selector('//span[text()="帐户所在地"]/following-sibling::span[1]').text_content()
         self.page.wait_for_selector('//button[text()="关闭"]').click()
         self.page.wait_for_timeout(self.human_wait_time / 2)
@@ -209,7 +247,7 @@ class Task:
             ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
              / self.finish_data["average_views"])
 
-        inner_CelebrityProfile(self.finish_data, isById=True)
+        self._data_To_db()
         self._close_data()
         self.page.wait_for_timeout(self.human_wait_time)
 
