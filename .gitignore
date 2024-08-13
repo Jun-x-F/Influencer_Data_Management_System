@@ -1,0 +1,12 @@
+# Ignore all files in the AppData directory
+.idea/
+*.log
+# Dependency directories
+include/
+Lib/
+Scripts/
+requirements.txt
+*.pyc
+__pycache__/
+venv/
+app.log
