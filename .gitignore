@@ -10,3 +10,4 @@ requirements.txt
 __pycache__/
 venv/
 app.log
+*.jpeg

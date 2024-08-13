@@ -16,9 +16,10 @@ image_file_path = os.path.join(current_directory, 'static', 'image')
 
 def download_image_file(image: str, file_name: str):
     response = requests.get(image, stream=True)
+    file_name = file_name.replace(".", "_")
     # 检查请求是否成功
     if response.status_code == 200:
-        with open(os.path.join(image_file_path, file_name+".jpeg"), 'wb') as f:
+        with open(os.path.join(image_file_path, file_name + ".jpeg"), 'wb') as f:
             for chunk in response.iter_content(1024):
                 f.write(chunk)
     else:
