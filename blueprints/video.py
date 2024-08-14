@@ -146,32 +146,27 @@ class Video:
             estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = data.get('send_id')
 
-            # Validate input
-            if not link:
-                return jsonify({'message': '链接是必需的。'}), 400
+            # 链接可以为空，如果存在则进行验证
+            if link:
+                url_pattern = re.compile(r'^(http|https)://')
+                if not url_pattern.match(link):
+                    return jsonify({'message': '无效的URL格式。'}), 400
 
-            # Validate URL format
-            url_pattern = re.compile(r'^(http|https)://')
-            if not url_pattern.match(link):
-                return jsonify({'message': '无效的URL格式。'}), 400
+                # Determine platform based on URL
+                platform_from_link = determine_platform(link)
+                if not platform_from_link:
+                    return jsonify({'message': '不支持的平台。'}), 400
 
-            # Determine platform based on URL
-            platform_from_link = determine_platform(link)
-            if not platform_from_link:
-                return jsonify({'message': '不支持的平台。'}), 400
-
-
-
-            # Add submitted_video_links link
-            send_id_links: deque = submitted_video_links.get(send_id, deque())
-            if link in send_id_links:
-                return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
-            send_id_links.append(link)
-            submitted_video_links[send_id] = send_id_links
+                # Add submitted_video_links link
+                send_id_links: deque = submitted_video_links.get(send_id, deque())
+                if link in send_id_links:
+                    return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
+                send_id_links.append(link)
+                submitted_video_links[send_id] = send_id_links
 
             # Collect data to DataFrame
             video_data = {
-                '唯一id': [unique_id],
+                'id': [unique_id],
                 '品牌': [brand],
                 '项目': [project_name],
                 '负责人': [manager],

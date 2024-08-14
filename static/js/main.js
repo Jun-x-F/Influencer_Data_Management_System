@@ -328,7 +328,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     var progress = document.getElementById('videoProgress').value.trim();
     var logisticsNumber = document.getElementById('videoLogisticsNumber').value.trim();
     var cost = document.getElementById('videocost').value.trim();
-    var currency = document.getElementById('videocurrency').value.trim(); // 获取币种
+    var currency = document.getElementById('videocurrency').value.trim();
     var product = document.getElementById('videoproduct').value.trim();
     var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
     var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
@@ -336,22 +336,32 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     var responseMessage = document.getElementById('responseMessageVideo');
     responseMessage.innerHTML = '正在提交...';
 
-    // 检查本次提交中的重复链接
-    var uniqueLinks = new Set();
-    var duplicateLinks = [];
-    var links = videoLinks.split('\n').map(link => link.trim()).filter(link => link !== '');
-    links.forEach(link => {
-        if (uniqueLinks.has(link)) {
-            duplicateLinks.push(link);
-        } else {
-            uniqueLinks.add(link);
-        }
-    });
+    // 如果没有链接，则不进行链接检查
+    var links = [];
+    if (videoLinks) {
+        links = videoLinks.split('\n').map(link => link.trim()).filter(link => link !== '');
+        var uniqueLinks = new Set();
+        var duplicateLinks = [];
 
-    // 提交非重复链接
-    uniqueLinks.forEach(link => {
-        responseMessage.innerHTML += `<p>视频链接 ${link} 提交成功。<br>数据抓取中...</p>`;
-        fetch('/video/submit_link', {
+        links.forEach(link => {
+            if (uniqueLinks.has(link)) {
+                duplicateLinks.push(link);
+            } else {
+                uniqueLinks.add(link);
+            }
+        });
+
+        if (duplicateLinks.length > 0) {
+            responseMessage.innerHTML = `<p style="color:red;">以下链接在提交中重复: ${duplicateLinks.join(', ')}</p>`;
+            return;
+        }
+    }
+
+    // 如果没有链接，仍然可以提交其他数据
+    var submissions = links.length ? links : [''];
+
+    Promise.all(submissions.map(link => {
+        return fetch('/video/submit_link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -365,7 +375,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
                 progress: progress,
                 logisticsNumber: logisticsNumber,
                 cost: cost,
-                currency: currency, // 添加币种字段
+                currency: currency,
                 product: product,
                 estimatedViews: estimatedViews,
                 estimatedLaunchDate: estimatedLaunchDate
@@ -374,17 +384,23 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         .then(response => response.json())
         .then(data => {
             responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
-            responseMessage.style.color = 'green';
-            // 更新视频表格
-            updateVideoTable();
         })
         .catch(error => {
             console.error('Error:', error);
-            responseMessage.innerHTML += `<p>提交链接 ${link} 时出错，请重试。</p>`;
-            responseMessage.style.color = 'red';
+            responseMessage.innerHTML += `<p style="color:red;">提交链接 ${link} 时出错，请重试。</p>`;
         });
+    }))
+    .then(() => {
+        responseMessage.style.color = 'green';
+        updateVideoTable(); // 更新视频表格
+    })
+    .catch(error => {
+        responseMessage.style.color = 'red';
+        responseMessage.innerHTML = `<p>提交表单时发生错误，请稍后再试。</p>`;
+        console.error('提交表单时发生错误:', error);
     });
 });
+
 
 
 // 获取唯一ID数据并自动填充项目、品牌、负责人
@@ -496,6 +512,156 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 点击“添加更多链接”
+// 封装数据加载逻辑
+function loadUniqueIds(dropdownElement) {
+    fetch('/video/get_unique_ids')
+        .then(response => response.json())
+        .then(data => {
+            if (data.uniqueIds) {
+                data.uniqueIds.forEach(function(id) {
+                    var option = document.createElement('option');
+                    option.value = id;
+                    option.text = id;
+                    dropdownElement.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching unique IDs:', error));
+}
+
+function loadProjectBrandManager(projectDropdown, brandDropdown, managerDropdown) {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.projects) {
+                data.projects.forEach(function(project) {
+                    var option = document.createElement('option');
+                    option.value = project;
+                    option.text = project;
+                    projectDropdown.appendChild(option);
+                });
+            }
+            if (data.brands) {
+                data.brands.forEach(function(brand) {
+                    var option = document.createElement('option');
+                    option.value = brand;
+                    option.text = brand;
+                    brandDropdown.appendChild(option);
+                });
+            }
+            if (data.managers) {
+                data.managers.forEach(function(manager) {
+                    var option = document.createElement('option');
+                    option.value = manager;
+                    option.text = manager;
+                    managerDropdown.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching project info:', error));
+}
+// 处理重置按钮的逻辑
+document.getElementById('resetVideoForm').addEventListener('click', function() {
+    var form = document.getElementById('videoForm');  // 使用表单的实际ID
+    resetFields(form);
+});
+
+
+// 重置表单字段和状态
+function resetFields(form) {
+    // 重置主表单字段
+    resetFormBlock(form);
+
+    // 查找所有通过“添加更多链接”生成的子表单块，并重置它们的字段
+    var linkFields = form.querySelectorAll('.linkFields');
+    linkFields.forEach(function(linkField) {
+        resetFormBlock(linkField);
+    });
+}
+function resetFormBlock(block) {
+    var projectNameField = block.querySelector('.videoProjectName');
+    var brandField = block.querySelector('.videobrand');
+    var managerField = block.querySelector('.videoManager');
+    var uniqueIdField = block.querySelector('.videoUniqueId');
+
+    if (projectNameField) {
+        projectNameField.value = '';
+        projectNameField.disabled = false;
+    }
+    if (brandField) {
+        brandField.value = '';
+        brandField.disabled = false;
+    }
+    if (managerField) {
+        managerField.value = '';
+        managerField.disabled = false;
+    }
+    if (uniqueIdField) {
+        uniqueIdField.value = '';
+    }
+}
+
+// 事件委托机制绑定事件监听器
+document.addEventListener('change', function (event) {
+    // 检查是否是唯一ID的下拉菜单触发了事件
+    if (event.target.classList.contains('videoUniqueId')) {
+        var uniqueId = event.target.value;
+        var parentForm = event.target.closest('.linkFields'); // 获取当前表单块
+
+        if (uniqueId) {
+            fetch('/video/get_project_and_manager', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ uniqueId: uniqueId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // 使用空字符串作为默认值
+                    const project = data.project || '';
+                    const brand = data.brand || '';
+                    const manager = data.manager || '';
+
+                    // 填充表单字段
+                    var projectInput = parentForm.querySelector('.videoProjectName');
+                    var brandInput = parentForm.querySelector('.videobrand');
+                    var managerInput = parentForm.querySelector('.videoManager');
+
+                    projectInput.value = project;
+                    brandInput.value = brand;
+                    managerInput.value = manager;
+
+                    // 禁用字段，使它们不可编辑
+                    projectInput.disabled = true;
+                    brandInput.disabled = true;
+                    managerInput.disabled = true;
+
+                    // 调用筛选函数
+                    filterTableByProjectBrandAndManager(project, brand, manager);
+
+                    // 高亮表格中对应的行
+                    highlightRowById(uniqueId);
+                })
+                .catch(error => console.error('Error:', error));
+        }else {
+            // 如果唯一ID为空，清空并解锁相关输入框
+            resetFields(parentForm);
+        }
+    }
+});
+//在页面加载时调用这些函数：
+document.addEventListener('DOMContentLoaded', function() {
+    var videoUniqueIdSelect = document.getElementById('videoUniqueId');
+    var videoProjectSelect = document.getElementById('videoProjectName');
+    var videoBrandSelect = document.getElementById('videobrand');
+    var videoManagerSelect = document.getElementById('videoManager');
+
+    loadUniqueIds(videoUniqueIdSelect);
+    loadProjectBrandManager(videoProjectSelect, videoBrandSelect, videoManagerSelect);
+});
+
+
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addLink').addEventListener('click', function() {
         var container = document.getElementById('linkFieldsContainer');
@@ -503,6 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
         newLinkFields.classList.add('linkFields');
         newLinkFields.innerHTML = `
             <hr>
+            <form id="videoForm">
             <div id="linkFieldsContainer">
                 <div class="linkFields">
                     <div class="form-row">
@@ -586,10 +753,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
             <button type="button" class="removeLink">取消</button>
+            </form>
+            
         `;
         container.appendChild(newLinkFields);
+
+
+        // 获取新添加的下拉菜单
+        var newUniqueIdSelect = newLinkFields.querySelector('.videoUniqueId');
+        var newProjectSelect = newLinkFields.querySelector('.videoProjectName');
+        var newBrandSelect = newLinkFields.querySelector('.videobrand');
+        var newManagerSelect = newLinkFields.querySelector('.videoManager');
+
+        // 为新表单加载数据
+        loadUniqueIds(newUniqueIdSelect);
+        loadProjectBrandManager(newProjectSelect, newBrandSelect, newManagerSelect);
         newLinkFields.querySelector('.removeLink').addEventListener('click', function() {
-            container.removeChild(newLinkFields);
+        container.removeChild(newLinkFields);
         });
     });
 });
@@ -976,7 +1156,41 @@ document.getElementById('cancelAddVideoData').addEventListener('click', function
     document.getElementById('addVideoDataForm').style.display = 'none';
 });
 
-document.getElementById('addVideoData').addEventListener('submit', function(event) {
+// 在页面加载时获取项目、品牌和负责人信息并填充datalist
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.brands) {
+                var brandOptions = document.getElementById('brandOptions');
+                data.brands.forEach(function (brand) {
+                    var option = document.createElement('option');
+                    option.value = brand;
+                    brandOptions.appendChild(option);
+                });
+            }
+            if (data.projects) {
+                var projectOptions = document.getElementById('projectOptions');
+                data.projects.forEach(function (project) {
+                    var option = document.createElement('option');
+                    option.value = project;
+                    projectOptions.appendChild(option);
+                });
+            }
+            if (data.managers) {
+                var managerOptions = document.getElementById('managerOptions');
+                data.managers.forEach(function (manager) {
+                    var option = document.createElement('option');
+                    option.value = manager;
+                    managerOptions.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching project info:', error));
+});
+
+// 提交新增表单时处理数据
+document.getElementById('addVideoData').addEventListener('submit', function (event) {
     event.preventDefault();
 
     var formData = {
@@ -998,11 +1212,11 @@ document.getElementById('addVideoData').addEventListener('submit', function(even
         },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        document.getElementById('addVideoDataForm').style.display = 'none';
-        updateVideoTable();  // 提交成功后更新表格
-    })
-    .catch(error => console.error('Error:', error));
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            document.getElementById('addVideoDataForm').style.display = 'none';
+            updateVideoTable();  // 提交成功后更新表格
+        })
+        .catch(error => console.error('Error:', error));
 });

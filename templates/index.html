@@ -14,7 +14,7 @@
         <!-- 红人板块 -->
         <section class="form-container">
             <div class="form-column">
-                <h2>提交红人链接</h2>
+                <h2>红人信息板块</h2>
                 <form id="influencerForm"  style="display: flex;">
                     <div style="flex: 1;">
                         <label for="influencerLinks">红人链接（每行一个）:</label>
@@ -169,7 +169,7 @@
 <!--    <button id="addVideoDataButton" style="position: absolute; top: 0; right: 0; z-index: 1000;">新增数据</button>-->
     <button id="addVideoDataButton" class="add-video-data-btn">新增数据</button>
     <div class="form-column">
-        <h2>提交视频链接</h2>
+        <h2>项目与视频板块</h2>
         <form id="videoForm">
             <div id="linkFieldsContainer">
                 <div class="linkFields">
@@ -312,19 +312,41 @@
                     <span class="close" id="closeAddVideoForm">&times;</span>
                     <form id="addVideoData">
                         <label for="addbrand">品牌:</label>
-                        <input type="text" id="addbrand" name="品牌" required><br>
+                        <input list="brandOptions" id="addbrand" name="品牌" required>
+                        <datalist id="brandOptions">
+                            <!-- 动态加载的品牌选项将插入到这里 -->
+                        </datalist>
+                        <br>
 
                         <label for="addprojectName">项目:</label>
-                        <input type="text" id="addprojectName" name="项目" required><br>
+                        <input list="projectOptions" id="addprojectName" name="项目" required>
+                        <datalist id="projectOptions">
+                            <!-- 动态加载的项目选项将插入到这里 -->
+                        </datalist>
+                        <br>
 
                         <label for="addmanager">负责人:</label>
-                        <input type="text" id="addmanager" name="负责人" required><br>
+                        <input list="managerOptions" id="addmanager" name="负责人" required>
+                        <datalist id="managerOptions">
+                            <!-- 动态加载的负责人选项将插入到这里 -->
+                        </datalist>
+                        <br>
 
                         <label for="addcost">花费:</label>
-                        <input type="number" id="addcost" name="花费"><br>
+                        <input type="number" id="addcost" class="addcost" placeholder="请输入花费">
 
                         <label for="addcurrency">币种:</label>
-                        <input type="text" id="addcurrency" name="币种"><br>
+                        <select id="addcurrency" class="addcurrency">
+                            <option value="">选择币种</option>
+                            <option value="USD">USD - 美元</option>
+                            <option value="EUR">EUR - 欧元</option>
+                            <option value="CNY">CNY - 人民币</option>
+                            <option value="JPY">JPY - 日元</option>
+                            <option value="GBP">GBP - 英镑</option>
+                            <option value="AUD">AUD - 澳元</option>
+                            <option value="CAD">CAD - 加元</option>
+                        </select>
+                        <br>
 
                         <label for="addproduct">产品:</label>
                         <input type="text" id="addproduct" name="产品"><br>
