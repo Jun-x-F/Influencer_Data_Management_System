@@ -40,7 +40,8 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     # 完成通知
     if flag == 2:
         threading_influencersVideo.set()
-    notice_handler.finish_notice(send_id)
+    else:
+        notice_handler.finish_notice(send_id)
 
 
 def background_task():
@@ -60,13 +61,13 @@ def getTrackInfo():
                                                          f"开始获取物流信息, 接收到{len(order_list)}个订单号")
             res = track_spider(isRequest=True, order_numbers=order_list)
             spider_notice_to_influencersVideo.add_notice(sendId,
-                                                         f"获取物流信息结果为{res}，正在同步表格数据")
-            # 等待2秒
-            time.sleep(2)
-            for order in order_list:
-                sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
+                                                         f"获取物流信息结果为{res}，等待同步表格数据")
             threading_influencersVideo.wait(timeout=60 * 2)
-            spider_notice_to_influencersVideo.add_notice(sendId, "执行完毕")
+            spider_notice_to_influencersVideo.add_notice(sendId,
+                                                         f"开始同步物流信息")
+            for order in order_list:
+                res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
+            spider_notice_to_influencersVideo.add_notice(sendId, f"物流信息同步执行完毕，结果为{res}")
             spider_notice_to_influencersVideo.finish_notice(sendId)
         time.sleep(5)
 

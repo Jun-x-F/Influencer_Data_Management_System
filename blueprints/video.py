@@ -261,13 +261,10 @@ class Video:
             seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
             isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
             global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
-            if isExecutedWithinSeven is True:
-                # 避免等待过久
-                threading_influencersVideo.set()
-                return jsonify({'message': '上次更新视频信息在7天前'}), 200
+
 
             # 链接可以为空，如果存在则进行验证
-            if link:
+            if link and isExecutedWithinSeven is False:
                 url_pattern = re.compile(r'^(http|https)://')
                 if not url_pattern.match(link):
                     return jsonify({'message': '无效的URL格式。'}), 400
@@ -352,8 +349,11 @@ class Video:
                 print('更新开始时间', datetime.datetime.now())
                 print('更新结束时间', datetime.datetime.now())
                 print('更新的数据日期', update_date)
-
-            return jsonify({'message': '项目信息提交成功。'}), 200
+            if isExecutedWithinSeven is True:
+                # 避免等待过久
+                threading_influencersVideo.set()
+                return jsonify({'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]\n上次更新视频信息在7天内'}), 200
+            return jsonify({'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]提交成功。\nurl={link}'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")

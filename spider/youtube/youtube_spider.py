@@ -201,7 +201,7 @@ class Task:
                 view_info = page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
                 if view_info:
                     global_log.info("观看量：" + view_info.text_content())
-                    view_info_str = view_info.text_content().split("次观看")[0]
+                    view_info_str = view_info.text_content().split(" ")[0]
                     view_count = self.extract_number(view_info_str)
                 # 滚动到页面底部
                 # while True:
