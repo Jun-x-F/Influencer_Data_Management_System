@@ -25,6 +25,10 @@ class FIFODict:
         key = self._keys.popleft()  # 从队列的开头弹出最早插入的键
         return key, self._data.pop(key)  # 删除字典中的对应键值对并返回
 
+    def is_empty(self):
+        """判断队列是否为空"""
+        return len(self._keys) == 0
+
     def __contains__(self, key):
         return key in self._data
 
@@ -52,4 +56,8 @@ class FIFODict:
     def total_size(self):
         """获取所有值的大小之和"""
         return sum(len(value) for value in self._data.values())
+
+    def items(self):
+        """返回队列中的所有键值对"""
+        return ((key, self._data[key]) for key in self._keys)  # 返回生成器
 

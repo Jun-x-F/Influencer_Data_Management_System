@@ -7,19 +7,23 @@
 """
 import datetime
 import json
+from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
 from log.logger import global_log
+from spider.config.config import headerLess, return_viewPort, user_agent
 from spider.ins import ins_post_feel_spider
 from spider.ins import ins_spider
-from spider.spider_notice import spider_notice
+from spider.spider_notice import spider_notice_to_celebrity, spider_notice_to_influencersVideo, Notice
 from spider.sql.redisConn import RedisClient
 from spider.tiktok import tiktok_spider
 from spider.tiktok import tiktok_video_spider
 from spider.youtube import youtube_spider
 from spider.youtube import youtube_video_spider
 from tool.get_ws import get_ws_id
+
+spider_notice: Optional[Notice] = None
 
 
 @global_log.log_exceptions
@@ -41,11 +45,12 @@ def work(url: str, cur: dict, flag, _id) -> int:
             spider_notice.add_notice(_id, "判断为获取YouTube视频信息，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(
-                    headless=False,
+                    headless=headerLess,
                     channel="chrome",
                     args=["--disable-blink-features=AutomationControlled"]
                 )
-                context = browser.new_context()
+                context = browser.new_context(viewport=return_viewPort(),
+                                              user_agent=user_agent, )
                 context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
                 )
@@ -67,11 +72,12 @@ def work(url: str, cur: dict, flag, _id) -> int:
             spider_notice.add_notice(_id, "判断为获取TikTok视频信息，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(
-                    headless=False,
+                    headless=headerLess,
                     channel="chrome",
                     args=["--disable-blink-features=AutomationControlled"]
                 )
-                context = browser.new_context()
+                context = browser.new_context(viewport=return_viewPort(),
+                                              user_agent=user_agent, )
                 context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
                 )
@@ -91,14 +97,15 @@ def work(url: str, cur: dict, flag, _id) -> int:
                 )
                 ins_spider.Task(browser, context).run(url)
         else:
-            spider_notice.add_notice(_id, "判断为获取Instagram视频信息，开始执行任务", _id)
+            spider_notice.add_notice(_id, "判断为获取Instagram视频信息，开始执行任务")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(
-                    headless=False,
+                    headless=headerLess,
                     channel="chrome",
                     args=["--disable-blink-features=AutomationControlled"]
                 )
-                context = browser.new_context()
+                context = browser.new_context(viewport=return_viewPort(),
+                                              user_agent=user_agent, )
                 context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
                 )
@@ -110,6 +117,11 @@ def work(url: str, cur: dict, flag, _id) -> int:
 
 
 def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
+    global spider_notice
+    spider_notice = (spider_notice_to_celebrity
+                     if flag == 1
+                     else spider_notice_to_influencersVideo)
+
     spider_notice.add_notice(_id, f"接收到链接为{url}, 开始解析url")
     retryDb = RedisClient("172.16.11.245", db=3)
     message = {}

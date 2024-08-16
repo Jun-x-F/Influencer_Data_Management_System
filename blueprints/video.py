@@ -7,13 +7,13 @@ from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
-from spider.template.class_dict_template import FIFODict
+from log.logger import global_log
+from spider.config.config import order_links, submitted_video_links
+from spider.spider_threading import threading_influencersVideo
+from spider.sql.data_inner_db import check_InfluencersVideoProjectData_in_db
 from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
-
-# 用于存储用户提交的视频链接
-submitted_video_links = FIFODict()
 
 class Video:
     @staticmethod
@@ -158,7 +158,6 @@ class Video:
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
     ## 显示所有控件字段内容
     @staticmethod
     @video_bp.route('/get_video_details', methods=['POST'])
@@ -191,7 +190,8 @@ class Video:
                 logistics_number = str(result_df['物流单号'].iloc[0]) if pd.notna(result_df['物流单号'].iloc[0]) else ''
                 cost = float(result_df['花费'].iloc[0]) if pd.notna(result_df['花费'].iloc[0]) else 0.0
                 currency = str(result_df['币种'].iloc[0]) if pd.notna(result_df['币种'].iloc[0]) else ''
-                estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(result_df['预估观看量'].iloc[0]) else 0
+                estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(
+                    result_df['预估观看量'].iloc[0]) else 0
 
                 date_string = result_df['预估上线时间'].iloc[0]
                 # 检查数据类型并进行必要的转换
@@ -212,8 +212,6 @@ class Video:
                     estimated_launch_date = date_object.strftime('%Y-%m-%d')
                 else:
                     estimated_launch_date = ''
-
-
 
                 return jsonify({
                     'brand': brand,
@@ -253,6 +251,20 @@ class Video:
             estimated_views = data.get('estimatedViews')
             estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = data.get('send_id')
+
+            # 将物流信息加入队列中
+            if logistics_number is not None:
+                order_list = order_links.get(send_id, [])
+                order_list.append(logistics_number)
+                order_links[send_id] = order_list
+
+            seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+            isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
+            global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
+            if isExecutedWithinSeven is True:
+                # 避免等待过久
+                threading_influencersVideo.set()
+                return jsonify({'message': '上次更新视频信息在7天前'}), 200
 
             # 链接可以为空，如果存在则进行验证
             if link:
@@ -311,11 +323,13 @@ class Video:
             if not table_exists:
                 # 表不存在，创建表并插入数据
                 tosql_if_exists = 'replace'
-                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields, index_type='UNIQUE')
+                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields,
+                                                                                            index_type='UNIQUE')
             else:
                 # 表存在，检查索引是否存在
                 try:
-                    index_info = ReadDatabase(DATABASE, f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
+                    index_info = ReadDatabase(DATABASE,
+                                              f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
                     index_exists = not index_info.empty
                 except Exception as e:
                     index_exists = False
@@ -344,7 +358,6 @@ class Video:
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
-
 
     ## 新增数据
     @staticmethod
@@ -378,8 +391,10 @@ class Video:
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
             # 添加缺失的列，初始化为空值
-            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数', '转发数', '参与率','视频链接'
-                           '更新日期','品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号', '花费', '产品', '预估观看量', '预估上线时间']
+            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数',
+                           '转发数', '参与率', '视频链接'
+                                               '更新日期', '品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号',
+                           '花费', '产品', '预估观看量', '预估上线时间']
             # 将缺失的列添加到 DataFrame 中，并将其初始化为 None（或 np.nan）
             for col in all_columns:
                 if col not in df.columns:
@@ -393,4 +408,3 @@ class Video:
         except Exception as e:
             print(e)
             return jsonify({'error': str(e)}), 500
-

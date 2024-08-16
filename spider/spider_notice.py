@@ -84,16 +84,37 @@ class Notice:
                 self.clean_id_notice(_id)
 
 
-@spider_notice_bp.route('/spider', methods=['POST'])
-def post_spider_notice():
+@spider_notice_bp.route('/spider/celebrity', methods=['POST'])
+def post_spider_notice_to_celebrity():
     request_data = request.json
     return_id = request_data.get("id")
-    isSuccess, last_message = spider_notice.get_finish_notice(return_id)
+    isSuccess, last_message = spider_notice_to_celebrity.get_finish_notice(return_id)
     if isSuccess:
         return jsonify({"message": last_message, "isSuccess": isSuccess, "status": "finish"}), 200
-    return_message = spider_notice.to_notice(return_id)
-    if return_id != spider_notice.use_id:
-        return jsonify({"message": f"排队处理中...队列目前有{submitted_influencer_links.total_size()}个请求", "isSuccess": False, "status": "wait"}), 200
+    return_message = spider_notice_to_celebrity.to_notice(return_id)
+    if return_id != spider_notice_to_celebrity.use_id:
+        return jsonify(
+            {"message": f"排队处理中...队列目前有{submitted_influencer_links.total_size()}个请求", "isSuccess": False,
+             "status": "wait"}), 200
+    if return_message is None:
+        return jsonify({"message": "wait working", "status": "wait"}), 200
+    if return_message == "clean":
+        return jsonify({"message": "clean", "status": "clean"}), 200
+    return jsonify({"message": return_message, "status": "doing"}), 200
+
+
+@spider_notice_bp.route('/spider/influencersVideo', methods=['POST'])
+def post_spider_notice_to_influencersVideo():
+    request_data = request.json
+    return_id = request_data.get("id")
+    isSuccess, last_message = spider_notice_to_influencersVideo.get_finish_notice(return_id)
+    if isSuccess:
+        return jsonify({"message": last_message, "isSuccess": isSuccess, "status": "finish"}), 200
+    return_message = spider_notice_to_influencersVideo.to_notice(return_id)
+    if return_id != spider_notice_to_influencersVideo.use_id:
+        return jsonify(
+            {"message": f"排队处理中...队列目前有{submitted_influencer_links.total_size()}个请求", "isSuccess": False,
+             "status": "wait"}), 200
     if return_message is None:
         return jsonify({"message": "wait working", "status": "wait"}), 200
     if return_message == "clean":
@@ -102,4 +123,5 @@ def post_spider_notice():
 
 
 # 全局化
-spider_notice = Notice()
+spider_notice_to_celebrity = Notice()
+spider_notice_to_influencersVideo = Notice()

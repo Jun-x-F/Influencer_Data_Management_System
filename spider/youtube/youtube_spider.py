@@ -15,6 +15,7 @@ from typing import Optional, List
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, ElementHandle, Route
 
 from log.logger import global_log
+from spider.config.config import headerLess, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from spider.template.exception_template import RetryableError
 from tool.download_file import download_image_file
@@ -147,11 +148,12 @@ class Task:
         with (sync_playwright() as _playwright):
             try:
                 cur_browser = _playwright.chromium.launch(
-                    headless=False,
+                    headless=headerLess,
                     channel="chrome",
                     args=["--disable-blink-features=AutomationControlled"],
                 )
-                cur_context = cur_browser.new_context()
+                cur_context = cur_browser.new_context(viewport=return_viewPort(),
+                                                      user_agent=user_agent,)
 
                 cur_context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"

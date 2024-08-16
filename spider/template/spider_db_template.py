@@ -93,3 +93,20 @@ class InfluencersVideoProjectDataByDate(Base):
     forward = Column('转发数', Integer, nullable=True, comment='转发数')
     engagement_rate = Column('参与率', Float, nullable=True, comment='参与率')
     updated_at = Column('更新日期', Date, default=date.today)
+
+
+class logistics_information_sheet(Base):
+    __tablename__ = 'logistics_information'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    number = Column('订单号', VARCHAR(255), nullable=True, comment='订单号')
+    prior_status = Column('物流状态', VARCHAR(255), nullable=True, comment='物流状态')
+    prior_status_zh = Column('物流状态_中文', VARCHAR(255), nullable=True, comment='物流状态_中文')
+    shipper_country = Column('发出地区', VARCHAR(255), nullable=True, comment='发出地区')
+    recipient_country = Column('接收地区', VARCHAR(255), nullable=True, comment='接收地区')
+    shipment_time = Column('最新物流更新时间', DateTime, nullable=True, comment='最新物流更新时间')
+    shipment_date = Column('最新物流日期', Date, nullable=True, comment='最新物流日期')
+    description = Column('最新物流详情', Text, nullable=True, comment='最新物流详情')
+    days_after_order = Column('物流运送时长（天）', BigInteger, nullable=True, comment='物流运送时长')
+    alias = Column('物流公司', VARCHAR(255), nullable=True, comment='物流公司')
+    updated_at = Column('更新日期', Date, default=date.today, onupdate=date.today)
