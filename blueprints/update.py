@@ -62,6 +62,9 @@ class UpdateInfluencer:
 
             if not platform or not name:
                 return jsonify({'message': '平台和红人名称是必需的。'}), 400
+
+
+
             update_date = datetime.date.today()
             influencer_data = {
                 '平台': [platform],
@@ -75,13 +78,13 @@ class UpdateInfluencer:
                 '标签功能1': [tag1],
                 '标签功能2': [tag2],
                 '标签功能3': [tag3],
-                '国家': [country],
+                '地区': [country],
                 '国家编码': [country_code],
                 '更新日期': [update_date]
             }
-
             update_date = datetime.date.today()
             influencer_data['更新日期'] = update_date
+
             df = pd.DataFrame(influencer_data)
             # 删除空列
             df.replace('', pd.NA, inplace=True)
@@ -132,7 +135,11 @@ class UpdateInfluencer:
                 print('更新结束时间', datetime.datetime.now())
                 print('更新的数据日期', update_date)
 
-            return jsonify({'message': '项目信息提交成功。'}), 200
+            # 返回更新的字段
+            updated_fields = df.to_dict(orient='list')
+            updated_fields = {k: v[0] for k, v in updated_fields.items()}
+
+            return jsonify({'message': '更新成功', 'updated_fields': updated_fields}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
@@ -153,6 +160,39 @@ class UpdateInfluencer:
             return jsonify(result)
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    ## 联动其他字段
+    @staticmethod
+    @update_bp.route('/get_influencer_details', methods=['POST'])
+    def get_influencer_details():
+        try:
+            data = request.json
+            platform = data.get('platform')
+            influencer_name = data.get('influencerName')
+
+            if not platform or not influencer_name:
+                return jsonify({'message': '平台和红人名称是必需的。'}), 400
+
+            DATABASE = 'marketing'
+            sql = f"""
+            SELECT * FROM celebrity_profile 
+            WHERE 平台='{platform}' AND 红人名称='{influencer_name}'
+            """
+            current_app.logger.info(f"执行SQL查询: {sql}")
+            influencer_details_df = ReadDatabase(DATABASE, sql).vm()
+            current_app.logger.info(f"查询结果: {influencer_details_df}")
+
+            if influencer_details_df.empty:
+                return jsonify({'message': '未找到红人信息'}), 404
+
+            influencer_details = influencer_details_df.iloc[0].to_dict()  # 转换为字典
+            print(influencer_details)
+            return jsonify(influencer_details), 200
+
+        except Exception as e:
+            current_app.logger.error(f"获取红人详情失败: {e}")
+            return jsonify({'message': f'获取红人详情失败: {e}'}), 500
+
 
 
 

@@ -12,9 +12,9 @@
         <h1>红人和视频数据收集器</h1>
 
         <!-- 红人板块 -->
-        <section class="form-container">
+        <section id="influencerSection" class="form-container">
             <div class="form-column">
-                <h2>红人信息板块</h2>
+                <h2>抓取红人信息板块</h2>
                 <form id="influencerForm"  style="display: flex;">
                     <div style="flex: 1;">
                         <label for="influencerLinks">红人链接（每行一个）:</label>
@@ -35,9 +35,8 @@
             </div>
 
 
-
             <div class="form-column">
-                <h2>更新红人信息</h2>
+                <h2>更新红人信息板块</h2>
                 <form id="updateInfluencerForm">
                     <div class="form-row">
                         <div>
@@ -55,8 +54,8 @@
                             </datalist>
                         </div>
                         <div>
-                            <label for="country">国家:</label>
-                            <input list="countries" id="country" name="country" placeholder="国家" oninput="fillCountryDetails('name')">
+                            <label for="country">地区:</label>
+                            <input list="countries" id="country" name="country" placeholder="地区" oninput="fillCountryDetails('name')">
                             <datalist id="countries"></datalist>
                         </div>
                         <div>
@@ -131,9 +130,7 @@
                     <th>平台</th>
                     <th>红人名称</th>
                     <th>红人全名</th>
-                    <th>红人主页地址</th>
                     <th>地区</th>
-                    <th>国家</th>
                     <th>国家编码</th>
                     <th>评级</th>
                     <th>粉丝数量</th>
@@ -160,11 +157,11 @@
     </div>
 </div>
 
-
         </section>
 
+
         <!-- 视频板块 -->
-<section class="form-container" style="position: relative;">
+<section id="videoSection" class="form-container" style="position: relative;">
     <!-- 新增数据按钮 -->
 <!--    <button id="addVideoDataButton" style="position: absolute; top: 0; right: 0; z-index: 1000;">新增数据</button>-->
     <button id="addVideoDataButton" class="add-video-data-btn">新增数据</button>

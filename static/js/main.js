@@ -97,9 +97,9 @@ window.onload = function() {
     var influencerInput = document.getElementById('updateInfluencerName');
     var datalist = document.getElementById('influencerNames');
 
-    console.log('Platform Select Element:', platformSelect);
-    console.log('Influencer Input Element:', influencerInput);
-    console.log('Datalist Element:', datalist);
+    // console.log('Platform Select Element:', platformSelect);
+    // console.log('Influencer Input Element:', influencerInput);
+    // console.log('Datalist Element:', datalist);
 
     if (!platformSelect || !influencerInput || !datalist) {
         console.error('必要的 DOM 元素未找到');
@@ -134,771 +134,6 @@ window.onload = function() {
         }
     });
 };
-
-
-
-
-
-
-document.getElementById('updateInfluencerForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    var platform = document.getElementById('updatePlatform').value;
-    var name = document.getElementById('updateInfluencerName').value;
-    var email = document.getElementById('email').value;
-    var whatsapp = document.getElementById('whatsapp').value;
-    var discord = document.getElementById('discord').value;
-    var address1 = document.getElementById('address1').value;
-    var address2 = document.getElementById('address2').value;
-    var address3 = document.getElementById('address3').value;
-    var tag1 = document.getElementById('tag1').value;
-    var tag2 = document.getElementById('tag2').value;
-    var tag3 = document.getElementById('tag3').value;
-    var country = document.getElementById('country').value;
-    var country_code = document.getElementById('country_code').value;
-
-    // Basic validation
-    if (!platform || !name) {
-        alert("请选择平台并输入红人名称。");
-        return;
-    }
-
-    var responseMessage = document.getElementById('responseMessageUpdateInfluencer');
-    responseMessage.innerHTML = '正在提交...';
-
-    fetch('/update/influencer', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            platform: platform,
-            name: name,
-            email: email,
-            whatsapp: whatsapp,
-            discord: discord,
-            address1: address1,
-            address2: address2,
-            address3: address3,
-            tag1: tag1,
-            tag2: tag2,
-            tag3: tag3,
-            country: country,
-            country_code: country_code
-        })
-    })
-
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('responseMessageUpdateInfluencer').innerHTML = data.message;
-        document.getElementById('responseMessageUpdateInfluencer').style.color = 'green';
-
-        // 重置表单和datalist
-        document.getElementById('updateInfluencerForm').reset();
-        datalist.innerHTML = '';
-    })
-    .catch(error => {
-        console.error('提交时出错:', error);
-        document.getElementById('responseMessageUpdateInfluencer').innerText = '提交时出错，请重试。';
-        document.getElementById('responseMessageUpdateInfluencer').style.color = 'red';
-    });
-});
-
-
-document.getElementById('resetUpdateInfluencerForm').addEventListener('click', function() {
-    document.getElementById('updateInfluencerForm').reset();
-    document.getElementById('updateInfluencerName').value = ''; // 确保红人名称没有选中任何选项
-    document.getElementById('responseMessageUpdateInfluencer').innerHTML = '';
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    updateInfluencerTable();
-});
-// 更新数据库表格的函数
-function updateInfluencerTable() {
-    fetch('/update/get_influencer_data', {
-        method: 'GET'
-    })
-    .then(response => response.json())
-    .then(data => {
-        const tableBody = document.querySelector('#influencerTable tbody');
-        tableBody.innerHTML = ''; // 清空表格内容
-
-        if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
-        } else {
-            data.forEach(row => {
-                var date = new Date(row.更新日期);
-                var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
-                const tr = document.createElement('tr');
-                const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
-
-                tr.innerHTML = `
-                    <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
-                    <td>${row.id || ''}</td>
-                    <td>${row.平台 || ''}</td>
-                    <td>${row.红人名称 || ''}</td>
-                    <td>${row.红人全名 || ''}</td>
-                    <td><a href="${row.红人主页地址}" target="_blank">${row.红人主页地址}</a></td> <!-- 将主页地址变为超链接 -->
-                    <td>${row.地区 || ''}</td>
-                    <td>${row.国家 || ''}</td>
-                    <td>${row.国家编码 || ''}</td>
-                    <td>${row.评级 || ''}</td>
-                    <td>${row.粉丝数量 || ''}</td>
-                    <td>${row.平均点赞数量 || ''}</td>
-                    <td>${row.平均评论数量 || ''}</td>
-                    <td>${row.平均播放量 || ''}</td>
-                    <td>${row.平均参与率 || ''}</td>
-                    <td>${row.邮箱 || ''}</td>
-                    <td>${row.地址信息1 || ''}</td>
-                    <td>${row.标签功能1 || ''}</td>
-                    <td>${row.WhatsApp || ''}</td>
-                    <td>${row.地址信息2 || ''}</td>
-                    <td>${row.标签功能2 || ''}</td>
-                    <td>${row.Discord || ''}</td>
-                    <td>${row.地址信息3 || ''}</td>
-                    <td>${row.标签功能3 || ''}</td>
-                    <td>${formattedDate || ''}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-        // 应用当前筛选条件
-        var currentPlatform = document.getElementById('updatePlatform').value;
-        var currentInfluencerName = document.getElementById('updateInfluencerName').value;
-        filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
-    })
-    .catch(error => {
-        console.error('Error fetching influencer table data:', error);
-    });
-}
-document.addEventListener('DOMContentLoaded', function() {
-    updateInfluencerTable();
-});
-
-// 根据平台和红人名称自动筛选表格
-function filterTableByPlatformAndInfluencerName(platform, influencerName) {
-    const rows = document.querySelectorAll('#influencerTable tbody tr');
-    rows.forEach(row => {
-        const rowPlatform = row.querySelector('td:nth-child(3)').textContent.trim();  // 假设平台在第3列
-        const rowInfluencerName = row.querySelector('td:nth-child(4)').textContent.trim();  // 假设红人名称在第4列
-
-        // 检查平台和红人名称是否匹配
-        if ((platform === "" || rowPlatform === platform) && (influencerName === "" || rowInfluencerName === influencerName)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-// 当平台或红人名称改变时，自动筛选表格
-document.getElementById('updatePlatform').addEventListener('change', function() {
-    var platform = this.value;
-    var influencerName = document.getElementById('updateInfluencerName').value;
-    filterTableByPlatformAndInfluencerName(platform, influencerName);
-});
-
-document.getElementById('updateInfluencerName').addEventListener('change', function() {
-    var influencerName = this.value;
-    var platform = document.getElementById('updatePlatform').value;
-    filterTableByPlatformAndInfluencerName(platform, influencerName);
-});
-
-// 确保页面加载完成后调用 updateInfluencerTable 函数
-document.addEventListener('DOMContentLoaded', function() {
-    updateInfluencerTable();
-});
-
-
-
-
-
-
-
-// 更新视频板块
-// 表单提交时
-document.getElementById('videoForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-
-    var videoLinks = document.getElementById('videoLinks').value.trim();
-    var uniqueId = document.getElementById('videoUniqueId').value.trim();
-    var projectName = document.getElementById('videoProjectName').value.trim();
-    var brand = document.getElementById('videobrand').value.trim();
-    var manager = document.getElementById('videoManager').value.trim();
-    var progress = document.getElementById('videoProgress').value.trim();
-    var logisticsNumber = document.getElementById('videoLogisticsNumber').value.trim();
-    var cost = document.getElementById('videocost').value.trim();
-    var currency = document.getElementById('videocurrency').value.trim();
-    var product = document.getElementById('videoproduct').value.trim();
-    var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
-    var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
-
-    var responseMessage = document.getElementById('responseMessageVideo');
-    responseMessage.innerHTML = '正在提交...';
-
-    // 如果没有链接，则不进行链接检查
-    var links = [];
-    if (videoLinks) {
-        links = videoLinks.split('\n').map(link => link.trim()).filter(link => link !== '');
-        var uniqueLinks = new Set();
-        var duplicateLinks = [];
-
-        links.forEach(link => {
-            if (uniqueLinks.has(link)) {
-                duplicateLinks.push(link);
-            } else {
-                uniqueLinks.add(link);
-            }
-        });
-
-        if (duplicateLinks.length > 0) {
-            responseMessage.innerHTML = `<p style="color:red;">以下链接在提交中重复: ${duplicateLinks.join(', ')}</p>`;
-            return;
-        }
-    }
-
-    // 如果没有链接，仍然可以提交其他数据
-    var submissions = links.length ? links : [''];
-
-    Promise.all(submissions.map(link => {
-        return fetch('/video/submit_link', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                link: link,
-                uniqueId: uniqueId,
-                projectName: projectName,
-                brand: brand,
-                manager: manager,
-                progress: progress,
-                logisticsNumber: logisticsNumber,
-                cost: cost,
-                currency: currency,
-                product: product,
-                estimatedViews: estimatedViews,
-                estimatedLaunchDate: estimatedLaunchDate
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            responseMessage.innerHTML += `<p style="color:red;">提交链接 ${link} 时出错，请重试。</p>`;
-        });
-    }))
-    .then(() => {
-        responseMessage.style.color = 'green';
-        updateVideoTable(); // 更新视频表格
-    })
-    .catch(error => {
-        responseMessage.style.color = 'red';
-        responseMessage.innerHTML = `<p>提交表单时发生错误，请稍后再试。</p>`;
-        console.error('提交表单时发生错误:', error);
-    });
-});
-
-
-
-// 获取唯一ID数据并自动填充项目、品牌、负责人
-document.addEventListener('DOMContentLoaded', function() {
-    // 获取唯一ID数据
-    fetch('/video/get_unique_ids')
-        .then(response => response.json())
-        .then(data => {
-            if (data.uniqueIds) {
-                var videoUniqueIdSelect = document.getElementById('videoUniqueId');
-                data.uniqueIds.forEach(function(id) {
-                    var option = document.createElement('option');
-                    option.value = id;
-                    option.text = id;
-                    videoUniqueIdSelect.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('Error fetching unique IDs:', error));
-});
-
-// 添加监听器，当选择唯一ID时，自动填充项目和负责人、品牌
-document.getElementById('videoUniqueId').addEventListener('change', function() {
-    var uniqueId = this.value;
-    if (uniqueId) {
-        fetch('/video/get_project_and_manager', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ uniqueId: uniqueId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // 使用空字符串作为默认值
-            const project = data.project || '';
-            const brand = data.brand || '';
-            const manager = data.manager || '';
-
-            // 填充表单字段
-            document.getElementById('videoProjectName').value = project;
-            document.getElementById('videobrand').value = brand;
-            document.getElementById('videoManager').value = manager;
-
-            // 调用筛选函数
-            filterTableByProjectBrandAndManager(project, brand, manager);
-
-            // 高亮表格中对应的行
-            highlightRowById(uniqueId);
-        })
-        .catch(error => console.error('Error:', error));
-    }
-});
-function highlightRowById(uniqueId) {
-    // 清除之前高亮的行
-    var rows = document.querySelectorAll('#videoTable tbody tr');
-    rows.forEach(row => {
-        row.style.backgroundColor = '';  // 重置背景色
-    });
-
-    // 查找对应的行并更改背景色
-    if (uniqueId) {
-        rows.forEach(row => {
-            var rowId = row.querySelector('td:first-child').textContent.trim();
-            if (rowId === uniqueId) {
-                row.style.backgroundColor = '#d1e7dd';  // 你可以选择你喜欢的颜色
-            }
-        });
-    }
-}
-
-
-
-
-// 在页面加载时获取项目、品牌和负责人信息
-document.addEventListener('DOMContentLoaded', function() {
-    fetch('/video/get_project_info')
-        .then(response => response.json())
-        .then(data => {
-            if (data.brands) {
-                var videoBrandSelect = document.getElementById('videobrand');
-                data.brands.forEach(function(brand) {
-                    var option = document.createElement('option');
-                    option.value = brand;
-                    option.text = brand;
-                    videoBrandSelect.appendChild(option);
-                });
-            }
-            if (data.projects) {
-                var videoProjectSelect = document.getElementById('videoProjectName');
-                data.projects.forEach(function(project) {
-                    var option = document.createElement('option');
-                    option.value = project;
-                    option.text = project;
-                    videoProjectSelect.appendChild(option);
-                });
-            }
-            if (data.managers) {
-                var videoManagerSelect = document.getElementById('videoManager');
-                data.managers.forEach(function(manager) {
-                    var option = document.createElement('option');
-                    option.value = manager;
-                    option.text = manager;
-                    videoManagerSelect.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('Error fetching project info:', error));
-});
-
-// 点击“添加更多链接”
-// 封装数据加载逻辑
-function loadUniqueIds(dropdownElement) {
-    fetch('/video/get_unique_ids')
-        .then(response => response.json())
-        .then(data => {
-            if (data.uniqueIds) {
-                data.uniqueIds.forEach(function(id) {
-                    var option = document.createElement('option');
-                    option.value = id;
-                    option.text = id;
-                    dropdownElement.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('Error fetching unique IDs:', error));
-}
-
-function loadProjectBrandManager(projectDropdown, brandDropdown, managerDropdown) {
-    fetch('/video/get_project_info')
-        .then(response => response.json())
-        .then(data => {
-            if (data.projects) {
-                data.projects.forEach(function(project) {
-                    var option = document.createElement('option');
-                    option.value = project;
-                    option.text = project;
-                    projectDropdown.appendChild(option);
-                });
-            }
-            if (data.brands) {
-                data.brands.forEach(function(brand) {
-                    var option = document.createElement('option');
-                    option.value = brand;
-                    option.text = brand;
-                    brandDropdown.appendChild(option);
-                });
-            }
-            if (data.managers) {
-                data.managers.forEach(function(manager) {
-                    var option = document.createElement('option');
-                    option.value = manager;
-                    option.text = manager;
-                    managerDropdown.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('Error fetching project info:', error));
-}
-// 处理重置按钮的逻辑
-document.getElementById('resetVideoForm').addEventListener('click', function() {
-    var form = document.getElementById('videoForm');  // 使用表单的实际ID
-    resetFields(form);
-});
-
-
-// 重置表单字段和状态
-function resetFields(form) {
-    // 重置主表单字段
-    resetFormBlock(form);
-
-    // 查找所有通过“添加更多链接”生成的子表单块，并重置它们的字段
-    var linkFields = form.querySelectorAll('.linkFields');
-    linkFields.forEach(function(linkField) {
-        resetFormBlock(linkField);
-    });
-}
-function resetFormBlock(block) {
-    var projectNameField = block.querySelector('.videoProjectName');
-    var brandField = block.querySelector('.videobrand');
-    var managerField = block.querySelector('.videoManager');
-    var uniqueIdField = block.querySelector('.videoUniqueId');
-
-    if (projectNameField) {
-        projectNameField.value = '';
-        projectNameField.disabled = false;
-    }
-    if (brandField) {
-        brandField.value = '';
-        brandField.disabled = false;
-    }
-    if (managerField) {
-        managerField.value = '';
-        managerField.disabled = false;
-    }
-    if (uniqueIdField) {
-        uniqueIdField.value = '';
-    }
-}
-
-// 事件委托机制绑定事件监听器
-document.addEventListener('change', function (event) {
-    // 检查是否是唯一ID的下拉菜单触发了事件
-    if (event.target.classList.contains('videoUniqueId')) {
-        var uniqueId = event.target.value;
-        var parentForm = event.target.closest('.linkFields'); // 获取当前表单块
-
-        if (uniqueId) {
-            fetch('/video/get_project_and_manager', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ uniqueId: uniqueId })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    // 使用空字符串作为默认值
-                    const project = data.project || '';
-                    const brand = data.brand || '';
-                    const manager = data.manager || '';
-
-                    // 填充表单字段
-                    var projectInput = parentForm.querySelector('.videoProjectName');
-                    var brandInput = parentForm.querySelector('.videobrand');
-                    var managerInput = parentForm.querySelector('.videoManager');
-
-                    projectInput.value = project;
-                    brandInput.value = brand;
-                    managerInput.value = manager;
-
-                    // 禁用字段，使它们不可编辑
-                    projectInput.disabled = true;
-                    brandInput.disabled = true;
-                    managerInput.disabled = true;
-
-                    // 调用筛选函数
-                    filterTableByProjectBrandAndManager(project, brand, manager);
-
-                    // 高亮表格中对应的行
-                    highlightRowById(uniqueId);
-                })
-                .catch(error => console.error('Error:', error));
-        }else {
-            // 如果唯一ID为空，清空并解锁相关输入框
-            resetFields(parentForm);
-        }
-    }
-});
-//在页面加载时调用这些函数：
-document.addEventListener('DOMContentLoaded', function() {
-    var videoUniqueIdSelect = document.getElementById('videoUniqueId');
-    var videoProjectSelect = document.getElementById('videoProjectName');
-    var videoBrandSelect = document.getElementById('videobrand');
-    var videoManagerSelect = document.getElementById('videoManager');
-
-    loadUniqueIds(videoUniqueIdSelect);
-    loadProjectBrandManager(videoProjectSelect, videoBrandSelect, videoManagerSelect);
-});
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('addLink').addEventListener('click', function() {
-        var container = document.getElementById('linkFieldsContainer');
-        var newLinkFields = document.createElement('div');
-        newLinkFields.classList.add('linkFields');
-        newLinkFields.innerHTML = `
-            <hr>
-            <form id="videoForm">
-            <div id="linkFieldsContainer">
-                <div class="linkFields">
-                    <div class="form-row">
-                        <div>
-                            <label for="videoUniqueId">唯一id:</label>
-                            <select id="videoUniqueId" class="videoUniqueId" required>
-                            <option value="">选择唯一id</option>
-                            <!-- 选项将在JavaScript中动态生成 1-->
-                        </select>
-                        </div>
-                        <div>
-                            <label for="videobrand">品牌:</label>
-                            <select id="videobrand" class="videobrand">
-                                <option value="">选择品牌</option>
-                                <!-- 选项将在JavaScript中动态生成 -->
-                            </select>
-                        </div>
-                        <div>
-                            <label for="videoProjectName">项目:</label>
-                            <select id="videoProjectName" class="videoProjectName">
-                                <option value="">选择项目</option>
-                                <!-- 选项将在JavaScript中动态生成 -->
-                            </select>
-                        </div>
-                        <div>
-                            <label for="videoManager">负责人:</label>
-                            <select id="videoManager" class="videoManager">
-                                <option value="">选择负责人</option>
-                                <!-- 选项将在JavaScript中动态生成 -->
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div>
-                            <label for="videoLinks">视频链接:</label>
-                            <textarea id="videoLinks" class="videoLinks" placeholder="请输入视频链接"></textarea>
-                        </div>
-                        <div>
-                            <label for="videoproduct">产品:</label>
-                            <input type="text" id="videoproduct" class="videoproduct" placeholder="请输入产品名称">
-                        </div>
-                        <div>
-                            <label for="videoProgress">合作进度:</label>
-                            <input type="text" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
-                        </div>
-                        <div>
-                            <label for="videoLogisticsNumber">物流单号:</label>
-                            <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div>
-                            <label for="videocost">花费:</label>
-                            <input type="number" id="videocost" class="videocost" placeholder="请输入花费">
-                        </div>
-                        <div>
-                            <label for="videocurrency">币种:</label>
-                            <select id="videocurrency" class="videocurrency">
-                                <option value="">选择币种</option>
-                                <option value="USD">USD - 美元</option>
-                                <option value="EUR">EUR - 欧元</option>
-                                <option value="CNY">CNY - 人民币</option>
-                                <option value="JPY">JPY - 日元</option>
-                                <option value="GBP">GBP - 英镑</option>
-                                <option value="AUD">AUD - 澳元</option>
-                                <option value="CAD">CAD - 加元</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="videoestimatedLaunchDate">预估上线时间:</label>
-                            <input type="date" id="videoestimatedLaunchDate" name="videoestimatedLaunchDate" placeholder="预估上线时间">
-                        </div>
-                        <div>
-                            <label for="videoestimatedViews">预估观看量:</label>
-                            <input type="number" id="videoestimatedViews" name="videoestimatedViews" placeholder="预估观看量">
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-            <button type="button" class="removeLink">取消</button>
-            </form>
-            
-        `;
-        container.appendChild(newLinkFields);
-
-
-        // 获取新添加的下拉菜单
-        var newUniqueIdSelect = newLinkFields.querySelector('.videoUniqueId');
-        var newProjectSelect = newLinkFields.querySelector('.videoProjectName');
-        var newBrandSelect = newLinkFields.querySelector('.videobrand');
-        var newManagerSelect = newLinkFields.querySelector('.videoManager');
-
-        // 为新表单加载数据
-        loadUniqueIds(newUniqueIdSelect);
-        loadProjectBrandManager(newProjectSelect, newBrandSelect, newManagerSelect);
-        newLinkFields.querySelector('.removeLink').addEventListener('click', function() {
-        container.removeChild(newLinkFields);
-        });
-    });
-});
-document.addEventListener('DOMContentLoaded', function() {
-    // 调用函数以更新红人数据表格
-    updateVideoTable();
-});
-// 更新视频数据表格
-// 全局定义 updateVideoTable 函数
-function updateVideoTable() {
-    fetch('/video/get_video_data', {
-        method: 'GET'
-    })
-    .then(response => response.json())
-    .then(data => {
-        const tableBody = document.querySelector('#videoTable tbody');
-        tableBody.innerHTML = ''; // 清空表格内容
-
-        data.forEach(row => {
-            var date = new Date(row.更新日期);
-            var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
-            var date2 = new Date(row.预估上线时间);
-            var formattedDate2 = date2.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
-            var date3 = new Date(row.发布时间);
-            var formattedDate3 = date3.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.id || ''}</td>
-                <td>${row.品牌 || ''}</td>
-                <td>${row.项目 || ''}</td>
-                <td>${row.负责人 || ''}</td>
-                <td>${row.合作进度 || ''}</td>
-                <td>${row.物流进度 || ''}</td>
-                <td>${row.物流单号 || ''}</td>
-                <td>${row.花费 || ''}</td>
-                <td>${row.币种 || ''}</td>
-                <td>${row.产品 || ''}</td>
-                <td>${row.预估观看量 || ''}</td>
-                <td>${formattedDate2}</td>
-                <td>${row.平台 || ''}</td>
-                <td>${row.类型 || ''}</td>
-                <td>${row.红人名称 || ''}</td>
-                <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td> 
-                <td>${formattedDate3}</td>
-                <td>${row.播放量 || ''}</td>
-                <td>${row.点赞数 || ''}</td>
-                <td>${row.评论数 || ''}</td>
-                <td>${row.收藏数 || ''}</td>
-                <td>${row.转发数 || ''}</td>
-                <td>${row.参与率 || ''}</td>
-                <td>${formattedDate}</td>
-            `;
-            tableBody.appendChild(tr);
-        });
-
-        // 应用当前筛选条件
-        var currentProject = document.getElementById('videoProjectName').value;
-        var currentBrand = document.getElementById('videobrand').value;
-        var currentManager = document.getElementById('videoManager').value;
-        if (currentProject || currentBrand || currentManager) {
-            filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager);
-        }
-    })
-    .catch(error => console.error('Error fetching video table data:', error));
-}
-
-// 确保页面加载完成后调用 updateVideoTable 函数
-document.addEventListener('DOMContentLoaded', function() {
-    updateVideoTable();
-});
-
-
-
-
-// 根据项目、品牌和负责人自动筛选表格
-function filterTableByProjectBrandAndManager(project, brand, manager) {
-    const rows = document.querySelectorAll('#videoTable tbody tr');
-    rows.forEach(row => {
-        const rowProject = row.querySelector('td:nth-child(3)').textContent.trim();
-        const rowBrand = row.querySelector('td:nth-child(2)').textContent.trim();
-        const rowManager = row.querySelector('td:nth-child(4)').textContent.trim();
-
-        if (rowProject === project && rowBrand === brand && rowManager === manager) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-// 3. 添加新的筛选功能
-// 如果需要在用户选择项目或负责人时，也可以自动筛选表格，您可以为#videoProjectName和#videoManager添加类似的事件监听器：
-// 添加筛选事件监听器
-document.getElementById('videoProjectName').addEventListener('change', function() {
-    var project = this.value;
-    var brand = document.getElementById('videobrand').value;
-    var manager = document.getElementById('videoManager').value;
-    filterTableByProjectBrandAndManager(project, brand, manager);
-});
-
-document.getElementById('videobrand').addEventListener('change', function() {
-    var brand = this.value;
-    var project = document.getElementById('videoProjectName').value;
-    var manager = document.getElementById('videoManager').value;
-    filterTableByProjectBrandAndManager(project, brand, manager);
-});
-
-document.getElementById('videoManager').addEventListener('change', function() {
-    var manager = this.value;
-    var project = document.getElementById('videoProjectName').value;
-    var brand = document.getElementById('videobrand').value;
-    filterTableByProjectBrandAndManager(project, brand, manager);
-});
-
-// 确保页面加载完成后调用 updateVideoTable 函数
-document.addEventListener('DOMContentLoaded', function() {
-    updateVideoTable();
-});
-
-
-
-document.getElementById('resetInfluencerForm').addEventListener('click', function() {
-    document.getElementById('influencerForm').reset();
-});
-
-document.getElementById('resetVideoForm').addEventListener('click', function() {
-    document.getElementById('videoForm').reset();
-});
-
 
 // 包含所有国家和地区的数组及其编码
 const countries = [
@@ -1117,9 +352,6 @@ countries.forEach(country => {
     datalistCountryCodes.appendChild(optionCode);
 });
 
-
-
-
 // 自动填充国家编码或国家名称
 function fillCountryDetails(type) {
     const countryInput = document.getElementById('country').value;
@@ -1141,6 +373,1429 @@ function fillCountryDetails(type) {
         }
     }
 }
+
+
+
+
+document.getElementById('updateInfluencerForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    // 移除红色边框
+    removeHighlight();
+    // 在这里定义 datalist
+    var datalist = document.getElementById('influencerNames');
+
+    var platform = document.getElementById('updatePlatform').value;
+    var name = document.getElementById('updateInfluencerName').value;
+    var email = document.getElementById('email').value;
+    var whatsapp = document.getElementById('whatsapp').value;
+    var discord = document.getElementById('discord').value;
+    var address1 = document.getElementById('address1').value;
+    var address2 = document.getElementById('address2').value;
+    var address3 = document.getElementById('address3').value;
+    var tag1 = document.getElementById('tag1').value;
+    var tag2 = document.getElementById('tag2').value;
+    var tag3 = document.getElementById('tag3').value;
+    var country = document.getElementById('country').value;
+    var country_code = document.getElementById('country_code').value;
+
+    // Basic validation
+    if (!platform || !name) {
+        alert("请选择平台并输入红人名称。");
+        return;
+    }
+
+    var responseMessage = document.getElementById('responseMessageUpdateInfluencer');
+    responseMessage.innerHTML = '正在提交...';
+
+    fetch('/update/influencer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            platform: platform,
+            name: name,
+            email: email,
+            whatsapp: whatsapp,
+            discord: discord,
+            address1: address1,
+            address2: address2,
+            address3: address3,
+            tag1: tag1,
+            tag2: tag2,
+            tag3: tag3,
+            country: country,
+            country_code: country_code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('responseMessageUpdateInfluencer').innerHTML = data.message;
+        document.getElementById('responseMessageUpdateInfluencer').style.color = 'green';
+        if (data.updated_fields) {
+                let updatedFieldsMessage = '更新的字段: <br>';
+                for (const [field, value] of Object.entries(data.updated_fields)) {
+                    updatedFieldsMessage += `${field}: ${value}<br>`;
+                }
+                document.getElementById('responseMessageUpdateInfluencer').innerHTML += updatedFieldsMessage;
+            }
+        // 重置表单和datalistf
+        document.getElementById('updateInfluencerForm').reset();
+        datalist.innerHTML = '';  // 清空 datalist
+        // 调用 updateInfluencerTable 立即更新表格
+        updateInfluencerTable();
+    })
+    .catch(error => {
+        console.error('提交时出错:', error);
+        document.getElementById('responseMessageUpdateInfluencer').innerText = '提交时出错，请重试。';
+        document.getElementById('responseMessageUpdateInfluencer').style.color = 'red';
+    });
+});
+
+
+
+document.getElementById('resetUpdateInfluencerForm').addEventListener('click', function() {
+    document.getElementById('updateInfluencerForm').reset();
+    document.getElementById('updateInfluencerName').value = ''; // 确保红人名称没有选中任何选项
+    document.getElementById('responseMessageUpdateInfluencer').innerHTML = '';
+    // 移除红色边框
+    removeHighlight();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateInfluencerTable();
+});
+// 更新数据库表格的函数
+function updateInfluencerTable() {
+    fetch('/update/get_influencer_data', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tableBody = document.querySelector('#influencerTable tbody');
+        tableBody.innerHTML = ''; // 清空表格内容
+
+        if (data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
+        } else {
+            data.forEach(row => {
+                var date = new Date(row.更新日期);
+                var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+                const tr = document.createElement('tr');
+                const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
+
+                tr.innerHTML = `
+                    <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
+                    <td>${row.id || ''}</td>
+                    <td>${row.平台 || ''}</td>
+                    <td><a href="${row.红人主页地址}" target="_blank">${row.红人名称 || ''}</a></td> <!-- 红人名称变为超链接 -->
+                    <td>${row.红人全名 || ''}</td>
+                    <td>${row.地区 || ''}</td>
+                    <td>${row.国家编码 || ''}</td>
+                    <td>${row.评级 || ''}</td>
+                    <td>${row.粉丝数量 || ''}</td>
+                    <td>${row.平均点赞数量 || ''}</td>
+                    <td>${row.平均评论数量 || ''}</td>
+                    <td>${row.平均播放量 || ''}</td>
+                    <td>${row.平均参与率 || ''}</td>
+                    <td>${row.邮箱 || ''}</td>
+                    <td>${row.地址信息1 || ''}</td>
+                    <td>${row.标签功能1 || ''}</td>
+                    <td>${row.WhatsApp || ''}</td>
+                    <td>${row.地址信息2 || ''}</td>
+                    <td>${row.标签功能2 || ''}</td>
+                    <td>${row.Discord || ''}</td>
+                    <td>${row.地址信息3 || ''}</td>
+                    <td>${row.标签功能3 || ''}</td>
+                    <td>${formattedDate || ''}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+        // 应用当前筛选条件
+        var currentPlatform = document.getElementById('updatePlatform').value;
+        var currentInfluencerName = document.getElementById('updateInfluencerName').value;
+        filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
+    })
+    .catch(error => {
+        console.error('Error fetching influencer table data:', error);
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    updateInfluencerTable();
+});
+
+// 根据平台和红人名称自动筛选表格
+function filterTableByPlatformAndInfluencerName(platform, influencerName) {
+    const rows = document.querySelectorAll('#influencerTable tbody tr');
+    rows.forEach(row => {
+        const rowPlatform = row.querySelector('td:nth-child(3)').textContent.trim();  // 假设平台在第3列
+        const rowInfluencerName = row.querySelector('td:nth-child(4)').textContent.trim();  // 假设红人名称在第4列
+
+        // 检查平台和红人名称是否匹配
+        if ((platform === "" || rowPlatform === platform) && (influencerName === "" || rowInfluencerName === influencerName)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// 当平台或红人名称改变时，自动筛选表格
+document.getElementById('updatePlatform').addEventListener('change', function() {
+    var platform = this.value;
+    var influencerName = document.getElementById('updateInfluencerName').value;
+    filterTableByPlatformAndInfluencerName(platform, influencerName);
+});
+
+document.getElementById('updateInfluencerName').addEventListener('change', function() {
+    var influencerName = this.value;
+    var platform = document.getElementById('updatePlatform').value;
+    filterTableByPlatformAndInfluencerName(platform, influencerName);
+});
+
+// 确保页面加载完成后调用 updateInfluencerTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateInfluencerTable();
+});
+
+// 当平台或红人名称改变时，自动填充其他字段
+document.getElementById('updateInfluencerName').addEventListener('input', fetchInfluencerDetails);
+document.getElementById('updatePlatform').addEventListener('change', fetchInfluencerDetails);
+
+function fetchInfluencerDetails() {
+    var platform = document.getElementById('updatePlatform').value;
+    var influencerName = document.getElementById('updateInfluencerName').value.trim();
+
+    if (platform && influencerName) {
+        fetch('/update/get_influencer_details', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ platform: platform, influencerName: influencerName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                // 调试输出
+                console.log('获取到的数据:', data);
+
+                // 填充表单字段
+                document.getElementById('country').value = data.地区 || '';
+                console.log('country:', data.地区); // 调试
+
+                document.getElementById('country_code').value = data.国家编码 || '';
+                console.log('国家编码:', data.国家编码); // 调试
+
+                document.getElementById('email').value = data.email || '';
+                console.log('Email:', data.email); // 调试
+
+                document.getElementById('whatsapp').value = data.WhatsApp || '';
+                console.log('WhatsApp:', data.WhatsApp); // 调试
+
+                document.getElementById('discord').value = data.Discord || '';
+                console.log('Discord:', data.Discord); // 调试
+
+                document.getElementById('address1').value = data.地址信息1 || '';
+                console.log('地址信息1:', data.地址信息1); // 调试
+
+                document.getElementById('address2').value = data.地址信息2 || '';
+                console.log('地址信息2:', data.地址信息2); // 调试
+
+                document.getElementById('address3').value = data.地址信息3 || '';
+                console.log('地址信息3:', data.地址信息3); // 调试
+
+                document.getElementById('tag1').value = data.标签功能1 || '';
+                console.log('标签功能1:', data.标签功能1); // 调试
+
+                document.getElementById('tag2').value = data.标签功能2 || '';
+                console.log('标签功能2:', data.标签功能2); // 调试
+
+                document.getElementById('tag3').value = data.标签功能3 || '';
+                console.log('标签功能3:', data.标签功能3); // 调试
+
+
+
+                // 高亮显示空字段
+                highlightEmptyFields();
+            }
+        })
+        .catch(error => {
+            console.error('获取红人详情时出错:', error);
+        });
+    }
+}
+
+
+function highlightEmptyFields() {
+    var fields = [
+        'email', 'whatsapp', 'discord', 'address1',
+        'address2', 'address3', 'tag1', 'tag2', 'tag3',
+        'country', 'country_code'
+    ];
+
+    fields.forEach(function(fieldId) {
+        var field = document.getElementById(fieldId);
+        if (!field.value) {
+            field.style.borderColor = 'red'; // 高亮显示为空的字段
+        } else {
+            field.style.borderColor = ''; // 移除高亮显示
+        }
+    });
+}
+function removeHighlight() {
+    var fields = [
+        'email', 'whatsapp', 'discord', 'address1',
+        'address2', 'address3', 'tag1', 'tag2', 'tag3',
+        'country', 'country_code'
+    ];
+
+    fields.forEach(function(fieldId) {
+        var field = document.getElementById(fieldId);
+        field.style.borderColor = ''; // 移除红色边框
+    });
+}
+
+
+
+
+
+
+// 更新视频板块
+// 表单提交时
+document.getElementById('videoForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    removeHighlightVideo(); // 移除外层的红框
+
+    // 处理所有动态生成的表单块，移除红框
+    const dynamicLinkFields = document.querySelectorAll('.linkFields');
+    dynamicLinkFields.forEach(function(linkField) {
+        removeHighlightVideoAdd(linkField);
+    });
+    var videoLinks = document.getElementById('videoLinks').value.trim();
+    var uniqueId = document.getElementById('videoUniqueId').value.trim();
+    var projectName = document.getElementById('videoProjectName').value.trim();
+    var brand = document.getElementById('videobrand').value.trim();
+    var manager = document.getElementById('videoManager').value.trim();
+    var progress = document.getElementById('videoProgress').value.trim();
+    var logisticsNumber = document.getElementById('videoLogisticsNumber').value.trim();
+    var cost = document.getElementById('videocost').value.trim();
+    var currency = document.getElementById('videocurrency').value.trim();
+    var product = document.getElementById('videoproduct').value.trim();
+    var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
+    var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
+
+    var responseMessage = document.getElementById('responseMessageVideo');
+    responseMessage.innerHTML = '正在提交...';
+
+    var links = [];
+    if (videoLinks) {
+        links = videoLinks.split('\n').map(link => link.trim()).filter(link => link !== '');
+        var uniqueLinks = new Set();
+        var duplicateLinks = [];
+
+        links.forEach(link => {
+            if (uniqueLinks.has(link)) {
+                duplicateLinks.push(link);
+            } else {
+                uniqueLinks.add(link);
+            }
+        });
+
+        if (duplicateLinks.length > 0) {
+            responseMessage.innerHTML = `<p style="color:red;">以下链接在提交中重复: ${duplicateLinks.join(', ')}</p>`;
+            return;
+        }
+    }
+
+    var submissions = links.length ? links : [''];
+
+    Promise.all(submissions.map(link => {
+        return fetch('/video/submit_link', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                link: link,
+                uniqueId: uniqueId,
+                projectName: projectName,
+                brand: brand,
+                manager: manager,
+                progress: progress,
+                logisticsNumber: logisticsNumber,
+                cost: cost,
+                currency: currency,
+                product: product,
+                estimatedViews: estimatedViews,
+                estimatedLaunchDate: estimatedLaunchDate
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            responseMessage.innerHTML += `<p style="color:red;">提交链接 ${link} 时出错，请重试。</p>`;
+        });
+    }))
+    .then(() => {
+        responseMessage.style.color = 'green';
+        updateVideoTable(); // 更新视频表格
+
+        // 自动触发重置按钮清空内容
+        document.getElementById('resetVideoForm').click();
+
+        // 重新加载所有唯一ID，恢复为所有可选项
+        reloadAllUniqueIds();
+    })
+    .catch(error => {
+        responseMessage.style.color = 'red';
+        responseMessage.innerHTML = `<p>提交表单时发生错误，请稍后再试。</p>`;
+        console.error('提交表单时发生错误:', error);
+    });
+});
+
+// 当品牌、项目或负责人改变时，更新唯一ID下拉菜单
+function updateUniqueIdDropdown(brand, project, manager) {
+    fetch('/video/get_filtered_unique_ids', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ brand: brand, project: project, manager: manager })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const videoUniqueIdSelect = document.getElementById('videoUniqueId');
+        videoUniqueIdSelect.innerHTML = ''; // 清空现有的选项
+
+        // 添加提示性选项
+        var placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.text = '请选择唯一ID';
+        placeholderOption.disabled = true; // 使其不可选
+        placeholderOption.selected = true; // 使其成为默认选项
+        videoUniqueIdSelect.appendChild(placeholderOption);
+
+        // 根据返回的ID列表填充唯一ID下拉菜单
+        data.uniqueIds.forEach(function(id) {
+            var option = document.createElement('option');
+            option.value = id;
+            option.text = id;
+            videoUniqueIdSelect.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Error fetching filtered unique IDs:', error));
+}
+
+
+// 当品牌、项目或负责人改变时，更新唯一ID下拉菜单
+document.getElementById('videobrand').addEventListener('change', function() {
+    const brand = this.value;
+    const project = document.getElementById('videoProjectName').value;
+    const manager = document.getElementById('videoManager').value;
+    updateUniqueIdDropdown(brand, project, manager);
+});
+
+document.getElementById('videoProjectName').addEventListener('change', function() {
+    const project = this.value;
+    const brand = document.getElementById('videobrand').value;
+    const manager = document.getElementById('videoManager').value;
+    updateUniqueIdDropdown(brand, project, manager);
+});
+
+document.getElementById('videoManager').addEventListener('change', function() {
+    const manager = this.value;
+    const brand = document.getElementById('videobrand').value;
+    const project = document.getElementById('videoProjectName').value;
+    updateUniqueIdDropdown(brand, project, manager);
+});
+// 选择id后，将数据显示在控件中
+document.getElementById('videoUniqueId').addEventListener('change', function() {
+    const target = event.target;
+    // 检查是否是唯一ID的下拉菜单触发了事件
+    if (target.classList.contains('videoUniqueId')) {
+        var uniqueId = target.value;
+        var formContainer = target.closest('.linkFields') || document.getElementById('videoForm');
+        if (uniqueId) {
+            fetch('/video/get_video_details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ uniqueId: uniqueId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                // 使用空字符串作为默认值
+                const brand = data.brand || '';
+                const project = data.project || '';
+                const manager = data.manager || '';
+                const videoLinks = data.videoLinks || '';
+                const product = data.product || '';
+                const progress = data.progress || '';
+                const logisticsNumber = data.logisticsNumber || '';
+                const cost = data.cost || '';
+                const currency = data.currency || '';
+                const estimatedViews = data.estimatedViews || '';
+                const estimatedLaunchDate = data.estimatedLaunchDate || '';
+
+                // 填充表单字段
+                document.getElementById('videobrand').value = brand;
+                document.getElementById('videoProjectName').value = project;
+                document.getElementById('videoManager').value = manager;
+                document.getElementById('videoLinks').value = videoLinks;
+                document.getElementById('videoproduct').value = product;
+                document.getElementById('videoProgress').value = progress;
+                document.getElementById('videoLogisticsNumber').value = logisticsNumber;
+                document.getElementById('videocost').value = cost;
+                document.getElementById('videocurrency').value = currency;
+                document.getElementById('videoestimatedViews').value = estimatedViews;
+                document.getElementById('videoestimatedLaunchDate').value = estimatedLaunchDate;
+
+                // 调用筛选函数
+                filterTableByProjectBrandAndManager(project, brand, manager);
+                // 调用高亮显示函数
+                highlightEmptyFieldsVideo();
+                // 高亮表格中对应的行
+                highlightRowById(uniqueId);
+
+                // 需要时禁用字段，使它们不可编辑
+                // document.getElementById('videoProjectName').disabled = true;
+                // document.getElementById('videobrand').disabled = true;
+                // document.getElementById('videoManager').disabled = true;
+            })
+            .catch(error => console.error('Error:', error));
+        } else {
+            // 如果唯一ID为空，清空并解锁相关输入框
+            resetFields(document.getElementById('videoForm'));
+        }
+    }
+    // 处理品牌、项目、负责人选择事件
+    ['videobrand', 'videoProjectName', 'videoManager'].forEach(function(className) {
+        if (target.classList.contains(className)) {
+            const formContainer = target.closest('.linkFields') || document.getElementById('videoForm');
+            const selectedValue = target.value;
+            const type = className === 'videobrand' ? 'brand' : className === 'videoProjectName' ? 'project' : 'manager';
+            updateDropdownOptions(selectedValue, type, formContainer);
+        }
+    });
+});
+function highlightEmptyFieldsVideo(formContainer = document) {
+    var fields = [
+        'videoUniqueId', 'videobrand', 'videoProjectName', 'videoManager',
+        'videoLinks', 'videoproduct', 'videoProgress', 'videoLogisticsNumber',
+        'videocost', 'videocurrency', 'videoestimatedLaunchDate', 'videoestimatedViews'
+    ];
+
+    fields.forEach(function(fieldId) {
+        // 处理最外层表单，使用id
+        var field = formContainer.getElementById ? formContainer.getElementById(fieldId) : null;
+
+        // 如果没有找到id，处理动态生成的表单块，使用class
+        if (!field && formContainer.querySelector) {
+            field = formContainer.querySelector('.' + fieldId);
+        }
+
+        // 高亮逻辑
+        if (field && !field.value) {
+            field.style.borderColor = 'red'; // 高亮显示为空的字段
+        } else if (field) {
+            field.style.borderColor = ''; // 移除高亮显示
+        }
+    });
+}
+
+function removeHighlightVideo(formContainer = document) {
+    var fields = [
+        'videoUniqueId', 'videobrand', 'videoProjectName', 'videoManager',
+        'videoLinks', 'videoproduct', 'videoProgress', 'videoLogisticsNumber',
+        'videocost', 'videocurrency', 'videoestimatedLaunchDate', 'videoestimatedViews'
+    ];
+
+    fields.forEach(function(fieldId) {
+        // 处理最外层表单，使用id
+        var field = formContainer.getElementById ? formContainer.getElementById(fieldId) : null;
+
+        // 如果没有找到id，处理动态生成的表单块，使用class
+        if (!field && formContainer.querySelector) {
+            field = formContainer.querySelector('.' + fieldId);
+        }
+
+        // 移除高亮显示
+        if (field) {
+            field.style.borderColor = ''; // 移除红色边框
+        }
+    });
+}
+
+
+
+
+// 获取唯一ID数据并自动填充项目、品牌、负责人
+function reloadAllUniqueIds() {
+    fetch('/video/get_unique_ids')
+        .then(response => response.json())
+        .then(data => {
+            const videoUniqueIdSelect = document.getElementById('videoUniqueId');
+            videoUniqueIdSelect.innerHTML = ''; // 清空现有的选项
+
+            // 添加提示性选项
+            var placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.text = '请选择唯一ID';
+            placeholderOption.disabled = true; // 使其不可选
+            placeholderOption.selected = true; // 使其成为默认选项
+            videoUniqueIdSelect.appendChild(placeholderOption);
+
+            // 填充所有的唯一ID
+            data.uniqueIds.forEach(function(id) {
+                var option = document.createElement('option');
+                option.value = id;
+                option.text = id;
+                videoUniqueIdSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error fetching all unique IDs:', error));
+}
+
+function highlightRowById(uniqueId) {
+    // 清除之前高亮的行
+    var rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        row.style.backgroundColor = '';  // 重置背景色
+    });
+
+    // 查找对应的行并更改背景色
+    if (uniqueId) {
+        rows.forEach(row => {
+            var rowId = row.querySelector('td:first-child').textContent.trim();
+            if (rowId === uniqueId) {
+                row.style.backgroundColor = '#d1e7dd';  // 你可以选择你喜欢的颜色
+            }
+        });
+    }
+}
+
+
+
+
+// 在页面加载时获取项目、品牌和负责人信息
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Brands data:', data.brands);
+            if (data.brands) {
+                var videoBrandSelect = document.getElementById('videobrand');
+                data.brands.forEach(function(brand) {
+                    var option = document.createElement('option');
+                    option.value = brand;
+                    option.text = brand;
+                    videoBrandSelect.appendChild(option);
+                });
+            }
+            if (data.projects) {
+                var videoProjectSelect = document.getElementById('videoProjectName');
+                data.projects.forEach(function(project) {
+                    var option = document.createElement('option');
+                    option.value = project;
+                    option.text = project;
+                    videoProjectSelect.appendChild(option);
+                });
+            }
+            if (data.managers) {
+                var videoManagerSelect = document.getElementById('videoManager');
+                data.managers.forEach(function(manager) {
+                    var option = document.createElement('option');
+                    option.value = manager;
+                    option.text = manager;
+                    videoManagerSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching project info:', error));
+});
+
+// 封装数据加载逻辑
+function loadUniqueIds(dropdownElement) {
+    fetch('/video/get_unique_ids')
+        .then(response => response.json())
+        .then(data => {
+            if (data.uniqueIds) {
+                data.uniqueIds.forEach(function(id) {
+                    var option = document.createElement('option');
+                    option.value = id;
+                    option.text = id;
+                    dropdownElement.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching unique IDs:', error));
+}
+
+function loadProjectBrandManager(projectDropdown, brandDropdown, managerDropdown) {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            // 先清空现有选项，防止重复
+            projectDropdown.innerHTML = '<option value="">选择项目</option>';
+            brandDropdown.innerHTML = '<option value="">选择品牌</option>';
+            managerDropdown.innerHTML = '<option value="">选择负责人</option>';
+
+            if (data.projects) {
+                data.projects.forEach(function(project) {
+                    var option = document.createElement('option');
+                    option.value = project;
+                    option.text = project;
+                    projectDropdown.appendChild(option);
+                });
+            }
+            if (data.brands) {
+                data.brands.forEach(function(brand) {
+                    var option = document.createElement('option');
+                    option.value = brand;
+                    option.text = brand;
+                    brandDropdown.appendChild(option);
+                });
+            }
+            if (data.managers) {
+                data.managers.forEach(function(manager) {
+                    var option = document.createElement('option');
+                    option.value = manager;
+                    option.text = manager;
+                    managerDropdown.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching project info:', error));
+}
+
+
+
+// 重置表单字段和状态
+function resetFields(form) {
+    // 重置主表单字段
+    resetFormBlock(form);
+
+    // 查找所有通过“添加更多链接”生成的子表单块，并重置它们的字段
+    var linkFields = form.querySelectorAll('.linkFields');
+    linkFields.forEach(function(linkField) {
+        resetFormBlock(linkField);
+    });
+
+    // 重新加载品牌、项目和负责人选项
+    loadProjectBrandManager(
+        form.querySelector('.videoProjectName'),
+        form.querySelector('.videobrand'),
+        form.querySelector('.videoManager')
+    );
+    // 重新加载唯一ID下拉菜单，确保恢复为所有可选项
+    reloadAllUniqueIds();
+}
+function resetFormBlock(block) {
+    var projectNameField = block.querySelector('.videoProjectName');
+    var brandField = block.querySelector('.videobrand');
+    var managerField = block.querySelector('.videoManager');
+    var uniqueIdField = block.querySelector('.videoUniqueId');
+
+    if (projectNameField) {
+        projectNameField.value = '';
+        projectNameField.disabled = false;
+    }
+    if (brandField) {
+        brandField.value = '';
+        brandField.disabled = false;
+    }
+    if (managerField) {
+        managerField.value = '';
+        managerField.disabled = false;
+    }
+    if (uniqueIdField) {
+        uniqueIdField.value = '';
+    }
+    // 清除高亮行的红框或其他视觉效果
+    var rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        row.style.backgroundColor = '';  // 重置背景色
+    });
+
+}
+
+// 事件委托机制绑定事件监听器
+// document.addEventListener('change', function (event) {
+//     // 检查是否是唯一ID的下拉菜单触发了事件
+//     if (event.target.classList.contains('videoUniqueId')) {
+//         var uniqueId = event.target.value;
+//         var parentForm = event.target.closest('.linkFields'); // 获取当前表单块
+//
+//         if (uniqueId) {
+//             fetch('/video/get_project_and_manager', {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 },
+//                 body: JSON.stringify({ uniqueId: uniqueId })
+//             })
+//                 .then(response => response.json())
+//                 .then(data => {
+//                     // 使用空字符串作为默认值
+//                     const project = data.project || '';
+//                     const brand = data.brand || '';
+//                     const manager = data.manager || '';
+//
+//                     // 填充表单字段
+//                     var projectInput = parentForm.querySelector('.videoProjectName');
+//                     var brandInput = parentForm.querySelector('.videobrand');
+//                     var managerInput = parentForm.querySelector('.videoManager');
+//
+//                     projectInput.value = project;
+//                     brandInput.value = brand;
+//                     managerInput.value = manager;
+//
+//                     // 禁用字段，使它们不可编辑
+//                     projectInput.disabled = true;
+//                     brandInput.disabled = true;
+//                     managerInput.disabled = true;
+//
+//                     // 调用筛选函数
+//                     filterTableByProjectBrandAndManager(project, brand, manager);
+//
+//                     // 高亮表格中对应的行
+//                     highlightRowById(uniqueId);
+//                 })
+//                 .catch(error => console.error('Error:', error));
+//         }else {
+//             // 如果唯一ID为空，清空并解锁相关输入框
+//             resetFields(parentForm);
+//         }
+//     }
+// });
+//在页面加载时调用这些函数：
+document.addEventListener('DOMContentLoaded', function() {
+    var videoUniqueIdSelect = document.getElementById('videoUniqueId');
+    var videoProjectSelect = document.getElementById('videoProjectName');
+    var videoBrandSelect = document.getElementById('videobrand');
+    var videoManagerSelect = document.getElementById('videoManager');
+
+    loadUniqueIds(videoUniqueIdSelect);
+    loadProjectBrandManager(videoProjectSelect, videoBrandSelect, videoManagerSelect);
+});
+
+
+// 点击“添加更多链接”
+document.addEventListener('DOMContentLoaded', function() {
+    var addLinkButton = document.getElementById('addLink');
+
+    if (addLinkButton) {
+        addLinkButton.addEventListener('click', function() {
+            var container = document.getElementById('linkFieldsContainer'); // 改为linkFieldsContainer，这样就能确保添加的新表单块在正确位置
+            var newLinkFields = document.createElement('div');
+            newLinkFields.classList.add('linkFields');
+            newLinkFields.innerHTML = `
+                <hr>
+                <div class="linkFields">
+                    <div class="form-row">
+                        <div>
+                            <label for="videoUniqueId">唯一id:</label>
+                            <select class="videoUniqueId" required>
+                                <option value="">选择唯一id</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videobrand">品牌:</label>
+                            <select class="videobrand">
+                                <option value="">选择品牌</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoProjectName">项目:</label>
+                            <select class="videoProjectName">
+                                <option value="">选择项目</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoManager">负责人:</label>
+                            <select class="videoManager">
+                                <option value="">选择负责人</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="videoLinks">视频链接:</label>
+                            <textarea class="videoLinks" placeholder="请输入视频链接"  style="height: 45px;"></textarea>
+                        </div>
+                        <div>
+                            <label for="videoproduct">产品:</label>
+                            <input type="text" class="videoproduct" placeholder="请输入产品名称">
+                        </div>
+                        <div>
+                            <label for="videoProgress">合作进度:</label>
+                            <input type="text" class="videoProgress" placeholder="请输入合作进度">
+                        </div>
+                        <div>
+                            <label for="videoLogisticsNumber">物流单号:</label>
+                            <input type="text" class="videoLogisticsNumber" placeholder="请输入物流单号">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="videocost">花费:</label>
+                            <input type="number" class="videocost" placeholder="请输入花费">
+                        </div>
+                        <div>
+                            <label for="videocurrency">币种:</label>
+                            <select class="videocurrency">
+                                <option value="">选择币种</option>
+                                <option value="USD">USD - 美元</option>
+                                <option value="EUR">EUR - 欧元</option>
+                                <option value="CNY">CNY - 人民币</option>
+                                <option value="JPY">JPY - 日元</option>
+                                <option value="GBP">GBP - 英镑</option>
+                                <option value="AUD">AUD - 澳元</option>
+                                <option value="CAD">CAD - 加元</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="videoestimatedLaunchDate">预估上线时间:</label>
+                            <input type="date" class="videoestimatedLaunchDate" placeholder="预估上线时间">
+                        </div>
+                        <div>
+                            <label for="videoestimatedViews">预估观看量:</label>
+                            <input type="number" class="videoestimatedViews" placeholder="预估观看量">
+                        </div>
+                    </div>
+                    <button type="button" class="removeLink">取消</button>
+                </div>
+            `;
+            container.appendChild(newLinkFields);
+
+            // 绑定取消按钮的事件
+            newLinkFields.querySelector('.removeLink').addEventListener('click', function() {
+                container.removeChild(newLinkFields);
+            });
+
+            // 为新表单块加载数据
+            loadUniqueIds(newLinkFields.querySelector('.videoUniqueId'));
+            loadProjectBrandManagerAdd(
+                newLinkFields.querySelector('.videoProjectName'),
+                newLinkFields.querySelector('.videobrand'),
+                newLinkFields.querySelector('.videoManager')
+            );
+
+            // 为新表单块绑定事件
+            bindDynamicFieldEvents(newLinkFields);
+        });
+    }
+
+    // 绑定事件到每个表单块
+    function bindDynamicFieldEvents(formContainer) {
+        const uniqueIdField = formContainer.querySelector('.videoUniqueId');
+        const brandField = formContainer.querySelector('.videobrand');
+        const projectField = formContainer.querySelector('.videoProjectName');
+        const managerField = formContainer.querySelector('.videoManager');
+
+        // 绑定唯一ID的change事件
+        uniqueIdField.addEventListener('change', function() {
+            const uniqueId = this.value;
+            if (uniqueId) {
+                fetch('/video/get_video_details', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ uniqueId: uniqueId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const brand = data.brand || '';
+                    const project = data.project || '';
+                    const manager = data.manager || '';
+                    const videoLinks = data.videoLinks || '';
+                    const product = data.product || '';
+                    const progress = data.progress || '';
+                    const logisticsNumber = data.logisticsNumber || '';
+                    const cost = data.cost || '';
+                    const currency = data.currency || '';
+                    const estimatedViews = data.estimatedViews || '';
+                    const estimatedLaunchDate = data.estimatedLaunchDate || '';
+
+                    // 填充表单字段
+                    brandField.value = brand;
+                    projectField.value = project;
+                    managerField.value = manager;
+                    formContainer.querySelector('.videoLinks').value = videoLinks;
+                    formContainer.querySelector('.videoproduct').value = product;
+                    formContainer.querySelector('.videoProgress').value = progress;
+                    formContainer.querySelector('.videoLogisticsNumber').value = logisticsNumber;
+                    formContainer.querySelector('.videocost').value = cost;
+                    formContainer.querySelector('.videocurrency').value = currency;
+                    console.log(formContainer); // 检查 formContainer 是否正确
+                    console.log(formContainer.querySelector('.videoestimatedViews')); // 检查元素是否存在
+                    formContainer.querySelector('.videoestimatedViews').value = estimatedViews;
+                    formContainer.querySelector('.videoestimatedLaunchDate').value = estimatedLaunchDate;
+
+                    // 调用筛选函数
+                    filterTableByProjectBrandAndManager(project, brand, manager);
+
+                    // 高亮空字段
+                    highlightEmptyFieldsVideoAdd(formContainer);
+
+                    // 高亮表格中对应的行
+                    highlightRowById(uniqueId);
+                })
+                .catch(error => console.error('Error:', error));
+            } else {
+                resetFields(formContainer);
+            }
+        });
+
+        // 当品牌、项目或负责人改变时，更新唯一ID下拉菜单
+        brandField.addEventListener('change', function() {
+            const brand = this.value;
+            const project = projectField.value;
+            const manager = managerField.value;
+            updateUniqueIdDropdown(formContainer, brand, project, manager);
+        });
+
+        projectField.addEventListener('change', function() {
+            const project = this.value;
+            const brand = brandField.value;
+            const manager = managerField.value;
+            updateUniqueIdDropdown(formContainer, brand, project, manager);
+        });
+
+        managerField.addEventListener('change', function() {
+            const manager = this.value;
+            const brand = brandField.value;
+            const project = projectField.value;
+            updateUniqueIdDropdown(formContainer, brand, project, manager);
+        });
+    }
+
+    // 更新唯一ID下拉菜单
+    function updateUniqueIdDropdown(formContainer, brand, project, manager) {
+        fetch('/video/get_filtered_unique_ids', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ brand: brand, project: project, manager: manager })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const uniqueIdField = formContainer.querySelector('.videoUniqueId');
+            uniqueIdField.innerHTML = ''; // 清空现有的选项
+
+            // 添加提示性选项
+            var placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.text = '请选择唯一ID';
+            placeholderOption.disabled = true;
+            placeholderOption.selected = true;
+            uniqueIdField.appendChild(placeholderOption);
+
+            // 根据返回的ID列表填充唯一ID下拉菜单
+            data.uniqueIds.forEach(function(id) {
+                var option = document.createElement('option');
+                option.value = id;
+                option.text = id;
+                uniqueIdField.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error fetching filtered unique IDs:', error));
+    }
+
+    // 为现有的表单块绑定事件
+    bindDynamicFieldEvents(document.getElementById('videoForm'));
+
+    // 确保页面加载时更新视频表格
+    updateVideoTable();
+});
+function highlightEmptyFieldsVideoAdd(formContainer) {
+    var fields = [
+        '.videoUniqueId', '.videobrand', '.videoProjectName', '.videoManager',
+        '.videoLinks', '.videoproduct', '.videoProgress', '.videoLogisticsNumber',
+        '.videocost', '.videocurrency', '.videoestimatedLaunchDate', '.videoestimatedViews'
+    ];
+
+    fields.forEach(function(fieldClass) {
+        var field = formContainer.querySelector(fieldClass);
+        if (field && !field.value) {
+            field.style.borderColor = 'red'; // 高亮显示为空的字段
+        } else if (field) {
+            field.style.borderColor = ''; // 移除高亮显示
+        }
+    });
+}
+function removeHighlightVideoAdd(formContainer) {
+    var fields = [
+        '.videoUniqueId', '.videobrand', '.videoProjectName', '.videoManager',
+        '.videoLinks', '.videoproduct', '.videoProgress', '.videoLogisticsNumber',
+        '.videocost', '.videocurrency', '.videoestimatedLaunchDate', '.videoestimatedViews'
+    ];
+
+    fields.forEach(function(fieldClass) {
+        var field = formContainer.querySelector(fieldClass);
+        if (field) {
+            field.style.borderColor = ''; // 移除红色边框
+        }
+    });
+}
+function loadProjectBrandManagerAdd(projectDropdown, brandDropdown, managerDropdown) {
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            const allProjects = data.projects || [];
+            const allBrands = data.brands || [];
+            const allManagers = data.managers || [];
+            const relationships = data.relationships || [];
+
+            function populateDropdownAdd(dropdown, items, selectedValue) {
+                dropdown.innerHTML = ''; // 清空现有选项
+
+                // 保留已选择的值
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = '';
+                placeholderOption.text = '请选择';
+                dropdown.appendChild(placeholderOption);
+
+                items.forEach(function(item) {
+                    var option = document.createElement('option');
+                    option.value = item;
+                    option.text = item;
+                    if (item === selectedValue) {
+                        option.selected = true; // 保留用户的选择
+                    }
+                    dropdown.appendChild(option);
+                });
+            }
+
+            function filterAndPopulate() {
+                const selectedProject = projectDropdown.value;
+                const selectedBrand = brandDropdown.value;
+                const selectedManager = managerDropdown.value;
+
+                let filteredProjects = allProjects;
+                let filteredBrands = allBrands;
+                let filteredManagers = allManagers;
+
+                if (selectedBrand) {
+                    filteredProjects = relationships
+                        .filter(relation => relation.brand === selectedBrand)
+                        .map(relation => relation.project);
+                    filteredManagers = relationships
+                        .filter(relation => relation.brand === selectedBrand)
+                        .map(relation => relation.manager);
+                }
+
+                if (selectedProject) {
+                    filteredBrands = relationships
+                        .filter(relation => relation.project === selectedProject)
+                        .map(relation => relation.brand);
+                    filteredManagers = relationships
+                        .filter(relation => relation.project === selectedProject)
+                        .map(relation => relation.manager);
+                }
+
+                if (selectedManager) {
+                    filteredProjects = relationships
+                        .filter(relation => relation.manager === selectedManager)
+                        .map(relation => relation.project);
+                    filteredBrands = relationships
+                        .filter(relation => relation.manager === selectedManager)
+                        .map(relation => relation.brand);
+                }
+
+                // populateDropdown(projectDropdown, [...new Set(filteredProjects)]);
+                // populateDropdown(brandDropdown, [...new Set(filteredBrands)]);
+                // populateDropdown(managerDropdown, [...new Set(filteredManagers)]);
+                populateDropdownAdd(projectDropdown, [...new Set(filteredProjects)], selectedProject);
+                populateDropdownAdd(brandDropdown, [...new Set(filteredBrands)], selectedBrand);
+                populateDropdownAdd(managerDropdown, [...new Set(filteredManagers)], selectedManager);
+            }
+
+            // 初始化下拉菜单
+            filterAndPopulate();
+
+            // 绑定change事件，处理联动逻辑
+            projectDropdown.addEventListener('change', filterAndPopulate);
+            brandDropdown.addEventListener('change', filterAndPopulate);
+            managerDropdown.addEventListener('change', filterAndPopulate);
+        })
+        .catch(error => console.error('Error fetching project info:', error));
+}
+
+
+
+
+
+// 更新下拉菜单选项的函数
+document.addEventListener('DOMContentLoaded', function() {
+    // 调用函数以更新红人数据表格
+    updateVideoTable();
+});
+// 更新视频数据表格
+// 全局定义 updateVideoTable 函数
+function updateVideoTable() {
+    fetch('/video/get_video_data', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tableBody = document.querySelector('#videoTable tbody');
+        tableBody.innerHTML = ''; // 清空表格内容
+
+        data.forEach(row => {
+            var date = new Date(row.更新日期);
+            var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+            var date2 = new Date(row.预估上线时间);
+            var formattedDate2 = date2.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+            var date3 = new Date(row.发布时间);
+            var formattedDate3 = date3.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.id || ''}</td>
+                <td>${row.品牌 || ''}</td>
+                <td>${row.项目 || ''}</td>
+                <td>${row.负责人 || ''}</td>
+                <td>${row.合作进度 || ''}</td>
+                <td>${row.物流进度 || ''}</td>
+                <td>${row.物流单号 || ''}</td>
+                <td>${row.花费 || ''}</td>
+                <td>${row.币种 || ''}</td>
+                <td>${row.产品 || ''}</td>
+                <td>${row.预估观看量 || ''}</td>
+                <td>${formattedDate2}</td>
+                <td>${row.平台 || ''}</td>
+                <td>${row.类型 || ''}</td>
+                <td>${row.红人名称 || ''}</td>
+                <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td> 
+                <td>${formattedDate3}</td>
+                <td>${row.播放量 || ''}</td>
+                <td>${row.点赞数 || ''}</td>
+                <td>${row.评论数 || ''}</td>
+                <td>${row.收藏数 || ''}</td>
+                <td>${row.转发数 || ''}</td>
+                <td>${row.参与率 || ''}</td>
+                <td>${formattedDate}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        // 应用当前筛选条件
+        var currentProject = document.getElementById('videoProjectName').value;
+        var currentBrand = document.getElementById('videobrand').value;
+        var currentManager = document.getElementById('videoManager').value;
+        if (currentProject || currentBrand || currentManager) {
+            filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager);
+        }
+    })
+    .catch(error => console.error('Error fetching video table data:', error));
+}
+
+// 确保页面加载完成后调用 updateVideoTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateVideoTable();
+});
+
+
+
+
+// 更新选择框时联动过滤其他选择框的选项
+// 填充下拉菜单的通用函数
+function populateDropdown(dropdown, items, selectedValue = '') {
+    dropdown.innerHTML = ''; // 清空现有选项
+
+    var defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.text = '选择选项';
+    dropdown.appendChild(defaultOption);
+
+    items.forEach(function(item) {
+        var option = document.createElement('option');
+        option.value = item;
+        option.text = item;
+        if (item === selectedValue) {
+            option.selected = true;
+        }
+        dropdown.appendChild(option);
+    });
+}
+
+// 更新下拉菜单选项的函数
+function updateDropdownOptions(selectedValue, type, formContainer) {
+    if (!formContainer) {
+        console.error(`Form container is undefined for selected value: ${selectedValue}, type: ${type}. Defaulting to #videoSection.`);
+        formContainer = document.querySelector('#videoSection'); // 如果没有定义，则默认到 videoSection
+    }
+    console.log(`Updating dropdowns in form container: ${formContainer.id || 'Main form'} with selected value: ${selectedValue} for type: ${type}`);
+
+    // 在这里定义变量并保持使用这些变量
+    const projectDropdown = formContainer.querySelector('.videoProjectName');
+    const managerDropdown = formContainer.querySelector('.videoManager');
+
+    if (!projectDropdown || !managerDropdown) {
+        console.error('Required elements not found within the form container.');
+        return;
+    }
+
+    fetch('/video/get_project_info')
+        .then(response => response.json())
+        .then(data => {
+            let filteredProjects = [];
+            let filteredManagers = [];
+
+            if (type === 'brand') {
+                data.relationships.forEach(function(relation) {
+                    if (relation.brand === selectedValue) {
+                        filteredProjects.push(relation.project);
+                    }
+                });
+                populateDropdown(projectDropdown, [...new Set(filteredProjects)]);
+
+            } else if (type === 'project') {
+                data.relationships.forEach(function(relation) {
+                    if (relation.project === selectedValue) {
+                        filteredManagers.push(relation.manager);
+                    }
+                });
+                populateDropdown(managerDropdown, [...new Set(filteredManagers)]);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const formContainer = document.querySelector('#videoSection');
+    console.log('Form container in DOMContentLoaded:', formContainer);  // 调试点2
+    if (!formContainer) {
+        console.error('Form container #videoSection is not found.');
+        return;
+    }
+
+    const videoBrand = formContainer.querySelector('#videobrand');
+    const videoProject = formContainer.querySelector('#videoProjectName');
+    const videoManager = formContainer.querySelector('#videoManager');
+
+    console.log('Elements found:', { videoBrand, videoProject, videoManager });  // 调试点3
+
+    if (videoBrand) {
+        videoBrand.addEventListener('change', function() {
+            console.log('Brand changed, updating dropdowns');  // 调试点4
+            const project = videoProject ? videoProject.value : '';
+            const manager = videoManager ? videoManager.value : '';
+            updateDropdownOptions(this.value, 'brand', formContainer);
+            filterTableByProjectBrandAndManager(project,this.value ,manager);
+        });
+    }
+
+    if (videoProject) {
+        videoProject.addEventListener('change', function() {
+            console.log('Project changed, updating dropdowns');  // 调试点5
+            const brand = videoBrand ? videoBrand.value : '';
+            const manager = videoManager ? videoManager.value : '';
+            updateDropdownOptions(this.value, 'project', formContainer);
+            filterTableByProjectBrandAndManager(this.value, brand, manager);
+        });
+    }
+
+    if (videoManager) {
+        videoManager.addEventListener('change', function() {
+            console.log('Manager changed, updating dropdowns');  // 调试点6
+            const brand = videoBrand ? videoBrand.value : '';
+            const project = videoProject ? videoProject.value : '';
+            updateDropdownOptions(this.value, 'manager', formContainer);
+            filterTableByProjectBrandAndManager(project, brand, this.value);
+        });
+    }
+
+    loadUniqueIds(formContainer.querySelector('#videoUniqueId'));
+    loadProjectBrandManager(videoProject, videoBrand, videoManager);
+    updateVideoTable(); // 更新视频表格
+});
+
+
+// 根据项目、品牌和负责人自动筛选表格
+function filterTableByProjectBrandAndManager(project, brand, manager) {
+    const rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        const rowProject = row.querySelector('td:nth-child(3)').textContent.trim();
+        const rowBrand = row.querySelector('td:nth-child(2)').textContent.trim();
+        const rowManager = row.querySelector('td:nth-child(4)').textContent.trim();
+
+        if ((project === '' || rowProject === project) &&
+            (brand === '' || rowBrand === brand) &&
+            (manager === '' || rowManager === manager)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+
+
+// 确保页面加载完成后调用 updateVideoTable 函数
+document.addEventListener('DOMContentLoaded', function() {
+    updateVideoTable();
+});
+
+
+
+document.getElementById('resetInfluencerForm').addEventListener('click', function() {
+    document.getElementById('influencerForm').reset();
+});
+
+document.getElementById('resetVideoForm').addEventListener('click', function() {
+    const form = document.getElementById('videoForm');
+    form.reset(); // 重置表单内容
+    removeHighlightVideo();
+    // 重新加载品牌、项目和负责人选项
+    loadProjectBrandManager(
+        form.querySelector('.videoProjectName'),
+        form.querySelector('.videobrand'),
+        form.querySelector('.videoManager')
+    );
+
+    // 重新启用被禁用的字段
+    form.querySelector('.videoProjectName').disabled = false;
+    form.querySelector('.videobrand').disabled = false;
+    form.querySelector('.videoManager').disabled = false;
+
+    // 处理动态添加的链接块部分
+    const dynamicLinkFields = document.querySelectorAll('.linkFields');
+    dynamicLinkFields.forEach(function(linkField) {
+        removeHighlightVideoAdd(linkField); // 处理每个动态表单块的去红
+        // 重新启用动态部分的选择框
+        linkField.querySelector('.videoProjectName').disabled = false;
+        linkField.querySelector('.videobrand').disabled = false;
+        linkField.querySelector('.videoManager').disabled = false;
+
+        // 如果需要，也可以在这里调用函数重新加载数据
+        loadProjectBrandManager(
+            linkField.querySelector('.videoProjectName'),
+            linkField.querySelector('.videobrand'),
+            linkField.querySelector('.videoManager')
+        );
+    });
+    updateVideoTable(); // 更新视频表格
+    // 重新加载所有唯一ID，恢复为所有可选项
+    reloadAllUniqueIds();
+});
+
+
+
+
+
 
 
 // 视频新增项目

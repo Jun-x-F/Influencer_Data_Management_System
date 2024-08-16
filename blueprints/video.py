@@ -32,21 +32,37 @@ class Video:
             return jsonify({'message': f'获取平台信息失败: {e}'}), 500
 
     @staticmethod
-    @video_bp.route('/get_influencers', methods=['POST'])
-    def get_influencers():
+    @video_bp.route('/get_filtered_unique_ids', methods=['POST'])
+    def get_filtered_unique_ids():
         try:
             data = request.json
-            platform = data.get('platform')
-            DATABASE = 'marketing'
-            sql = f"SELECT 红人名称 FROM celebrity_profile WHERE 平台='{platform}'"
-            current_app.logger.info(f"执行SQL查询: {sql}")
-            influencers_df = ReadDatabase(DATABASE, sql).vm()
-            current_app.logger.info(f"查询结果: {influencers_df}")
-            influencers = influencers_df['红人名称'].tolist()
-            return jsonify({'influencers': influencers}), 200
+            brand = data.get('brand')
+            project = data.get('project')
+            manager = data.get('manager')
+
+            # 动态构建查询条件
+            query = "SELECT id FROM influencers_video_project_data WHERE 1=1"
+
+            if brand:
+                query += f" AND 品牌 = '{brand}'"
+            if project:
+                query += f" AND 项目 = '{project}'"
+            if manager:
+                query += f" AND 负责人 = '{manager}'"
+
+            # 执行查询
+            current_app.logger.info(f"执行SQL查询: {query}")
+            result_df = ReadDatabase('marketing', query).vm()
+            current_app.logger.info(f"查询结果: {result_df}")
+
+            if not result_df.empty:
+                unique_ids = result_df['id'].tolist()
+                return jsonify({'uniqueIds': unique_ids}), 200
+            else:
+                return jsonify({'uniqueIds': []}), 200
         except Exception as e:
-            current_app.logger.error(f"获取红人信息失败: {e}")
-            return jsonify({'message': f'获取红人信息失败: {e}'}), 500
+            current_app.logger.error(f"获取唯一ID列表失败: {e}")
+            return jsonify({'message': f'获取唯一ID列表失败: {e}'}), 500
 
     @staticmethod
     @video_bp.route('/get_project_info', methods=['GET'])
@@ -61,12 +77,27 @@ class Video:
             # 替换 NaN 或 None 值
             project_info_df = project_info_df.fillna('')
 
-            brand = project_info_df['品牌'].tolist()
-            projects = project_info_df['项目'].tolist()
-            managers = project_info_df['负责人'].tolist()
+            # 构建品牌、项目、负责人之间的关系
+            relationships = []
+            for index, row in project_info_df.iterrows():
+                relationships.append({
+                    "brand": row['品牌'],
+                    "project": row['项目'],
+                    "manager": row['负责人']
+                })
 
+            # 过滤空值并去重
+            brands = list(set([b for b in project_info_df['品牌'].tolist() if b]))
+            projects = list(set([p for p in project_info_df['项目'].tolist() if p]))
+            managers = list(set([m for m in project_info_df['负责人'].tolist() if m]))
 
-            return jsonify({'brand': brand,'projects': projects, 'managers': managers}), 200
+            return jsonify({
+                'brands': brands,
+                'projects': projects,
+                'managers': managers,
+                'relationships': relationships
+            }), 200
+
         except Exception as e:
             current_app.logger.error(f"获取项目信息失败: {e}")
             return jsonify({'message': f'获取项目信息失败: {e}'}), 500
@@ -127,6 +158,83 @@ class Video:
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+
+    ## 显示所有控件字段内容
+    @staticmethod
+    @video_bp.route('/get_video_details', methods=['POST'])
+    def get_video_details():
+        try:
+            data = request.json
+            unique_id = data.get('uniqueId')
+            DATABASE = 'marketing'
+            sql = f"""
+                SELECT 
+                    品牌, 项目, 负责人, 视频链接, 产品, 合作进度, 
+                    物流单号, 花费, 币种, 预估观看量, 预估上线时间 
+                FROM 
+                    influencers_video_project_data 
+                WHERE 
+                    id='{unique_id}'
+            """
+            current_app.logger.info(f"执行SQL查询: {sql}")
+            result_df = ReadDatabase(DATABASE, sql).vm()
+            current_app.logger.info(f"查询结果: {result_df}")
+
+            if not result_df.empty:
+                # 将所有字段的值转换为基本数据类型（str 或 int）
+                brand = str(result_df['品牌'].iloc[0]) if pd.notna(result_df['品牌'].iloc[0]) else ''
+                project = str(result_df['项目'].iloc[0]) if pd.notna(result_df['项目'].iloc[0]) else ''
+                manager = str(result_df['负责人'].iloc[0]) if pd.notna(result_df['负责人'].iloc[0]) else ''
+                video_links = str(result_df['视频链接'].iloc[0]) if pd.notna(result_df['视频链接'].iloc[0]) else ''
+                product = str(result_df['产品'].iloc[0]) if pd.notna(result_df['产品'].iloc[0]) else ''
+                progress = str(result_df['合作进度'].iloc[0]) if pd.notna(result_df['合作进度'].iloc[0]) else ''
+                logistics_number = str(result_df['物流单号'].iloc[0]) if pd.notna(result_df['物流单号'].iloc[0]) else ''
+                cost = float(result_df['花费'].iloc[0]) if pd.notna(result_df['花费'].iloc[0]) else 0.0
+                currency = str(result_df['币种'].iloc[0]) if pd.notna(result_df['币种'].iloc[0]) else ''
+                estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(result_df['预估观看量'].iloc[0]) else 0
+
+                date_string = result_df['预估上线时间'].iloc[0]
+                # 检查数据类型并进行必要的转换
+                if isinstance(date_string, str):
+                    try:
+                        # 尝试将字符串转换为日期对象
+                        date_object = datetime.datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        try:
+                            # 如果第一种格式不匹配，尝试另一个常见的格式
+                            date_object = datetime.datetime.strptime(date_string, '%Y-%m-%d')
+                        except ValueError:
+                            date_object = None  # 如果日期格式不匹配，可以选择忽略或记录错误
+                else:
+                    date_object = date_string
+                # 使用 strftime 进行格式化
+                if date_object:
+                    estimated_launch_date = date_object.strftime('%Y-%m-%d')
+                else:
+                    estimated_launch_date = ''
+
+
+
+                return jsonify({
+                    'brand': brand,
+                    'project': project,
+                    'manager': manager,
+                    'videoLinks': video_links,
+                    'product': product,
+                    'progress': progress,
+                    'logisticsNumber': logistics_number,
+                    'cost': cost,
+                    'currency': currency,
+                    'estimatedViews': estimated_views,
+                    'estimatedLaunchDate': estimated_launch_date
+                }), 200
+            else:
+                return jsonify({'message': '未找到匹配的数据'}), 404
+        except Exception as e:
+            current_app.logger.error(f"获取视频详细信息失败: {e}")
+            return jsonify({'message': f'获取视频详细信息失败: {e}'}), 500
+
+    ## 更新数据
     @staticmethod
     @video_bp.route('/submit_link', methods=['POST'])
     def submit_link():
@@ -237,6 +345,8 @@ class Video:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
 
+
+    ## 新增数据
     @staticmethod
     @video_bp.route('/add_video_data', methods=['POST'])
     def add_video_data():

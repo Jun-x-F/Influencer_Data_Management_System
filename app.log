@@ -224,3 +224,11 @@ Traceback (most recent call last):
   File "D:\wzhData\BaiduSyncdisk\project\python\Influencer_Data_Management_System\spider\spider_notice.py", line 38, in clean_id_notice
     del self.notice_info[_id]
 KeyError: '71063f53-f084-42d4-a4de-255c58f308f0'
+2024-08-15 15:46:01,399 - app - ERROR - 获取视频详细信息失败: Object of type int64 is not JSON serializable
+2024-08-15 15:48:16,789 - app - ERROR - 获取视频详细信息失败: Object of type int64 is not JSON serializable
+2024-08-15 15:59:48,432 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-15 16:00:08,243 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-15 16:00:10,723 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-15 16:00:18,118 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-15 16:00:38,438 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-15 16:02:12,794 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
