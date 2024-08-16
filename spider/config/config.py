@@ -11,7 +11,7 @@ from log.logger import global_log
 from spider.template.class_dict_template import FIFODict
 
 # 是否打开页面
-headerLess = False
+headerLess = True
 
 # user_agent
 user_agent = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 "
