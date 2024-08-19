@@ -76,12 +76,13 @@ class Notice:
 
     def clean_none_notice(self) -> None:
         """清除掉没有人使用的id"""
-        for _id, work_info in self.work_id_time.items():
-            updateTime = work_info.get("更新时间")
-            time_diff = datetime.now() - updateTime
-            if time_diff > timedelta(hours=1):
-                global_log.info(f"清除 send_id:{_id}")
-                self.clean_id_notice(_id)
+        if self.work_id_time is not None:
+            for _id, work_info in self.work_id_time.items():
+                updateTime = work_info.get("更新时间")
+                time_diff = datetime.now() - updateTime
+                if time_diff > timedelta(hours=1):
+                    global_log.info(f"清除 send_id:{_id}")
+                    self.clean_id_notice(_id)
 
 
 @spider_notice_bp.route('/spider/celebrity', methods=['POST'])
