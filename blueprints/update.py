@@ -64,7 +64,6 @@ class UpdateInfluencer:
                 return jsonify({'message': '平台和红人名称是必需的。'}), 400
 
 
-
             update_date = datetime.date.today()
             influencer_data = {
                 '平台': [platform],
@@ -175,23 +174,54 @@ class UpdateInfluencer:
 
             DATABASE = 'marketing'
             sql = f"""
-            SELECT * FROM celebrity_profile 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, 邮箱, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
             WHERE 平台='{platform}' AND 红人名称='{influencer_name}'
             """
             current_app.logger.info(f"执行SQL查询: {sql}")
             influencer_details_df = ReadDatabase(DATABASE, sql).vm()
             current_app.logger.info(f"查询结果: {influencer_details_df}")
 
-            if influencer_details_df.empty:
-                return jsonify({'message': '未找到红人信息'}), 404
+            if not influencer_details_df.empty:
+                # 将所有字段的值转换为基本数据类型（str 或 int）
+                platform = str(influencer_details_df['平台'].iloc[0]) if pd.notna(influencer_details_df['平台'].iloc[0]) else ''
+                influencer_name = str(influencer_details_df['红人名称'].iloc[0]) if pd.notna(influencer_details_df['红人名称'].iloc[0]) else ''
+                country_code = str(influencer_details_df['国家编码'].iloc[0]) if pd.notna(influencer_details_df['国家编码'].iloc[0]) else ''
+                whatsapp = str(influencer_details_df['WhatsApp'].iloc[0]) if pd.notna(influencer_details_df['WhatsApp'].iloc[0]) else ''
+                discord = str(influencer_details_df['Discord'].iloc[0]) if pd.notna(influencer_details_df['Discord'].iloc[0]) else ''
+                email = str(influencer_details_df['邮箱'].iloc[0]) if pd.notna(influencer_details_df['邮箱'].iloc[0]) else ''
+                address1 = str(influencer_details_df['地址信息1'].iloc[0]) if pd.notna(influencer_details_df['地址信息1'].iloc[0]) else ''
+                address2 = str(influencer_details_df['地址信息2'].iloc[0]) if pd.notna(influencer_details_df['地址信息2'].iloc[0]) else ''
+                address3 = str(influencer_details_df['地址信息3'].iloc[0]) if pd.notna(influencer_details_df['地址信息3'].iloc[0]) else ''
+                tag1 = str(influencer_details_df['标签功能1'].iloc[0]) if pd.notna(influencer_details_df['标签功能1'].iloc[0]) else ''
+                tag2 = str(influencer_details_df['标签功能2'].iloc[0]) if pd.notna(influencer_details_df['标签功能2'].iloc[0]) else ''
+                tag3 = str(influencer_details_df['标签功能3'].iloc[0]) if pd.notna(influencer_details_df['标签功能3'].iloc[0]) else ''
+                region = str(influencer_details_df['地区'].iloc[0]) if pd.notna(influencer_details_df['地区'].iloc[0]) else ''
 
-            influencer_details = influencer_details_df.iloc[0].to_dict()  # 转换为字典
-            print(influencer_details)
-            return jsonify(influencer_details), 200
+                return jsonify({
+                    '平台': platform,
+                    '红人名称': influencer_name,
+                    '国家编码': country_code,
+                    'whatsapp': whatsapp,
+                    'discord': discord,
+                    'email': email,
+                    '地址信息1': address1,
+                    '地址信息2': address2,
+                    '地址信息3': address3,
+                    '标签功能1': tag1,
+                    '标签功能2': tag2,
+                    '标签功能3': tag3,
+                    '地区': region
+                }), 200
+
+            else:
+                return jsonify({'message': '未找到红人信息'}), 404
 
         except Exception as e:
             current_app.logger.error(f"获取红人详情失败: {e}")
             return jsonify({'message': f'获取红人详情失败: {e}'}), 500
+
 
 
 

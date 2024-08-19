@@ -199,6 +199,17 @@
                                 <!-- 选项将在JavaScript中动态生成 -->
                             </select>
                         </div>
+                        <div>
+                            <label for="videoInfluencerName">红人名称:</label>
+                            <select id="videoInfluencerName" class="videoInfluencerName">
+                                <option value="">选择负责人</option>
+                                <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+            <!--                            <input list="videoinfluencerNames" id="videoInfluencerName" class="videoInfluencerName" name="videoinfluencerName" placeholder="选择红人">-->
+<!--                            <datalist id="videoinfluencerNames">-->
+<!--                                &lt;!&ndash; 此处将动态添加选项 &ndash;&gt;-->
+<!--                            </datalist>-->
                     </div>
 
                     <div class="form-row">
@@ -208,15 +219,28 @@
                         </div>
                         <div>
                             <label for="videoproduct">产品:</label>
-                            <input type="text" id="videoproduct" class="videoproduct" placeholder="请输入产品名称">
+                            <input list="productOptions" id="videoproduct" class="videoproduct" placeholder="请输入或选择产品">
+                            <datalist id="productOptions"></datalist>
                         </div>
                         <div>
                             <label for="videoProgress">合作进度:</label>
-                            <input type="text" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                            <input list="progressOptions" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                            <datalist id="progressOptions">
+                                <option value="进行中">
+                                <option value="合作完成">
+                                <option value="合作失败">
+                            </datalist>
                         </div>
                         <div>
                             <label for="videoLogisticsNumber">物流单号:</label>
                             <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
+                        </div>
+                        <div>
+                            <label for="videoType">类型:</label>
+                            <select id="videoType" class="videoType">
+                            <option value="">选择类型</option>
+                            <!-- 选项将在JavaScript中动态生成 -->
+                            </select>
                         </div>
                     </div>
 
@@ -305,63 +329,74 @@
 <!--    <div id="addVideoDataForm" style="display: none; position: absolute; top: 60px; right: 20px; background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">-->
     <!-- 新增数据表单 -->
             <div id="addVideoDataForm" class="modal">
-                <div class="modal-content">
-                    <span class="close" id="closeAddVideoForm">&times;</span>
-                    <form id="addVideoData">
-                        <label for="addbrand">品牌:</label>
-                        <input list="brandOptions" id="addbrand" name="品牌" required>
-                        <datalist id="brandOptions">
-                            <!-- 动态加载的品牌选项将插入到这里 -->
-                        </datalist>
-                        <br>
+    <div class="modal-content">
+        <span class="close" id="closeAddVideoForm">&times;</span>
+        <form id="addVideoData">
+            <label for="addbrand">品牌:</label>
+            <input list="brandOptions" id="addbrand" name="品牌" required>
+            <datalist id="brandOptions">
+                <!-- 动态加载的品牌选项将插入到这里 -->
+            </datalist>
+            <br>
 
-                        <label for="addprojectName">项目:</label>
-                        <input list="projectOptions" id="addprojectName" name="项目" required>
-                        <datalist id="projectOptions">
-                            <!-- 动态加载的项目选项将插入到这里 -->
-                        </datalist>
-                        <br>
+            <label for="addprojectName">项目:</label>
+            <input list="projectOptions" id="addprojectName" name="项目" required>
+            <datalist id="projectOptions">
+                <!-- 动态加载的项目选项将插入到这里 -->
+            </datalist>
+            <br>
 
-                        <label for="addmanager">负责人:</label>
-                        <input list="managerOptions" id="addmanager" name="负责人" required>
-                        <datalist id="managerOptions">
-                            <!-- 动态加载的负责人选项将插入到这里 -->
-                        </datalist>
-                        <br>
+            <label for="addmanager">负责人:</label>
+            <input list="managerOptions" id="addmanager" name="负责人" required>
+            <datalist id="managerOptions">
+                <!-- 动态加载的负责人选项将插入到这里 -->
+            </datalist>
+            <br>
 
-                        <label for="addcost">花费:</label>
-                        <input type="number" id="addcost" class="addcost" placeholder="请输入花费">
+            <label for="addcost">花费:</label>
+            <input type="number" id="addcost" class="addcost" placeholder="请输入花费">
 
-                        <label for="addcurrency">币种:</label>
-                        <select id="addcurrency" class="addcurrency">
-                            <option value="">选择币种</option>
-                            <option value="USD">USD - 美元</option>
-                            <option value="EUR">EUR - 欧元</option>
-                            <option value="CNY">CNY - 人民币</option>
-                            <option value="JPY">JPY - 日元</option>
-                            <option value="GBP">GBP - 英镑</option>
-                            <option value="AUD">AUD - 澳元</option>
-                            <option value="CAD">CAD - 加元</option>
-                        </select>
-                        <br>
+            <label for="addcurrency">币种:</label>
+            <select id="addcurrency" class="addcurrency">
+                <option value="">选择币种</option>
+                <option value="USD">USD - 美元</option>
+                <option value="EUR">EUR - 欧元</option>
+                <option value="CNY">CNY - 人民币</option>
+                <option value="JPY">JPY - 日元</option>
+                <option value="GBP">GBP - 英镑</option>
+                <option value="AUD">AUD - 澳元</option>
+                <option value="CAD">CAD - 加元</option>
+            </select>
+            <br>
 
-                        <label for="addproduct">产品:</label>
-                        <input type="text" id="addproduct" name="产品"><br>
+            <!-- 修改后的产品输入框 -->
+            <label for="addproduct">产品:</label>
+            <input list="productOptions" id="addproduct" name="产品" placeholder="请输入或选择产品">
+            <datalist id="addproductOptions">
+                <!-- 动态加载的产品选项将插入到这里 -->
+            </datalist>
+            <br>
 
-                        <label for="addProgress">合作进度:</label>
-                        <input type="text" id="addProgress" name="合作进度"><br>
+            <label for="addProgress">合作进度:</label>
+            <input list="progressOptions" id="addProgress" class="addProgress" placeholder="请输入合作进度">
+            <datalist id="addprogressOptions">
+                <option value="进行中">
+                <option value="合作完成">
+                <option value="合作失败">
+            </datalist>
 
-                        <label for="addestimatedViews">预估观看量:</label>
-                        <input type="number" id="addestimatedViews" name="预估观看量"><br>
+            <label for="addestimatedViews">预估观看量:</label>
+            <input type="number" id="addestimatedViews" name="预估观看量"><br>
 
-                        <label for="addestimatedLaunchDate">预估上线时间:</label>
-                        <input type="date" id="addestimatedLaunchDate" name="预估上线时间"><br>
+            <label for="addestimatedLaunchDate">预估上线时间:</label>
+            <input type="date" id="addestimatedLaunchDate" name="预估上线时间"><br>
 
-                        <button type="submit" class="btn-primary">提交</button>
-                        <button type="button" id="cancelAddVideoData" class="btn-secondary">取消</button>
-                    </form>
-                </div>
-            </div>
+            <button type="submit" class="btn-primary">提交</button>
+            <button type="button" id="cancelAddVideoData" class="btn-secondary">取消</button>
+        </form>
+    </div>
+</div>
+
 </section>
 
 

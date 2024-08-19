@@ -232,3 +232,91 @@ KeyError: '71063f53-f084-42d4-a4de-255c58f308f0'
 2024-08-15 16:00:18,118 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
 2024-08-15 16:00:38,438 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
 2024-08-15 16:02:12,794 - app - ERROR - 获取视频详细信息失败: 'str' object has no attribute 'strftime'
+2024-08-19 10:52:53,787 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@HansTechTalk'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:34,646 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:35,671 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@d'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:36,004 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:36,522 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@h'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:37,233 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@ha'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:37,468 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@han'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:37,654 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@hans'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:54:38,983 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@HansTechTalk'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:55:57,960 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-08-19 10:56:55,554 - app - ERROR - 获取红人详情失败: (pymysql.err.OperationalError) (1054, "Unknown column 'email' in 'field list'")
+[SQL: 
+            SELECT 平台, 红人名称, 国家编码, WhatsApp, Discord, email, 
+                   地址信息1, 地址信息2, 地址信息3, 标签功能1, 标签功能2, 标签功能3, 地区 
+            FROM celebrity_profile 
+            WHERE 平台='youtube' AND 红人名称='@'
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

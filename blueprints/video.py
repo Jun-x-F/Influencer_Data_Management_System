@@ -39,8 +39,8 @@ class Video:
             brand = data.get('brand')
             project = data.get('project')
             manager = data.get('manager')
+            influencer = data.get('influencer')  # 获取红人名称
 
-            # 动态构建查询条件
             query = "SELECT id FROM influencers_video_project_data WHERE 1=1"
 
             if brand:
@@ -49,11 +49,11 @@ class Video:
                 query += f" AND 项目 = '{project}'"
             if manager:
                 query += f" AND 负责人 = '{manager}'"
+            if influencer:
+                query += f" AND 红人名称 = '{influencer}'"  # 添加红人名称过滤条件
 
-            # 执行查询
             current_app.logger.info(f"执行SQL查询: {query}")
             result_df = ReadDatabase('marketing', query).vm()
-            current_app.logger.info(f"查询结果: {result_df}")
 
             if not result_df.empty:
                 unique_ids = result_df['id'].tolist()
@@ -69,7 +69,7 @@ class Video:
     def get_project_info():
         try:
             DATABASE = 'marketing'
-            sql = 'SELECT DISTINCT 品牌,项目, 负责人 FROM influencers_video_project_data'
+            sql = 'SELECT DISTINCT 品牌, 项目, 负责人, 红人名称 FROM influencers_video_project_data'
             current_app.logger.info(f"执行SQL查询: {sql}")
             project_info_df = ReadDatabase(DATABASE, sql).vm()
             current_app.logger.info(f"查询结果: {project_info_df}")
@@ -77,25 +77,63 @@ class Video:
             # 替换 NaN 或 None 值
             project_info_df = project_info_df.fillna('')
 
-            # 构建品牌、项目、负责人之间的关系
+            # 构建品牌、项目、负责人、红人名称之间的关系
             relationships = []
             for index, row in project_info_df.iterrows():
                 relationships.append({
                     "brand": row['品牌'],
                     "project": row['项目'],
-                    "manager": row['负责人']
+                    "manager": row['负责人'],
+                    "influencer": row['红人名称']  # 新增红人名称字段
                 })
 
             # 过滤空值并去重
             brands = list(set([b for b in project_info_df['品牌'].tolist() if b]))
             projects = list(set([p for p in project_info_df['项目'].tolist() if p]))
             managers = list(set([m for m in project_info_df['负责人'].tolist() if m]))
+            influencers = list(set([i for i in project_info_df['红人名称'].tolist() if i]))  # 新增红人名称字段
 
             return jsonify({
                 'brands': brands,
                 'projects': projects,
                 'managers': managers,
+                'influencers': influencers,  # 返回红人名称列表
                 'relationships': relationships
+            }), 200
+
+        except Exception as e:
+            current_app.logger.error(f"获取项目信息失败: {e}")
+            return jsonify({'message': f'获取项目信息失败: {e}'}), 500
+
+    @staticmethod
+    @video_bp.route('/get_product_options', methods=['GET'])
+    def get_product_options():
+        try:
+            DATABASE = 'marketing'
+            sql = 'SELECT DISTINCT 产品 FROM influencers_video_project_data'
+            current_app.logger.info(f"执行SQL查询: {sql}")
+            project_info_df = ReadDatabase(DATABASE, sql).vm()
+            current_app.logger.info(f"查询结果: {project_info_df}")
+
+            # 替换 NaN 或 None 值
+            project_info_df = project_info_df.fillna('')
+
+            sql1 = 'SELECT DISTINCT 类型 FROM influencers_video_project_data'
+            current_app.logger.info(f"执行SQL查询: {sql1}")
+            project_info_df1 = ReadDatabase(DATABASE, sql1).vm()
+            current_app.logger.info(f"查询结果: {project_info_df1}")
+
+            # 替换 NaN 或 None 值
+            project_info_df1 = project_info_df1.fillna('')
+
+
+            # 过滤空值并去重
+            product = list(set([b for b in project_info_df['产品'].tolist() if b]))
+            type = list(set([b for b in project_info_df1['类型'].tolist() if b]))
+
+            return jsonify({
+                'product': product,
+                'unique_video_type': type,
             }), 200
 
         except Exception as e:
@@ -169,7 +207,7 @@ class Video:
             DATABASE = 'marketing'
             sql = f"""
                 SELECT 
-                    品牌, 项目, 负责人, 视频链接, 产品, 合作进度, 
+                    品牌, 项目, 负责人,红人名称,类型, 视频链接, 产品, 合作进度, 
                     物流单号, 花费, 币种, 预估观看量, 预估上线时间 
                 FROM 
                     influencers_video_project_data 
@@ -184,6 +222,8 @@ class Video:
                 # 将所有字段的值转换为基本数据类型（str 或 int）
                 brand = str(result_df['品牌'].iloc[0]) if pd.notna(result_df['品牌'].iloc[0]) else ''
                 project = str(result_df['项目'].iloc[0]) if pd.notna(result_df['项目'].iloc[0]) else ''
+                influencers = str(result_df['红人名称'].iloc[0]) if pd.notna(result_df['红人名称'].iloc[0]) else ''
+                video_type = str(result_df['类型'].iloc[0]) if pd.notna(result_df['类型'].iloc[0]) else ''
                 manager = str(result_df['负责人'].iloc[0]) if pd.notna(result_df['负责人'].iloc[0]) else ''
                 video_links = str(result_df['视频链接'].iloc[0]) if pd.notna(result_df['视频链接'].iloc[0]) else ''
                 product = str(result_df['产品'].iloc[0]) if pd.notna(result_df['产品'].iloc[0]) else ''
@@ -212,13 +252,28 @@ class Video:
                     estimated_launch_date = date_object.strftime('%Y-%m-%d')
                 else:
                     estimated_launch_date = ''
-
-
+                print({
+                    'brand': brand,
+                    'project': project,
+                    'manager': manager,
+                    'influencers' : influencers,
+                    'video_type':video_type,
+                    'videoLinks': video_links,
+                    'product': product,
+                    'progress': progress,
+                    'logisticsNumber': logistics_number,
+                    'cost': cost,
+                    'currency': currency,
+                    'estimatedViews': estimated_views,
+                    'estimatedLaunchDate': estimated_launch_date
+                })
 
                 return jsonify({
                     'brand': brand,
                     'project': project,
                     'manager': manager,
+                    'influencers' : influencers,
+                    'video_type':video_type,
                     'videoLinks': video_links,
                     'product': product,
                     'progress': progress,
@@ -245,6 +300,7 @@ class Video:
             project_name = data.get('projectName')
             brand = data.get('brand')
             manager = data.get('manager')
+            influencer = data.get('influencer')  # 新增红人名称字段
             progress = data.get('progress')
             logistics_number = data.get('logisticsNumber')
             cost = data.get('cost')
@@ -278,10 +334,11 @@ class Video:
                 '品牌': [brand],
                 '项目': [project_name],
                 '负责人': [manager],
+                '红人名称': [influencer],  # 新增红人名称字段
                 '合作进度': [progress],
                 '物流单号': [logistics_number],
                 '花费': [cost],
-                '币种': [currency],  # 添加币种
+                '币种': [currency],
                 '产品': [product],
                 '预估观看量': [estimated_views],
                 '预估上线时间': [estimated_launch_date],
@@ -344,7 +401,6 @@ class Video:
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
-
 
     ## 新增数据
     @staticmethod
