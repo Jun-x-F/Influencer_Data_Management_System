@@ -196,7 +196,7 @@ class Task:
                         aria_label = page.query_selector(
                             '//like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button').get_attribute(
                             "aria-label")
-                        like_count_str = aria_label.replace("与另外", "").replace("人一起赞此视频", "").strip()
+                        like_count_str = aria_label.split(" ")[1]
                     like_count = self.extract_number(like_count_str)
                 view_info = page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
                 if view_info:
