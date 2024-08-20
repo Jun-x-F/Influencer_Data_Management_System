@@ -31,3 +31,7 @@ submitted_video_links = FIFODict()
 order_links = FIFODict()
 # 用于存储用户提交的红人链接
 submitted_influencer_links = FIFODict()
+# 提交视频异常
+submitted_one_video_error = False
+# 视频在7天之内，不需要执行其他任务
+submitted_pass_video = None

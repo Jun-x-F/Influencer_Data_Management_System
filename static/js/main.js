@@ -70,6 +70,10 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
                 clearInterval(intervalId);
             });
     }, 5000);
+    // 设置30秒的超时定时器
+    const timeoutId = setTimeout(() => {
+        clearInterval(intervalId);  // 关闭定时任务
+    }, 30000);
 });
 
 
@@ -761,7 +765,8 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
             .then(data => {
                 if (data.status === 'clean' || data.isSuccess) {
                     clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
-                    updateVideoTable()
+                    updateVideoTable();
+                    clearTimeout(timeoutId);
                 }
                 if (data.status !== 'wait'){
                     responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
@@ -773,8 +778,14 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
                 responseMessage.innerHTML += `<p style="font-size: 14px">访问 http://172.16.11.245:5000/notice/spider/influencersVideo 时出错，请重试。</p>`;
                 responseMessage.style.color = 'red';
                 clearInterval(intervalId);
+                clearTimeout(timeoutId);
             });
     }, 5000);
+
+    // 设置30秒的超时定时器
+    const timeoutId = setTimeout(() => {
+        clearInterval(intervalId);  // 关闭定时任务
+    }, 30000);
 
     var submissions = links.length ? links : [''];
 

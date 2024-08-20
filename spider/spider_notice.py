@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from blueprints.influencer import submitted_influencer_links
 from log.logger import global_log
+from spider.config import config
 
 spider_notice_bp = Blueprint('notice', __name__)
 
@@ -53,6 +54,7 @@ class Notice:
 
     def finish_notice(self, _id: str) -> None:
         """更新成功"""
+        global_log.info(f"{_id} 更新成功")
         work_info = self.work_id_time[_id]
         work_info["isSuccess"] = True
         self.work_id_time[_id] = work_info
@@ -80,7 +82,7 @@ class Notice:
             for _id, work_info in self.work_id_time.items():
                 updateTime = work_info.get("更新时间")
                 time_diff = datetime.now() - updateTime
-                if time_diff > timedelta(hours=1):
+                if time_diff > timedelta(minutes=1):
                     global_log.info(f"清除 send_id:{_id}")
                     self.clean_id_notice(_id)
 
@@ -96,7 +98,7 @@ def post_spider_notice_to_celebrity():
     if return_id != spider_notice_to_celebrity.use_id:
         return jsonify(
             {"message": f"排队处理中...队列目前有{submitted_influencer_links.total_size()}个请求", "isSuccess": False,
-             "status": "wait"}), 200
+             "status": "waitQueue"}), 200
     if return_message is None:
         return jsonify({"message": "wait working", "status": "wait"}), 200
     if return_message == "clean":
@@ -109,6 +111,11 @@ def post_spider_notice_to_influencersVideo():
     request_data = request.json
     return_id = request_data.get("id")
     isSuccess, last_message = spider_notice_to_influencersVideo.get_finish_notice(return_id)
+    if config.submitted_pass_video is True:
+        # 没有视频且没有物流的情况下
+        config.submitted_pass_video = None
+        return jsonify({"message": "submitted_pass_video", "isSuccess": True, "status": "finish"}), 200
+
     if isSuccess:
         return jsonify({"message": last_message, "isSuccess": isSuccess, "status": "finish"}), 200
     return_message = spider_notice_to_influencersVideo.to_notice(return_id)

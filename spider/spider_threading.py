@@ -9,6 +9,7 @@ import threading
 import time
 
 from spider import run_spider
+from spider.config import config
 from spider.config.config import order_links, submitted_influencer_links, submitted_video_links
 from spider.spider_notice import spider_notice_to_influencersVideo, spider_notice_to_celebrity
 from spider.sql.data_inner_db import sync_logistics_information_sheet_to_InfluencersVideoProjectData
@@ -38,7 +39,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
         run_spider.run_spider(link, {}, flag, send_id)
 
     # 完成通知
-    if flag == 2:
+    if flag == 2 and config.submitted_one_video_error is False:
         threading_influencersVideo.set()
     else:
         notice_handler.finish_notice(send_id)

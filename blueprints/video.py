@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
+from spider.config import config
 from spider.config.config import order_links, submitted_video_links
 from spider.spider_threading import threading_influencersVideo
 from spider.sql.data_inner_db import check_InfluencersVideoProjectData_in_db
@@ -126,7 +127,6 @@ class Video:
 
             # 替换 NaN 或 None 值
             project_info_df1 = project_info_df1.fillna('')
-
 
             # 过滤空值并去重
             product = list(set([b for b in project_info_df['产品'].tolist() if b]))
@@ -258,8 +258,8 @@ class Video:
                     'brand': brand,
                     'project': project,
                     'manager': manager,
-                    'influencers' : influencers,
-                    'video_type':video_type,
+                    'influencers': influencers,
+                    'video_type': video_type,
                     'videoLinks': video_links,
                     'product': product,
                     'progress': progress,
@@ -301,6 +301,8 @@ class Video:
                 order_list = order_links.get(send_id, [])
                 order_list.append(logistics_number)
                 order_links[send_id] = order_list
+            else:
+                config.submitted_one_video_error = True
 
             seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
             isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
@@ -364,11 +366,13 @@ class Video:
             if not table_exists:
                 # 表不存在，创建表并插入数据
                 tosql_if_exists = 'replace'
-                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields, index_type='UNIQUE')
+                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields,
+                                                                                            index_type='UNIQUE')
             else:
                 # 表存在，检查索引是否存在
                 try:
-                    index_info = ReadDatabase(DATABASE, f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
+                    index_info = ReadDatabase(DATABASE,
+                                              f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
                     index_exists = not index_info.empty
                 except Exception as e:
                     index_exists = False
@@ -394,15 +398,16 @@ class Video:
             if isExecutedWithinSeven is True:
                 # 避免等待过久
                 threading_influencersVideo.set()
+                if config.submitted_one_video_error is True:
+                    config.submitted_pass_video = True
                 return jsonify({
-                                   'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]\n上次更新视频信息在7天内'}), 200
+                    'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]\n上次更新视频信息在7天内'}), 200
             return jsonify({
-                               'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]提交成功。\nurl={link}'}), 200
+                'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]提交成功。\nurl={link}'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
-
 
     ## 新增数据
     @staticmethod
@@ -453,4 +458,3 @@ class Video:
         except Exception as e:
             print(e)
             return jsonify({'error': str(e)}), 500
-
