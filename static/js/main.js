@@ -2012,7 +2012,7 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
 });
 
 
-// 其他
+//
 document.addEventListener('DOMContentLoaded', function() {
     // 获取产品选项和类型选项
     fetch('/video/get_product_options')
@@ -2021,9 +2021,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Received data:', data); // 调试输出
 
         // 处理产品选项
-        if (data && Array.isArray(data.product)) { // 检查 data.product 是否是一个数组
+        if (data && Array.isArray(data.product)) {
             var productOptions = document.getElementById('productOptions');
-            data.product.forEach(function(product) { // 遍历 product 数组
+            data.product.forEach(function(product) {
                 var option = document.createElement('option');
                 option.value = product;
                 productOptions.appendChild(option);
@@ -2033,27 +2033,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 处理类型选项
-        if (data && Array.isArray(data.unique_video_type)) { // 检查 data.unique_video_type 是否是一个数组
-            var typeSelect = document.getElementById('videoType'); // 选择类型的 select 元素
-            data.unique_video_type.forEach(function(type) { // 遍历类型数组
-                var option = document.createElement('option');
-                option.value = type;
-                option.text = type; // 设置选项的显示文本
-                typeSelect.appendChild(option);
-            });
-        } else {
-            console.error('Invalid data format for types:', data);
-        }
-
-         // 处理类型选项
         if (data && Array.isArray(data.unique_video_type)) {
-            var typeElements = document.querySelectorAll('.videoType'); // 获取所有 videoType 类的元素
-            typeElements.forEach(function(typeElement) {
+            var typeSelects = document.querySelectorAll('.videoType'); // 获取所有类型字段
+
+            typeSelects.forEach(function(typeSelect) {
                 data.unique_video_type.forEach(function(type) {
                     var option = document.createElement('option');
                     option.value = type;
                     option.text = type;
-                    typeElement.appendChild(option);
+                    typeSelect.appendChild(option);
+                });
+
+                // 为每个类型字段添加事件监听器
+                typeSelect.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    filterTableByType(selectedType);
                 });
             });
         } else {
@@ -2062,5 +2056,19 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => console.error('Error fetching product or type options:', error));
 });
+// 单独的类型字段筛选函数
+function filterTableByType(type) {
+    const rows = document.querySelectorAll('#videoTable tbody tr');
+    rows.forEach(row => {
+        const rowType = row.querySelector('td:nth-child(14)').textContent.trim(); // 假设类型字段在第6列
+
+        if (type === '' || rowType === type) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 
 
