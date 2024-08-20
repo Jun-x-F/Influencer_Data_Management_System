@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from log.logger import global_log
 from spider.sql.mysql import Connect
 from spider.template.spider_db_template import Base, InfluencersVideoProjectDataByDate, CelebrityProfile, \
-    InfluencersVideoProjectData
+    InfluencersVideoProjectData, logistics_information_sheet
 
 db = Connect(2, "marketing")
 db.create_session()
@@ -116,3 +116,27 @@ def inner_CelebrityProfile(finish_data, isById=False):
         global_log.error(f"Failed to log to database: {e}")
         db.session.rollback()
         raise
+
+
+def check_InfluencersVideoProjectData_in_db(uniqueId, day_ago) -> bool:
+    if db.check_connection() is not True:
+        db.reconnect_session()
+    filters = and_(
+        InfluencersVideoProjectData.id == uniqueId,
+        InfluencersVideoProjectData.updated_at >= day_ago
+    )
+    exists = db.session.query(InfluencersVideoProjectData).filter(filters).first() is not None
+    return exists
+
+
+def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_numbers):
+    if db.check_connection() is not True:
+        db.reconnect_session()
+    record = db.session.query(logistics_information_sheet).filter_by(number=logistics_numbers).first()
+    if record is not None:
+        existing = db.session.query(InfluencersVideoProjectData).filter_by(trackingNumber=record.number).all()
+        if existing:
+            existing.progressLogistics = record.prior_status_zh
+            db.session.commit()
+            return True
+    return False
