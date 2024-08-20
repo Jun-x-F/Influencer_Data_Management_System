@@ -7,13 +7,14 @@ from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
-from spider.template.class_dict_template import FIFODict
+from log.logger import global_log
+from spider.config.config import order_links, submitted_video_links
+from spider.spider_threading import threading_influencersVideo
+from spider.sql.data_inner_db import check_InfluencersVideoProjectData_in_db
 from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
 
-# 用于存储用户提交的视频链接
-submitted_video_links = FIFODict()
 
 class Video:
     @staticmethod
@@ -196,7 +197,6 @@ class Video:
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
     ## 显示所有控件字段内容
     @staticmethod
     @video_bp.route('/get_video_details', methods=['POST'])
@@ -231,7 +231,8 @@ class Video:
                 logistics_number = str(result_df['物流单号'].iloc[0]) if pd.notna(result_df['物流单号'].iloc[0]) else ''
                 cost = float(result_df['花费'].iloc[0]) if pd.notna(result_df['花费'].iloc[0]) else 0.0
                 currency = str(result_df['币种'].iloc[0]) if pd.notna(result_df['币种'].iloc[0]) else ''
-                estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(result_df['预估观看量'].iloc[0]) else 0
+                estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(
+                    result_df['预估观看量'].iloc[0]) else 0
 
                 date_string = result_df['预估上线时间'].iloc[0]
                 # 检查数据类型并进行必要的转换
@@ -252,21 +253,6 @@ class Video:
                     estimated_launch_date = date_object.strftime('%Y-%m-%d')
                 else:
                     estimated_launch_date = ''
-                print({
-                    'brand': brand,
-                    'project': project,
-                    'manager': manager,
-                    'influencers' : influencers,
-                    'video_type':video_type,
-                    'videoLinks': video_links,
-                    'product': product,
-                    'progress': progress,
-                    'logisticsNumber': logistics_number,
-                    'cost': cost,
-                    'currency': currency,
-                    'estimatedViews': estimated_views,
-                    'estimatedLaunchDate': estimated_launch_date
-                })
 
                 return jsonify({
                     'brand': brand,
@@ -310,8 +296,18 @@ class Video:
             estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = data.get('send_id')
 
+            # 将物流信息加入队列中
+            if logistics_number is not None:
+                order_list = order_links.get(send_id, [])
+                order_list.append(logistics_number)
+                order_links[send_id] = order_list
+
+            seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+            isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
+            global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
+
             # 链接可以为空，如果存在则进行验证
-            if link:
+            if link and isExecutedWithinSeven is False:
                 url_pattern = re.compile(r'^(http|https)://')
                 if not url_pattern.match(link):
                     return jsonify({'message': '无效的URL格式。'}), 400
@@ -395,12 +391,18 @@ class Video:
                 print('更新开始时间', datetime.datetime.now())
                 print('更新结束时间', datetime.datetime.now())
                 print('更新的数据日期', update_date)
-
-            return jsonify({'message': '项目信息提交成功。'}), 200
+            if isExecutedWithinSeven is True:
+                # 避免等待过久
+                threading_influencersVideo.set()
+                return jsonify({
+                                   'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]\n上次更新视频信息在7天内'}), 200
+            return jsonify({
+                               'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]提交成功。\nurl={link}'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
+
 
     ## 新增数据
     @staticmethod
@@ -434,8 +436,10 @@ class Video:
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
             # 添加缺失的列，初始化为空值
-            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数', '转发数', '参与率','视频链接'
-                           '更新日期','品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号', '花费', '产品', '预估观看量', '预估上线时间']
+            all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数',
+                           '转发数', '参与率', '视频链接',
+                           '更新日期', '品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号',
+                           '花费', '产品', '预估观看量', '预估上线时间']
             # 将缺失的列添加到 DataFrame 中，并将其初始化为 None（或 np.nan）
             for col in all_columns:
                 if col not in df.columns:
