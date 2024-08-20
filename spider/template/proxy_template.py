@@ -10,8 +10,8 @@ from log.logger import global_log
 global_log.info("配置proxy文件成功...")
 
 proxy_url = "brd.superproxy.io:22225"
-proxy_user = "brd-customer-hl_152b8c40-zone-deone"
-proxy_pass = "ep2dtcj1gf2b"
+proxy_user = "brd-customer-hl_152b8c40-zone-datacenter_proxy1"
+proxy_pass = "e4j8v08y0x3s"
 
 proxy = {
     'http': f'http://{proxy_user}:{proxy_pass}@{proxy_url}',

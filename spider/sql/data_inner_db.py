@@ -119,13 +119,16 @@ def inner_CelebrityProfile(finish_data, isById=False):
 
 
 def check_InfluencersVideoProjectData_in_db(uniqueId, day_ago) -> bool:
+    exists = False
     if db.check_connection() is not True:
         db.reconnect_session()
     filters = and_(
         InfluencersVideoProjectData.id == uniqueId,
         InfluencersVideoProjectData.updated_at >= day_ago
     )
-    exists = db.session.query(InfluencersVideoProjectData).filter(filters).first() is not None
+    exists_data = db.session.query(InfluencersVideoProjectData).filter(filters).first()
+    if exists_data is not None:
+        return exists_data.likes is not None
     return exists
 
 

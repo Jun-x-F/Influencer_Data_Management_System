@@ -297,7 +297,7 @@ class Video:
             send_id = data.get('send_id')
 
             # 将物流信息加入队列中
-            if logistics_number is not None:
+            if logistics_number is not None and logistics_number != "":
                 order_list = order_links.get(send_id, [])
                 order_list.append(logistics_number)
                 order_links[send_id] = order_list

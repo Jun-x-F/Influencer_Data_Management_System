@@ -560,8 +560,8 @@ def run(isRequest: bool = False, order_numbers: list = None):
             global isSavePath
             isSavePath = True
             log.info("判断为人工手动操作")
-            # file_path = r"D:\wzhData\BaiduSyncdisk\project\python\DataAnalysis\物流-4-2024-08-14-1723627893.xlsx"
-            file_path = input("请输入文件路径(拖拽文件到此命令窗口，并回车即可): \n")
+            file_path = r"D:\wzhData\BaiduSyncdisk\project\python\DataAnalysis\物流-4-2024-08-14-1723627893.xlsx"
+            # file_path = input("请输入文件路径(拖拽文件到此命令窗口，并回车即可): \n")
             read_excel(file_path)
             # 启动数据库提交线程
             commit_thread = threading.Thread(target=commit_to_file, daemon=True)

@@ -101,16 +101,20 @@ class Task:
             # //like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button
             # aria-label="与另外 433 人一起赞此视频"
             like_count_str = like_button_view_model.text_content()
+            if "赞" in like_count_str:
+                like_count_str = "0"
+
             if "12345678901234567890123456789" in like_button_view_model.text_content():
                 aria_label = self.page.query_selector(
                     '//like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button').get_attribute(
                     "aria-label")
-                like_count_str = aria_label.replace("与另外", "").replace("人一起赞此视频", "").strip()
+                like_count_str = aria_label.split(" ")[1]
             like_count = self.extract_number(like_count_str)
             self.finish_data["likes"] = like_count
         view_info = self.page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
         if view_info:
-            view_info_str = view_info.text_content().split("次观看")[0]
+            global_log.info("观看量：" + view_info.text_content())
+            view_info_str = view_info.text_content().split(" ")[0]
             view_count = self.extract_number(view_info_str)
             self.finish_data["views"] = view_count
 
