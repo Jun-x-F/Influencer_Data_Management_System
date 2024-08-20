@@ -64,7 +64,7 @@ def inner_InfluencersVideoProjectData(finish_data):
         filters = and_(
             InfluencersVideoProjectData.platform == finish_data.get("platform"),
             InfluencersVideoProjectData.user_name == finish_data.get("user_name"),
-            )
+        )
 
         db_history_data = (db.session.query(InfluencersVideoProjectData).filter(filters).first())
 
@@ -134,9 +134,12 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
         db.reconnect_session()
     record = db.session.query(logistics_information_sheet).filter_by(number=logistics_numbers).first()
     if record is not None:
-        existing = db.session.query(InfluencersVideoProjectData).filter_by(trackingNumber=record.number).all()
-        if existing:
-            existing.progressLogistics = record.prior_status_zh
+        existing_records = db.session.query(InfluencersVideoProjectData).filter_by(trackingNumber=record.number).all()
+        if existing_records:
+            # 更新所有找到的记录
+            for existing in existing_records:
+                existing.progressLogistics = record.prior_status_zh
+
             db.session.commit()
             return True
     return False

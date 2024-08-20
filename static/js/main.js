@@ -46,7 +46,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider
     const intervalId = setInterval(() => {
-        fetch('/notice/spider', {
+        fetch('/notice/spider/celebrity', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -59,7 +59,9 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
                     clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
                     updateInfluencerTable()
                 }
+                if (data.status !== 'wait'){
                 responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -722,7 +724,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     var product = document.getElementById('videoproduct').value.trim();
     var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
     var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
-
+    var uid = uuid.v4();
     var responseMessage = document.getElementById('responseMessageVideo');
     responseMessage.innerHTML = '正在提交...';
 
@@ -745,6 +747,34 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
             return;
         }
     }
+
+    // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider/influencersVideo
+    const intervalId = setInterval(() => {
+        fetch('/notice/spider/influencersVideo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({send_id: uid})
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'clean' || data.isSuccess) {
+                    clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
+                    updateVideoTable()
+                }
+                if (data.status !== 'wait'){
+                    responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
+                }
+
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                responseMessage.innerHTML += `<p style="font-size: 14px">访问 http://172.16.11.245:5000/notice/spider/influencersVideo 时出错，请重试。</p>`;
+                responseMessage.style.color = 'red';
+                clearInterval(intervalId);
+            });
+    }, 5000);
 
     var submissions = links.length ? links : [''];
 

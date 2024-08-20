@@ -4,13 +4,12 @@ from collections import deque
 from flask import Blueprint, request, jsonify
 
 from base import ReadDatabase
-from spider.template.class_dict_template import FIFODict
+from spider.config.config import submitted_influencer_links
 from utils import determine_platform
 
 influencer_bp = Blueprint('influencer', __name__)
 
-# 用于存储用户提交的红人链接
-submitted_influencer_links = FIFODict()
+
 
 
 class Influencer:

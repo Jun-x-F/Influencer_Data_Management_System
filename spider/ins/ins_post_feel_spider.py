@@ -9,6 +9,7 @@ from typing import Optional
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Response
 
+from spider.config.config import headerLess, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from tool.TimeUtils import TimeUtils
 
@@ -108,7 +109,7 @@ if __name__ == '__main__':
     proxy_url = f"https://brd-customer-hl_c99584d5-zone-datacenter_proxy1:8wt7q8p6682f@brd.superproxy.io:22225"
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
-            headless=False,
+            headless=headerLess,
             channel="chrome",
             args=["--disable-blink-features=AutomationControlled"],
             # proxy={
@@ -117,7 +118,8 @@ if __name__ == '__main__':
             #     'password': '8wt7q8p6682f',
             # }
         )
-        context = browser.new_context()
+        context = browser.new_context(viewport=return_viewPort(),
+                                      user_agent=user_agent,)
 
         context.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
