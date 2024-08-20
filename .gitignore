@@ -1,6 +1,7 @@
 # Ignore all files in the AppData directory
 .idea/
 *.log
+app.log
 # Dependency directories
 include/
 Lib/
@@ -9,5 +10,4 @@ requirements.txt
 *.pyc
 __pycache__/
 venv/
-app.log
 *.jpeg
