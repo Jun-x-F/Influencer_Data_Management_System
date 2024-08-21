@@ -13,4 +13,3 @@ class RetryableError(Exception):
     def __init__(self, message="A retryable error occurred", retry_count=0):
         super().__init__(message)
         self.retry_count = retry_count
-

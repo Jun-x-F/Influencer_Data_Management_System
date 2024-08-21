@@ -7,28 +7,34 @@
 """
 import functools
 import inspect
+import logging
 import os
 import sys
 import traceback
+from pathlib import Path
 from typing import Dict
 
 import pymysql
 from loguru import logger
 
 from log.log_template import Log
+from tool.FileUtils import get_project_path, build_tree_for_py_files
 
 
 class LoguruLogger:
     def __init__(self,
                  log_level="INFO",
-                 console=False,
-                 isOpenError=False):
+                 console=True,
+                 isOpenError=True,
+                 isSave=True):
         """
         :param log_level:日志等级
         :param console: 是否打印日志
         :param isOpenError: 是否返回异常
+        :param isSave: 是否保存
         """
         # 数据库配置文件
+        self.file_tree = build_tree_for_py_files(Path(get_project_path()))
         self.config = {
             'host': '120.79.205.19',
             'user': 'user1',
@@ -64,13 +70,23 @@ class LoguruLogger:
         #     enqueue=True,
         #     serialize=True  # 设置序列化
         # )
-
+        # 添加文件日志处理器
+        if isSave is True:
+            # 日志路径
+            config_path = os.path.join(get_project_path(), "app.log")
+            logger.add(
+                config_path,
+                level=log_level.upper(),
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra[filename]}:{extra[lineno]} | {message}",
+                rotation="100 MB",  # 每个日志文件最大10MB
+                retention="10 days",  # 只保留最近10天的日志文件
+            )
         # 添加控制台输出记录器
         if console:
             logger.add(
                 sys.stdout,
                 level=log_level.upper(),
-                format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <cyan>{file}:{line}</cyan> | <white>{message}</white>",
+                format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <cyan>{extra[filename]}:{extra[lineno]}</cyan> | <white>{message}</white>",
                 # 优化控制台输出格式
                 colorize=True  # 启用颜色
             )
@@ -162,21 +178,55 @@ class LoguruLogger:
 
         self._log_to_db(_to_message)
 
+    def find_deepest_file_in_tree(self, filename, tree, current_depth=0):
+        _cur = None
+        for file_name, deepest in tree.items():
+            if filename == file_name:
+                _cur = deepest
+            if isinstance(deepest, dict):
+                if filename in str(deepest):
+                    _cur = self.find_deepest_file_in_tree(filename, deepest, current_depth + 1)
+        return _cur
+
+    def find_matching_depth_in_stack(self, stack, tree) -> inspect.FrameInfo:
+        """匹配用户写的py文件，返回信息"""
+        max_depth_in_tree = 0
+        _cur_dict = {}
+        for depth, frame in enumerate(stack):
+            filename = os.path.basename(frame.filename)
+            depth_in_tree = self.find_deepest_file_in_tree(filename, tree)
+            if depth_in_tree is not None:
+                _cur_dict[depth_in_tree] = frame
+                max_depth_in_tree = max(max_depth_in_tree, depth_in_tree)
+        return _cur_dict.get(max_depth_in_tree)
+
+    def _to_format(self, message: inspect.FrameInfo):
+        return {
+            "filename": os.path.basename(message.filename),
+            "lineno": message.lineno,
+        }
+
     def debug(self, message):
-        logger.opt(depth=1).debug(message)
+        depth_info = self.find_matching_depth_in_stack(inspect.stack(), self.file_tree)
+        record = self._to_format(depth_info)
+        logger.bind(**record).debug(message)
 
     def info(self, message):
-        logger.opt(depth=1).info(message)
+        depth_info = self.find_matching_depth_in_stack(inspect.stack(), self.file_tree)
+        record = self._to_format(depth_info)
+        logger.bind(**record).info(message)
 
     def warning(self, message):
-        logger.opt(depth=1).warning(message)
+        depth_info = self.find_matching_depth_in_stack(inspect.stack(), self.file_tree)
+        record = self._to_format(depth_info)
+        logger.bind(**record).warning(message)
 
     def error(self, message=None):
         # 获取调用此方法的文件名
-        caller_frame = inspect.stack()[1]
-        caller_file = caller_frame.filename
-        caller_line = caller_frame.lineno
-        caller_function = caller_frame.function
+        depth_info = self.find_matching_depth_in_stack(inspect.stack(), self.file_tree)
+        caller_file = depth_info.filename
+        caller_line = depth_info.lineno
+        caller_function = depth_info.function
         self.log_exception(message, caller_file, caller_line, caller_function)
 
     def log_exception(self, errorNotice=None, errorFileName=None, errorFileLine=None, func_name=None):
@@ -248,7 +298,9 @@ class LoguruLogger:
         return wrapper
 
     def critical(self, message):
-        logger.opt(depth=1).critical(message)
+        depth_info = self.find_matching_depth_in_stack(inspect.stack(), self.file_tree)
+        record = self._to_format(depth_info)
+        logger.bind(**record).critical(message)
 
     def catch(self, *args, **kwargs):
         return logger.catch(*args, **kwargs)
@@ -273,5 +325,38 @@ class LoguruLogger:
         return exception_info
 
 
+# 创建一个自定义处理程序
+class InterceptHandler(logging.Handler):
+    # 继承logging.Handler 指向 loguru
+    def emit(self, record):
+        log_level = record.levelno
+        info = record.getMessage()
+        # 修改werkzeug的配置日志
+        if " - - " in info:
+            info_list = info.split(" - - ")
+            ip = info_list[0].strip()
+            ms_list = info_list[1].split('"')
+            _cur_message = ms_list[1]
+            code = int(ms_list[2].strip().replace("-", ""))
+            if 100 <= code < 400:
+                log_level = logging.INFO
+            elif 400 <= code < 500:
+                log_level = logging.WARN
+            elif 500 <= code < 600:
+                log_level = logging.INFO
+            info = f"The address is {ip} to request {_cur_message} is {code}"
+
+        if log_level == logging.INFO:
+            global_log.info(info)
+        elif log_level == logging.WARN:
+            global_log.warning(info)
+        elif log_level == logging.DEBUG:
+            global_log.debug(info)
+        elif log_level == logging.ERROR:
+            global_log.error(info)
+        elif log_level == logging.CRITICAL:
+            global_log.critical(info)
+
+
 # 全局日志
-global_log = LoguruLogger(console=True, isOpenError=True)
+global_log = LoguruLogger(console=True, isOpenError=True, isSave=True)

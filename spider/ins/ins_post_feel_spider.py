@@ -119,7 +119,7 @@ if __name__ == '__main__':
             # }
         )
         context = browser.new_context(viewport=return_viewPort(),
-                                      user_agent=user_agent,)
+                                      user_agent=user_agent, )
 
         context.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"

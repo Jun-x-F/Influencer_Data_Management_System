@@ -1,11 +1,15 @@
-from flask import Blueprint, request, jsonify, current_app
-from utils import sanitize_input
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater
-import pandas as pd
 import datetime
+
+import pandas as pd
+from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
+
+from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+from utils import sanitize_input
+
 pd.set_option('display.max_columns', None)
 update_bp = Blueprint('update', __name__)
+
 
 class UpdateInfluencer:
     @staticmethod
@@ -40,7 +44,6 @@ class UpdateInfluencer:
             current_app.logger.error(f"获取红人信息失败: {e}")
             return jsonify({'message': f'获取红人信息失败: {e}'}), 500
 
-
     @staticmethod
     @update_bp.route('/influencer', methods=['POST'])
     def update_influencer():
@@ -62,7 +65,6 @@ class UpdateInfluencer:
 
             if not platform or not name:
                 return jsonify({'message': '平台和红人名称是必需的。'}), 400
-
 
             update_date = datetime.date.today()
             influencer_data = {
@@ -91,7 +93,7 @@ class UpdateInfluencer:
             # print(df)
 
             # 定义索引字段
-            index_fields = ['平台','红人名称']
+            index_fields = ['平台', '红人名称']
 
             # 检查表是否存在
             DATABASE = 'marketing'
@@ -105,11 +107,13 @@ class UpdateInfluencer:
             if not table_exists:
                 # 表不存在，创建表并插入数据
                 tosql_if_exists = 'replace'
-                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields, index_type='UNIQUE')
+                DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields,
+                                                                                            index_type='UNIQUE')
             else:
                 # 表存在，检查索引是否存在
                 try:
-                    index_info = ReadDatabase(DATABASE, f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
+                    index_info = ReadDatabase(DATABASE,
+                                              f"SHOW INDEX FROM {sql_t} WHERE Key_name='idx_{sql_t}_unique'").vm()
                     index_exists = not index_info.empty
                 except Exception as e:
                     index_exists = False
@@ -125,7 +129,6 @@ class UpdateInfluencer:
                         print(f"索引 idx_{sql_t}_unique 创建成功。")
                     except Exception as e:
                         print(f"创建索引失败: {e}")
-
 
                 # 更新现有表中的数据
                 db_updater = DatabaseUpdater()
@@ -185,19 +188,32 @@ class UpdateInfluencer:
 
             if not influencer_details_df.empty:
                 # 将所有字段的值转换为基本数据类型（str 或 int）
-                platform = str(influencer_details_df['平台'].iloc[0]) if pd.notna(influencer_details_df['平台'].iloc[0]) else ''
-                influencer_name = str(influencer_details_df['红人名称'].iloc[0]) if pd.notna(influencer_details_df['红人名称'].iloc[0]) else ''
-                country_code = str(influencer_details_df['国家编码'].iloc[0]) if pd.notna(influencer_details_df['国家编码'].iloc[0]) else ''
-                whatsapp = str(influencer_details_df['WhatsApp'].iloc[0]) if pd.notna(influencer_details_df['WhatsApp'].iloc[0]) else ''
-                discord = str(influencer_details_df['Discord'].iloc[0]) if pd.notna(influencer_details_df['Discord'].iloc[0]) else ''
-                email = str(influencer_details_df['邮箱'].iloc[0]) if pd.notna(influencer_details_df['邮箱'].iloc[0]) else ''
-                address1 = str(influencer_details_df['地址信息1'].iloc[0]) if pd.notna(influencer_details_df['地址信息1'].iloc[0]) else ''
-                address2 = str(influencer_details_df['地址信息2'].iloc[0]) if pd.notna(influencer_details_df['地址信息2'].iloc[0]) else ''
-                address3 = str(influencer_details_df['地址信息3'].iloc[0]) if pd.notna(influencer_details_df['地址信息3'].iloc[0]) else ''
-                tag1 = str(influencer_details_df['标签功能1'].iloc[0]) if pd.notna(influencer_details_df['标签功能1'].iloc[0]) else ''
-                tag2 = str(influencer_details_df['标签功能2'].iloc[0]) if pd.notna(influencer_details_df['标签功能2'].iloc[0]) else ''
-                tag3 = str(influencer_details_df['标签功能3'].iloc[0]) if pd.notna(influencer_details_df['标签功能3'].iloc[0]) else ''
-                region = str(influencer_details_df['地区'].iloc[0]) if pd.notna(influencer_details_df['地区'].iloc[0]) else ''
+                platform = str(influencer_details_df['平台'].iloc[0]) if pd.notna(
+                    influencer_details_df['平台'].iloc[0]) else ''
+                influencer_name = str(influencer_details_df['红人名称'].iloc[0]) if pd.notna(
+                    influencer_details_df['红人名称'].iloc[0]) else ''
+                country_code = str(influencer_details_df['国家编码'].iloc[0]) if pd.notna(
+                    influencer_details_df['国家编码'].iloc[0]) else ''
+                whatsapp = str(influencer_details_df['WhatsApp'].iloc[0]) if pd.notna(
+                    influencer_details_df['WhatsApp'].iloc[0]) else ''
+                discord = str(influencer_details_df['Discord'].iloc[0]) if pd.notna(
+                    influencer_details_df['Discord'].iloc[0]) else ''
+                email = str(influencer_details_df['邮箱'].iloc[0]) if pd.notna(
+                    influencer_details_df['邮箱'].iloc[0]) else ''
+                address1 = str(influencer_details_df['地址信息1'].iloc[0]) if pd.notna(
+                    influencer_details_df['地址信息1'].iloc[0]) else ''
+                address2 = str(influencer_details_df['地址信息2'].iloc[0]) if pd.notna(
+                    influencer_details_df['地址信息2'].iloc[0]) else ''
+                address3 = str(influencer_details_df['地址信息3'].iloc[0]) if pd.notna(
+                    influencer_details_df['地址信息3'].iloc[0]) else ''
+                tag1 = str(influencer_details_df['标签功能1'].iloc[0]) if pd.notna(
+                    influencer_details_df['标签功能1'].iloc[0]) else ''
+                tag2 = str(influencer_details_df['标签功能2'].iloc[0]) if pd.notna(
+                    influencer_details_df['标签功能2'].iloc[0]) else ''
+                tag3 = str(influencer_details_df['标签功能3'].iloc[0]) if pd.notna(
+                    influencer_details_df['标签功能3'].iloc[0]) else ''
+                region = str(influencer_details_df['地区'].iloc[0]) if pd.notna(
+                    influencer_details_df['地区'].iloc[0]) else ''
 
                 return jsonify({
                     '平台': platform,
@@ -221,8 +237,3 @@ class UpdateInfluencer:
         except Exception as e:
             current_app.logger.error(f"获取红人详情失败: {e}")
             return jsonify({'message': f'获取红人详情失败: {e}'}), 500
-
-
-
-
-

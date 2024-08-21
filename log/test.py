@@ -25,7 +25,6 @@ async def test_message_exception_logging():
         log.error("这是一条测试的代码")
 
 
-
 async def test_message_b():
     raise ValueError("异常数据")
 

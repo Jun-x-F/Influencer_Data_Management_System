@@ -1,17 +1,16 @@
+import datetime
+
+import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
+
+from base import DF_ToSql
+from base import DatabaseUpdater
+from base import ReadDatabase
 from forms import ProjectForm
 from utils import sanitize_input
 
-from base import DF_ToSql
-from base import ReadDatabase
-from base import DatabaseUpdater
-
-import datetime
-from datetime import  timedelta
-import pandas as pd
-import time
-
 project_information_bp = Blueprint('project_information', __name__)
+
 
 class ProjectInformation:
     @staticmethod
@@ -44,8 +43,6 @@ class ProjectInformation:
             current_app.logger.error(f"获取负责人信息失败: {e}")
             return jsonify({'message': f'获取负责人信息失败: {e}'}), 500
 
-
-
     @staticmethod
     @project_information_bp.route('/submit', methods=['POST'])
     def submit():
@@ -64,7 +61,8 @@ class ProjectInformation:
 
                 # 记录操作
                 current_app.logger.info(f"提交项目: {project_name}, 负责人: {manager}")
-                print(f"项目: {project_name}, 负责人: {manager}, 合作进度: {progress}, 花费: {cost}, 产品: {product}, 预估观看量: {estimated_views}, 预估上线时间: {estimated_launch_date}")
+                print(
+                    f"项目: {project_name}, 负责人: {manager}, 合作进度: {progress}, 花费: {cost}, 产品: {product}, 预估观看量: {estimated_views}, 预估上线时间: {estimated_launch_date}")
 
                 # 将数据收集到一个字典中
                 project_data = {
@@ -95,7 +93,8 @@ class ProjectInformation:
                 if not table_exists:
                     # 表不存在，创建表并插入数据
                     tosql_if_exists = 'replace'
-                    DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields, index_type='UNIQUE')
+                    DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types().add_index(index_fields,
+                                                                                                index_type='UNIQUE')
                 else:
                     # 表存在，检查索引是否存在
                     index_exists = False
@@ -132,4 +131,3 @@ class ProjectInformation:
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
             return jsonify({'message': '内部服务器错误。'}), 500
-

@@ -2,8 +2,6 @@
 import logging
 import os
 import threading
-import time
-from logging.handlers import RotatingFileHandler
 
 from flask import Flask, render_template
 from flask_cors import CORS
@@ -14,6 +12,7 @@ from blueprints.project_information import project_information_bp
 from blueprints.update import update_bp
 from blueprints.video import video_bp
 from forms import ProjectForm
+from log.logger import InterceptHandler
 from spider.spider_notice import spider_notice_bp
 from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task
 
@@ -23,11 +22,13 @@ CORS(app)  # 允许所有跨域请求
 # 设置 SECRET_KEY
 app.config['SECRET_KEY'] = os.urandom(24)
 
-handler = RotatingFileHandler('app.log', maxBytes=100000, backupCount=10)
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-app.logger.addHandler(handler)
+# 移除 Flask 默认的日志处理器
+for handler in list(app.logger.handlers):
+    app.logger.removeHandler(handler)
+# 移除 Werkzeug 默认的日志处理器
+logging.getLogger('werkzeug').handlers = []
+# 设置全局日志配置，将所有日志重定向到 Loguru
+logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)
 
 # 注册蓝图
 app.register_blueprint(influencer_bp, url_prefix='/influencer')

@@ -3,9 +3,7 @@ import pickle
 
 import redis
 
-from log.logger import LoguruLogger
-
-logger = LoguruLogger()
+from log.logger import global_log
 
 
 class RedisClient:
@@ -20,29 +18,29 @@ class RedisClient:
             connection = redis.Redis(host=self.host, port=self.port, db=self.db)
             # 测试连接
             connection.ping()
-            logger.info(f"Connected to Redis at {self.host}:{self.port}, db: {self.db}")
+            global_log.info(f"Connected to Redis at {self.host}:{self.port}, db: {self.db}")
             return connection
         except redis.ConnectionError as e:
             print(e)
-            logger.error()
+            global_log.error()
             return None
 
     def set_value(self, key, value, expiration=None):
         try:
             self.connection.set(key, value, ex=expiration)
-            logger.info(f"Set {key} = {value} with expiration = {expiration}")
+            global_log.info(f"Set {key} = {value} with expiration = {expiration}")
         except Exception as e:
-            logger.error()
+            global_log.error()
 
     def get_value(self, key):
         try:
             value = self.connection.get(key)
             if value is not None:
                 value = value.decode('utf-8')
-            logger.info(f"Get {key} = {value}")
+            global_log.info(f"Get {key} = {value}")
             return value
         except Exception as e:
-            logger.error()
+            global_log.error()
             return None
 
     def set_dataframe(self, key, df, expiration=None):
@@ -50,9 +48,9 @@ class RedisClient:
             # 序列化 DataFrame
             df_bytes = pickle.dumps(df)
             self.connection.set(key, df_bytes, ex=expiration)
-            logger.info(f"Set DataFrame for key {key} with expiration = {expiration}")
+            global_log.info(f"Set DataFrame for key {key} with expiration = {expiration}")
         except Exception as e:
-            logger.error()
+            global_log.error()
 
     def get_dataframe(self, key):
         try:
@@ -60,13 +58,13 @@ class RedisClient:
             df_bytes = self.connection.get(key)
             if df_bytes is not None:
                 df = pickle.loads(df_bytes)
-                logger.info(f"Get DataFrame for key {key}")
+                global_log.info(f"Get DataFrame for key {key}")
                 return df
             else:
-                logger.warning(f"No DataFrame found for key {key}")
+                global_log.warning(f"No DataFrame found for key {key}")
                 return None
         except Exception as e:
-            logger.error()
+            global_log.error()
             return None
 
 

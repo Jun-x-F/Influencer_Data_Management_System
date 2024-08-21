@@ -9,13 +9,11 @@ import time
 
 import requests
 
-from log.logger import LoguruLogger
+from log.logger import global_log
 from spider.template.proxy_template import proxy
 
-log = LoguruLogger(isOpenError=True, console=True)
 auth_config = {
 }
-log.info("初始化翻译接口的配置文件成功...")
 
 
 def is_within_8_minutes(timestamp):
@@ -34,7 +32,7 @@ def is_within_8_minutes(timestamp):
 
 def get_auth():
     auth = requests.get("https://edge.microsoft.com/translate/auth", proxies=proxy).text
-    log.info(f"请求翻译auth认证长度: {len(auth)}")
+    global_log.info(f"请求翻译auth认证长度: {len(auth)}")
     return auth
 
 
@@ -75,9 +73,8 @@ def translate(text):
     }
     data = text.encode('unicode_escape')
     response = requests.post(url, headers=headers, params=params, data=data, proxies=proxy)
-    log.info(f"请求翻译接口结果为: {response.status_code}")
+    global_log.info(f"请求翻译接口结果为: {response.status_code}")
     return response.json()
-
 
 # print(translate(
 #     '[{"text":"Delivered to your community mailbox, parcel locker or apt./condo mailbox"},{"text":"Item out for '

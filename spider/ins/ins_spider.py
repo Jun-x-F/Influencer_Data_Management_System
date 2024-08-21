@@ -170,7 +170,6 @@ class Task:
 
         return avg_like_count, avg_comment_count, avg_play_count
 
-
     def work(self, _url):
         user_name = self.extract_username(_url)
         self.finish_data["user_name"] = user_name
@@ -183,7 +182,7 @@ class Task:
         self.page.wait_for_timeout(self.human_wait_time)
         # 获取国家信息
         self.page.wait_for_selector(f'//h2/*[text()="{user_name}"]').click()
-        self.page.wait_for_timeout(self.human_wait_time/2)
+        self.page.wait_for_timeout(self.human_wait_time / 2)
         region = self.page.wait_for_selector('//span[text()="帐户所在地"]/following-sibling::span[1]').text_content()
         self.page.wait_for_selector('//button[text()="关闭"]').click()
         self.page.wait_for_timeout(self.human_wait_time / 2)

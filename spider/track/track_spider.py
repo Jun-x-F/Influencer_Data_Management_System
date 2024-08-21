@@ -22,10 +22,9 @@ import pandas as pd
 from playwright.sync_api import Page, sync_playwright, Response
 from sqlalchemy.orm import scoped_session
 
-from log.logger import LoguruLogger
-from spider.config.config import headerLess, return_viewPort, user_agent
+from log.logger import global_log
+from spider.config.config import headerLess, return_viewPort, user_agent, redis_conn
 from spider.sql.data_inner_db import db
-from spider.sql.redisConn import RedisClient
 from spider.template.class_dict_template import FIFODict
 from spider.template.proxy_template import proxy_user, proxy_pass, proxy_url
 from spider.template.spider_db_template import logistics_information_sheet
@@ -33,7 +32,6 @@ from spider.track.track_global_info import global_json
 from spider.translator.microsofttranslator import translate
 
 isSavePath = False
-redis_client = RedisClient(host='172.16.11.245', port=6379, db=5)
 order_queue = Queue()
 cache_queue = Queue()
 count_queue = FIFODict()
@@ -43,8 +41,6 @@ tf_dict = FIFODict()
 shutdown_event = threading.Event()
 recept_event = threading.Event()
 
-log = LoguruLogger(isOpenError=True, console=True)
-
 
 class Task:
     def __init__(self, _page: Page, str_number: str):
@@ -53,7 +49,7 @@ class Task:
         self.response_data = None
         self.get_flag = False
         self.str_number = str_number
-        log.info("装载爬虫获取的json")
+        global_log.info("装载爬虫获取的json")
         self.zh_cn = global_json
 
     def on_response(self, response: Response):
@@ -66,12 +62,12 @@ class Task:
             meta = raw_res.get("meta")
             code = meta.get("code")
             if code == 200:
-                log.info(f"页面监听到指定request请求，进行解析...")
+                global_log.info(f"页面监听到指定request请求，进行解析...")
                 self.response_data = raw_res.get("shipments")
                 state = self.response_data[0].get("state")
                 shipment = self.response_data[0].get("shipment")
                 if state != 'Failure' and shipment is not None:
-                    log.info(f"response数据获取成功，进行解析...")
+                    global_log.info(f"response数据获取成功，进行解析...")
                     # log.info(self.response_data)
                     self.get_flag = True
 
@@ -82,10 +78,10 @@ class Task:
 
             # 提取并打印地理位置信息
             geo_info = self.page.evaluate("() => JSON.parse(document.body.innerText)")
-            log.info(
+            global_log.info(
                 f"IP: {geo_info['ip']} Country: {geo_info['country']} Region: {geo_info['region']} City: {geo_info['city']} Location: {geo_info['loc']}")
         except Exception:
-            log.info("解析ip请求失败，继续执行任务")
+            global_log.info("解析ip请求失败，继续执行任务")
 
     def click_info(self):
         if_login = False
@@ -97,13 +93,13 @@ class Task:
             except Exception:
                 self.page.wait_for_timeout(self.human_wait_time)
         if if_login is False:
-            log.info(
+            global_log.info(
                 f"目标https://www.track.net/zh-cn加载，累计等待{(self.human_wait_time * 5) / 1000}秒，重新回归队列中")
             order_queue.put(self.str_number)
             return if_login
         textarea = self.page.query_selector('//textarea[@id="auto-size-textarea"]')
         if textarea is None:
-            log.info("检测不到输入框...重新加入队列中")
+            global_log.info("检测不到输入框...重新加入队列中")
             order_queue.put(self.str_number)
             return False
         textarea.fill(self.str_number.replace(",", "\n"))
@@ -121,7 +117,7 @@ class Task:
 
         self.page.on("response", self.on_response)
         _url = f"https://t.17track.net/zh-cn#nums={self.str_number}"
-        log.info(f"目标url为{_url}")
+        global_log.info(f"目标url为{_url}")
         for i in range(5):
             try:
                 # https://t.17track.net/en#nums=
@@ -134,7 +130,7 @@ class Task:
             finally:
                 self.page.wait_for_timeout(self.human_wait_time)
         if if_login is False:
-            log.error(f"{_url}跳转失败，累计等待{(self.human_wait_time * 5) / 1000}秒，重新回归队列中")
+            global_log.error(f"{_url}跳转失败，累计等待{(self.human_wait_time * 5) / 1000}秒，重新回归队列中")
             change_task_info(self.str_number, "retry")
             return
 
@@ -147,7 +143,7 @@ class Task:
                     self.page.query_selector('//a[text()="完成"]').click()
                     break
                 time.sleep(random.random())
-            log.info("检测到指引，关闭指引完成")
+            global_log.info("检测到指引，关闭指引完成")
 
         for _ in range(60 * 2):
             if self.get_flag is True:
@@ -155,7 +151,7 @@ class Task:
                 if res is False:
                     err_str = ",".join(error_list)
                     change_task_info(err_str, "retry")
-                    log.error("解析数据出现异常，重新加入任务队列中")
+                    global_log.error("解析数据出现异常，重新加入任务队列中")
                     raw_list = self.str_number.split(",")
                     result = list(set(raw_list) - set(error_list))
                     result_to_str = ",".join(result)
@@ -166,19 +162,19 @@ class Task:
 
             reload = self.page.query_selector('//*[contains(text(), "网络访问错误，请进行重试")]')
             if reload is not None:
-                log.info(f"页面识别到网络访问错误，进行刷新重试")
+                global_log.info(f"页面识别到网络访问错误，进行刷新重试")
                 self.page.reload(wait_until="domcontentloaded")
                 self.page.wait_for_timeout(self.human_wait_time)
 
             # <h4 class="modal-title text-truncate">警告</h4>
             notice = self.page.query_selector('//h4[contains(text(), "警告")]')
             if notice is not None:
-                log.info(f"页面识别到验证码，进行刷新重试")
+                global_log.info(f"页面识别到验证码，进行刷新重试")
                 try:
                     self.page.reload(wait_until="domcontentloaded")
                     self.page.wait_for_timeout(self.human_wait_time)
                 except Exception as e:
-                    log.info("出现网络波动情况，需要检查网络")
+                    global_log.info("出现网络波动情况，需要检查网络")
 
             time.sleep(1)
 
@@ -305,9 +301,9 @@ class Task:
                 else:
                     cache_queue.put(logistics_information_sheet(**order_cur_data))
             except Exception as e:
-                log.error(f"{number}解析数据出现异常，退出解析")
-                log.error(e)
-                log.error(info)
+                global_log.error(f"{number}解析数据出现异常，退出解析")
+                global_log.error(e)
+                global_log.error(info)
                 _cur_error_list.append(number)
 
                 continue
@@ -337,8 +333,8 @@ def put_order_number_in_queue(retry_item=3, chunk_size=40) -> Optional[str]:
             info["thread_id"] = None
             count_queue[_order] = info
 
-            redis_client.set_value(_order, f"17track异常数据, 时间为{datetime.datetime.now()}", 20 * 24 * 3600)
-            log.info(f"检测到{_order}出现获取异常次数不低于{retry_item}次，添加到Redis异常队列中，有效性20天")
+            redis_conn.set_value(_order, f"17track异常数据, 时间为{datetime.datetime.now()}", 20 * 24 * 3600)
+            global_log.info(f"检测到{_order}出现获取异常次数不低于{retry_item}次，添加到Redis异常队列中，有效性20天")
 
     _cur_order_len = len(_cur_list)
 
@@ -350,10 +346,10 @@ def put_order_number_in_queue(retry_item=3, chunk_size=40) -> Optional[str]:
     for i in range(_cur_order_item):
         order_queue.put(",".join(_cur_list[start: (i + 1) * chunk_size]).strip(","))
         start = (i + 1) * chunk_size
-    log.info(f"队列根据{chunk_size}条订单为一个任务，累计生成{order_queue.qsize()}个任务")
+    global_log.info(f"队列根据{chunk_size}条订单为一个任务，累计生成{order_queue.qsize()}个任务")
 
 
-def same_to_count_queue(_order_list: list, isList= True):
+def same_to_count_queue(_order_list: list, isList=True):
     for _order in _order_list:
         # 将次数归为0
         if isList is True:
@@ -366,12 +362,12 @@ def same_to_count_queue(_order_list: list, isList= True):
                 "count": 0,
                 "status": "create"
             }
-    log.info(f"累计解析出来{len(count_queue)}条订单数据，开始添加到执行队列中")
+    global_log.info(f"累计解析出来{len(count_queue)}条订单数据，开始添加到执行队列中")
 
 
 def read_excel(file_path):
     """读取excel"""
-    log.info(f"开始读取本地文件, 路径为{file_path}")
+    global_log.info(f"开始读取本地文件, 路径为{file_path}")
     df = pd.read_excel(file_path)
     _order_list = df.values.tolist()
     same_to_count_queue(_order_list)
@@ -449,13 +445,13 @@ def commit_to_file_to_process(file_path: Path):
         if len(instances) != 0:
             update_df.to_excel(file_path, index=False)
 
-            log.info(f"数据已更新并保存到{file_path}，任务未结束前不要打开!")
+            global_log.info(f"数据已更新并保存到{file_path}，任务未结束前不要打开!")
 
 
 def commit_to_file():
     desktop_path = Path.home() / "Desktop"
     file_path = desktop_path / f"{datetime.datetime.now().strftime('%Y-%m-%d')}_logistics_information.xlsx"
-    log.info(f"文件存放路径为 {desktop_path}")
+    global_log.info(f"文件存放路径为 {desktop_path}")
     while not shutdown_event.is_set():
         commit_to_file_to_process(file_path)
         time.sleep(5)
@@ -482,18 +478,18 @@ def commit_to_db_process(session: scoped_session):
             existing_record.shipment_date = instance.shipment_date
             existing_record.description = instance.description
             existing_record.days_after_order = instance.days_after_order
-            log.info(f"Updated existing record with number: {instance.number}, alias: {instance.alias}")
+            global_log.info(f"Updated existing record with number: {instance.number}, alias: {instance.alias}")
         else:
             # 如果不存在，则添加为新记录
             instances.append(instance)
-            log.info(f"Added new record with number: {instance.number}, alias: {instance.alias}")
+            global_log.info(f"Added new record with number: {instance.number}, alias: {instance.alias}")
 
         cache_queue.task_done()
 
     if instances:
         session.add_all(instances)
         session.commit()
-        log.info(f"Committed {len(instances)} new instances to the database.")
+        global_log.info(f"Committed {len(instances)} new instances to the database.")
     else:
         session.commit()  # 提交更新的记录
 
@@ -543,30 +539,30 @@ def thread_work():
                     # 超时3分钟
                     future.result(timeout=60 * 3)  # 确保获取任务的结果并处理异常
                 except concurrent.futures.TimeoutError:
-                    log.error(f"{task}任务超时，加入重试队列中")
+                    global_log.error(f"{task}任务超时，加入重试队列中")
                     change_task_info(task, "retry")
                 except Exception as e:
                     raise
             put_order_number_in_queue()
     shutdown_event.set()
-    log.info("任务执行完毕，等待队列同步数据中...")
+    global_log.info("任务执行完毕，等待队列同步数据中...")
     recept_event.wait(timeout=60 * 3)
 
 
 def run(isRequest: bool = False, order_numbers: list = None):
     try:
-        log.info("执行获取订单任务详情")
+        global_log.info("执行获取订单任务详情")
         if isRequest is False:
             global isSavePath
             isSavePath = True
-            log.info("判断为人工手动操作")
+            global_log.info("判断为人工手动操作")
             file_path = r"D:\wzhData\BaiduSyncdisk\project\python\DataAnalysis\物流-4-2024-08-14-1723627893.xlsx"
             # file_path = input("请输入文件路径(拖拽文件到此命令窗口，并回车即可): \n")
             read_excel(file_path)
             # 启动数据库提交线程
             commit_thread = threading.Thread(target=commit_to_file, daemon=True)
         else:
-            log.info("判断为红人系统发出的请求操作")
+            global_log.info("判断为红人系统发出的请求操作")
             same_to_count_queue(order_numbers, isList=False)
             # 启动数据库提交线程
             commit_thread = threading.Thread(target=commit_to_db, daemon=True)

@@ -247,8 +247,8 @@ class Task:
             self.finish_data["type"] = "视频"
         try:
             self.finish_data["engagement_rate"] = (
-                        (self.finish_data.get("likes", 0) + self.finish_data.get("comments", 0))
-                        / self.finish_data.get("views", 0))
+                    (self.finish_data.get("likes", 0) + self.finish_data.get("comments", 0))
+                    / self.finish_data.get("views", 0))
         except Exception:
             self.finish_data["engagement_rate"] = 0
 

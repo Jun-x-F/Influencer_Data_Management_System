@@ -10,6 +10,7 @@ from collections import deque
 
 class FIFODict:
     """先进先出的dict"""
+
     def __init__(self):
         self._data = {}
         self._keys = deque()
@@ -60,4 +61,3 @@ class FIFODict:
     def items(self):
         """返回队列中的所有键值对"""
         return ((key, self._data[key]) for key in self._keys)  # 返回生成器
-

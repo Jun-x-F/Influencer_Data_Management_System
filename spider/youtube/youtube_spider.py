@@ -153,7 +153,7 @@ class Task:
                     args=["--disable-blink-features=AutomationControlled"],
                 )
                 cur_context = cur_browser.new_context(viewport=return_viewPort(),
-                                                      user_agent=user_agent,)
+                                                      user_agent=user_agent, )
 
                 cur_context.add_init_script(
                     "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"

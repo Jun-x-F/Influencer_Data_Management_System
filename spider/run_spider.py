@@ -12,11 +12,10 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from log.logger import global_log
-from spider.config.config import headerLess, return_viewPort, user_agent
+from spider.config.config import headerLess, return_viewPort, user_agent, redis_conn
 from spider.ins import ins_post_feel_spider
 from spider.ins import ins_spider
 from spider.spider_notice import spider_notice_to_celebrity, spider_notice_to_influencersVideo, Notice
-from spider.sql.redisConn import RedisClient
 from spider.tiktok import tiktok_spider
 from spider.tiktok import tiktok_video_spider
 from spider.youtube import youtube_spider
@@ -123,7 +122,6 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
                      else spider_notice_to_influencersVideo)
 
     spider_notice.add_notice(_id, f"接收到链接为{url}, 开始解析url")
-    retryDb = RedisClient("172.16.11.245", db=3)
     message = {}
     try:
         code = work(url, cur, flag, _id)
@@ -138,7 +136,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
         message["code"] = 500
         message["message"] = "爬虫异常, 检查日志"
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        retryDb.set_value(url, json.dumps(cur))
+        redis_conn.set_value(url, json.dumps(cur))
     spider_notice.add_notice(_id, f"链接{url} 执行结果为 {message.get('message')}")
     return message
 

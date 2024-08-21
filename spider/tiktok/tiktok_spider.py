@@ -35,7 +35,6 @@ class Task:
         self.response_sort_data = []
         self.finish_data = {}
 
-
     def verify_bar_close(self) -> None:
         """关闭验证，并更新"""
         verify_bar_item = self.page.query_selector('//*[@id="verify-bar-close"]')
@@ -99,8 +98,7 @@ class Task:
         self.finish_data["average_engagement_rate"] = \
             ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
              / self.finish_data["average_views"])
-        self.finish_data["level"] = grade_criteria(self.finish_data["platform"],self.finish_data["average_views"])
-
+        self.finish_data["level"] = grade_criteria(self.finish_data["platform"], self.finish_data["average_views"])
 
     def work(self, _url) -> None:
         """代码执行层"""

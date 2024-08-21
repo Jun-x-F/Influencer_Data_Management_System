@@ -10,8 +10,6 @@ from utils import determine_platform
 influencer_bp = Blueprint('influencer', __name__)
 
 
-
-
 class Influencer:
     @staticmethod
     @influencer_bp.route('/submit_link', methods=['POST'])

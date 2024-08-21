@@ -33,4 +33,3 @@ def get_ws_id():
         log.info(response.text)
         webSocketDebuggerUrl = response.json().get("webSocketDebuggerUrl")
         return webSocketDebuggerUrl
-
