@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频数据管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>视频数据管理</h1>
+
+       <section id="videoSection" class="form-container" style="position: relative;">
+    <!-- 新增数据按钮 -->
+    <button id="addVideoDataButton" class="add-video-data-btn">新增数据</button>
+    <div class="form-column">
+    <h2>项目与视频板块</h2>
+    <form id="videoForm">
+        <div id="linkFieldsContainer">
+            <div class="linkFields">
+                <div class="form-row">
+                    <div>
+                        <label for="videoUniqueId">唯一id:</label>
+                        <input list="videoUniqueIdList" id="videoUniqueId" class="videoUniqueId" placeholder="选择或输入唯一id" required>
+                        <datalist id="videoUniqueIdList">
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </datalist>
+                    </div>
+                    <div>
+                        <label for="videobrand">品牌:</label>
+                        <select id="videobrand" class="videobrand">
+                            <option value="">选择品牌</option>
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="videoProjectName">项目:</label>
+                        <select id="videoProjectName" class="videoProjectName">
+                            <option value="">选择项目</option>
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="videoManager">负责人:</label>
+                        <select id="videoManager" class="videoManager">
+                            <option value="">选择负责人</option>
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="videoInfluencerName">红人名称:</label>
+                        <input list="videoInfluencerNameList" id="videoInfluencerName" class="videoInfluencerName" placeholder="选择或输入红人名称">
+                        <datalist id="videoInfluencerNameList">
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div>
+                        <label for="videoLinks">视频链接:</label>
+                        <textarea id="videoLinks" class="videoLinks" placeholder="请输入视频链接"></textarea>
+                    </div>
+                    <div>
+                        <label for="videoproduct">产品:</label>
+                        <input list="productOptions" id="videoproduct" class="videoproduct" placeholder="请输入或选择产品">
+                        <datalist id="productOptions"></datalist>
+                    </div>
+                    <div>
+                        <label for="videoProgress">合作进度:</label>
+                        <input list="progressOptions" id="videoProgress" class="videoProgress" placeholder="请输入合作进度">
+                        <datalist id="progressOptions">
+                            <option value="进行中">
+                            <option value="合作完成">
+                            <option value="合作失败">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label for="videoLogisticsNumber">物流单号:</label>
+                        <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber" placeholder="请输入物流单号">
+                    </div>
+                    <div>
+                        <label for="videoType">类型:</label>
+                        <select id="videoType" class="videoType">
+                            <option value="">选择类型</option>
+                            <!-- 选项将在JavaScript中动态生成 -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div>
+                        <label for="videocost">花费:</label>
+                        <input type="number" id="videocost" class="videocost" placeholder="请输入花费">
+                    </div>
+                    <div>
+                        <label for="videocurrency">币种:</label>
+                        <select id="videocurrency" class="videocurrency">
+                            <option value="">选择币种</option>
+                            <option value="USD">USD - 美元</option>
+                            <option value="EUR">EUR - 欧元</option>
+                            <option value="CNY">CNY - 人民币</option>
+                            <option value="JPY">JPY - 日元</option>
+                            <option value="GBP">GBP - 英镑</option>
+                            <option value="AUD">AUD - 澳元</option>
+                            <option value="CAD">CAD - 加元</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="videoestimatedLaunchDate">预估上线时间:</label>
+                        <input type="date" id="videoestimatedLaunchDate" name="videoestimatedLaunchDate" placeholder="预估上线时间">
+                    </div>
+                    <div>
+                        <label for="videoestimatedViews">预估观看量:</label>
+                        <input type="number" id="videoestimatedViews" name="videoestimatedViews" placeholder="预估观看量">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="position: relative; width: 100%;">
+            <div style="display: inline-block;">
+                <button type="submit" class="btn-primary">提交视频</button>
+                <button type="button" id="resetVideoForm" class="btn-secondary">重置</button>
+            </div>
+            <div style="position: absolute; right: 0; top: 0;">
+                <button type="button" id="deleteVideoData" class="btn-danger">删除</button>
+            </div>
+        </div>
+
+        <!-- 用于显示提交结果的元素 -->
+        <div id="responseMessageVideo" class="response-message"></div>
+
+    </form>
+</div>
+
+
+    <!-- 视频数据表格 -->
+    <div class="form-column">
+        <div id="videoTableContainer">
+            <table id="videoTable" border="1">
+                <thead>
+                    <tr>
+                        <th class="group1">唯一id</th>
+                        <th class="group1">品牌</th>
+                        <th class="group1">项目</th>
+                        <th class="group1">负责人</th>
+                        <th class="group1">合作进度</th>
+                        <th class="group1">物流进度</th>
+                        <th class="group1">物流单号</th>
+                        <th class="group1">花费</th>
+                        <th class="group1">币种</th>
+                        <th class="group1">产品</th>
+                        <th class="group1">预估观看量</th>
+                        <th class="group1">预估上线时间</th>
+                        <th class="group2">平台</th>
+                        <th class="group2">类型</th>
+                        <th class="group2">红人名称</th>
+                        <th class="group2">视频链接</th>
+                        <th class="group2">发布时间</th>
+                        <th class="group2">播放量</th>
+                        <th class="group2">点赞数</th>
+                        <th class="group2">评论数</th>
+                        <th class="group2">收藏数</th>
+                        <th class="group2">转发数</th>
+                        <th class="group2">参与率</th>
+                        <th class="group2">更新日期</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 数据将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新增数据表单 -->
+    <div id="addVideoDataForm" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeAddVideoForm">&times;</span>
+            <form id="addVideoData">
+                <label for="addbrand">品牌:</label>
+                <input list="addBrandOptions" id="addbrand" name="品牌" required>
+                <datalist id="addBrandOptions">
+                    <!-- 动态加载的品牌选项将插入到这里 -->
+                </datalist>
+                <br>
+
+                <label for="addprojectName">项目:</label>
+                <input list="addProjectOptions" id="addprojectName" name="项目" required>
+                <datalist id="addProjectOptions">
+                    <!-- 动态加载的项目选项将插入到这里 -->
+                </datalist>
+                <br>
+
+                <label for="addmanager">负责人:</label>
+                <input list="addManagerOptions" id="addmanager" name="负责人" required>
+                <datalist id="addManagerOptions">
+                    <!-- 动态加载的负责人选项将插入到这里 -->
+                </datalist>
+                <br>
+
+                <label for="addcost">花费:</label>
+                <input type="number" id="addcost" class="addcost" placeholder="请输入花费">
+
+                <label for="addcurrency">币种:</label>
+                <select id="addcurrency" class="addcurrency">
+                    <option value="">选择币种</option>
+                    <option value="USD">USD - 美元</option>
+                    <option value="EUR">EUR - 欧元</option>
+                    <option value="CNY">CNY - 人民币</option>
+                    <option value="JPY">JPY - 日元</option>
+                    <option value="GBP">GBP - 英镑</option>
+                    <option value="AUD">AUD - 澳元</option>
+                    <option value="CAD">CAD - 加元</option>
+                </select>
+                <br>
+
+                <label for="addproduct">产品:</label>
+                <input list="addProductOptions" id="addproduct" name="产品" placeholder="请输入或选择产品">
+                <datalist id="addProductOptions">
+                    <!-- 动态加载的产品选项将插入到这里 -->
+                </datalist>
+                <br>
+
+                <label for="addProgress">合作进度:</label>
+                <input list="addProgressOptions" id="addProgress" class="addProgress" placeholder="请输入合作进度">
+                <datalist id="addProgressOptions">
+                    <option value="进行中">
+                    <option value="合作完成">
+                    <option value="合作失败">
+                </datalist>
+
+                <label for="addestimatedViews">预估观看量:</label>
+                <input type="number" id="addestimatedViews" name="预估观看量"><br>
+
+                <label for="addestimatedLaunchDate">预估上线时间:</label>
+                <input type="date" id="addestimatedLaunchDate" name="预估上线时间"><br>
+
+                <button type="submit" class="btn-primary">提交</button>
+                <button type="button" id="cancelAddVideoData" class="btn-secondary">取消</button>
+            </form>
+        </div>
+    </div>
+
+</section>
+    </div>
+
+    <!-- 指标定义板块 -->
+<section id="metricsDefinitionSection" class="form-container">
+    <div class="form-column">
+        <h2>指标定义板块</h2>
+        <form id="metricsDefinitionForm">
+            <div class="form-row">
+                <div>
+                    <label for="metricsBrand">品牌:</label>
+                    <input list="metricsBrandOptions" id="metricsBrand" name="brand" placeholder="请输入或选择品牌" required>
+                    <datalist id="metricsBrandOptions">
+                        <!-- 动态加载的品牌选项将插入到这里 -->
+                    </datalist>
+                </div>
+                <div>
+                    <label for="metricsProject">项目:</label>
+                    <input list="metricsProjectOptions" id="metricsProject" name="project" placeholder="请输入或选择项目">
+                    <datalist id="metricsProjectOptions">
+                        <!-- 动态加载的项目选项将插入到这里 -->
+                    </datalist>
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label for="metricsManager">负责人:</label>
+                    <input list="metricsManagerOptions" id="metricsManager" name="manager" placeholder="请输入或选择负责人">
+                    <datalist id="metricsManagerOptions">
+                        <!-- 动态加载的负责人选项将插入到这里 -->
+                    </datalist>
+                </div>
+                <div>
+                    <label for="metricsProduct">产品:</label>
+                    <input list="metricsProductOptions" id="metricsProduct" name="product" placeholder="请输入或选择产品">
+                    <datalist id="metricsProductOptions">
+                        <!-- 动态加载的产品选项将插入到这里 -->
+                    </datalist>
+                </div>
+            </div>
+            <div class="form-row">
+            <div>
+                <label for="metricsId">唯一ID（仅用于删除数据）:</label>
+                <input list="metricsIdOptions" id="metricsId" name="id" placeholder="请输入或选择唯一ID">
+                <datalist id="metricsIdOptions">
+                    <!-- 动态加载的唯一ID选项将插入到这里 -->
+                </datalist>
+            </div>
+        </div>
+
+            <div style="position: relative; width: 100%;">
+                <div style="display: inline-block;">
+                    <button type="submit" class="btn-primary">提交视频</button>
+                    <button type="button" id="resetMetricsForm" class="btn-secondary">重置</button>
+                </div>
+                <div style="position: absolute; right: 0; top: 0;">
+                    <button type="button" id="deleteMetricsData" class="btn-danger">删除</button>
+                </div>
+            </div>
+        </form>
+        <div id="responseMessageMetrics" class="response-message"></div>
+    </div>
+
+
+     <!-- 指标定义数据表 -->
+    <div class="form-column">
+        <div id="metricsTableContainer">
+            <table id="metricsTable" border="1">
+                <thead>
+                    <tr>
+                        <th class="group1">唯一id</th>
+                        <th class="group1">品牌</th>
+                        <th class="group1">项目</th>
+                        <th class="group1">产品</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 数据将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+    <script src="{{ url_for('static', filename='js/videos.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+</body>
+</html>

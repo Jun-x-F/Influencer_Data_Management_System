@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红人和视频数据收集器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>红人数据管理</h1>
+
+        <!-- 红人板块 -->
+        <section id="influencerSection" class="form-container">
+            <div class="form-column">
+                <h2>抓取红人信息板块</h2>
+                <form id="influencerForm"  style="display: flex;">
+                    <div style="flex: 1;">
+                        <label for="influencerLinks">红人链接（每行一个）:</label>
+                        <textarea id="influencerLinks" name="influencerLinks" placeholder="请输入红人链接，每行一个" required class="full-width"></textarea>
+                        <div class="form-row">
+                            <button type="submit" class="btn-primary">提交抓取</button>
+                            <button type="button" id="resetInfluencerForm" class="btn-secondary">重置</button>
+
+                        </div>
+                    </div>
+
+            <!-- 右侧结果显示框 -->
+            <div class="response-message" id="responseMessageInfluencer" style="flex: 1; margin-left: 20px;">
+                <!-- 提交结果内容将显示在这里 -->
+
+                        </div>
+                </form>
+            </div>
+
+
+            <div class="form-column">
+                <h2>更新红人信息板块</h2>
+                <form id="updateInfluencerForm">
+                    <div class="form-row">
+                        <div>
+                            <label for="updatePlatform">平台:</label>
+                            <select id="updatePlatform" name="platform" required>
+                                <option value="">选择平台</option>
+                                <!-- 平台选项将在JavaScript中动态生成 -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="updateInfluencerName">红人名称:</label>
+                            <input list="influencerNames" id="updateInfluencerName" name="influencerName" placeholder="选择红人">
+                            <datalist id="influencerNames">
+                                <!-- 此处将动态添加选项 -->
+                            </datalist>
+                        </div>
+                        <div>
+                            <label for="country">国家:</label>
+                            <input list="countries" id="country" name="country" placeholder="国家" oninput="fillCountryDetails('name')">
+                            <datalist id="countries"></datalist>
+                        </div>
+                        <div>
+                            <label for="country_code">国家编码:</label>
+                            <input list="country_codes" id="country_code" name="country_code" placeholder="国家编码" oninput="fillCountryDetails('code')">
+                            <datalist id="country_codes"></datalist>
+                        </div>
+
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="email">邮箱:</label>
+                            <input type="email" id="email" name="email" placeholder="邮箱">
+                        </div>
+                        <div>
+                            <label for="whatsapp">WhatsApp:</label>
+                            <input type="text" id="whatsapp" name="whatsapp" placeholder="WhatsApp">
+                        </div>
+                        <div>
+                            <label for="discord">Discord:</label>
+                            <input type="text" id="discord" name="discord" placeholder="Discord">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="address1">地址信息1:</label>
+                            <input type="text" id="address1" name="address1" placeholder="地址1">
+                        </div>
+                        <div>
+                            <label for="address2">地址信息2:</label>
+                            <input type="text" id="address2" name="address2" placeholder="地址2">
+                        </div>
+                        <div>
+                            <label for="address3">地址信息3:</label>
+                            <input type="text" id="address3" name="address3" placeholder="地址3">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="tag1">标签功能1:</label>
+                            <input type="text" id="tag1" name="tag1" placeholder="标签1">
+                        </div>
+                        <div>
+                            <label for="tag2">标签功能2:</label>
+                            <input type="text" id="tag2" name="tag2" placeholder="标签2">
+                        </div>
+                        <div>
+                            <label for="tag3">标签功能3:</label>
+                            <input type="text" id="tag3" name="tag3" placeholder="标签3">
+                         </div>
+                    </div>
+                    <div class="form-row">
+                        <button type="submit" class="btn-primary">提交更新</button>
+                        <button type="button" id="resetUpdateInfluencerForm" class="btn-secondary">重置</button>
+                    </div>
+                </form>
+<!--                <div class="response-container">-->
+    <div id="responseMessageUpdateInfluencer" class="response-message"></div>
+
+            </div>
+
+
+
+            <!-- 红人数据表格 -->
+            <div class="form-column">
+    <div id="influencerTableContainer">
+        <table id="influencerTable">
+            <thead>
+                <tr>
+                    <th>红人头像地址</th>
+                    <th>平台</th>
+                    <th>红人名称</th>
+                    <th>红人全名</th>
+                    <th>国家</th>
+                    <th>国家编码</th>
+                    <th>评级</th>
+                    <th>粉丝数量</th>
+                    <th>平均播放量</th>
+                    <th>平均点赞数量</th>
+                    <th>平均评论数量</th>
+                    <th>平均参与率</th>
+                    <th>邮箱</th>
+                    <th>WhatsApp</th>
+                    <th>Discord</th>
+                    <th>地址信息1</th>
+                    <th>地址信息2</th>
+                    <th>地址信息3</th>
+                    <th>标签功能1</th>
+                    <th>标签功能2</th>
+                    <th>标签功能3</th>
+                    <th>更新日期</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 数据将通过 JavaScript 动态插入 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+        </section>
+    </div>
+
+
+
+
+    <script src="{{ url_for('static', filename='js/influencers.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+</body>
+</html>
