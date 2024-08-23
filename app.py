@@ -53,19 +53,7 @@ def influencers_page():
 @app.route('/videos')
 def videos_page():
     return render_template('videos.html')
-def root():
-    # 重定向到红人页面
-    return redirect(url_for('influencers_page'))
 
-
-@app.route('/influencers')
-def influencers_page():
-    return render_template('influencers.html')
-
-
-@app.route('/videos')
-def videos_page():
-    return render_template('videos.html')
 
 if __name__ == '__main__':
     # 在后台启动线程

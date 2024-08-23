@@ -6,7 +6,7 @@ import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
 
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater,ExecuteDatabaseQuery
+from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
 from spider.config import config
 from spider.config.config import order_links, submitted_video_links
@@ -451,7 +451,7 @@ class Video:
                     df[col] = None
             # 确保列的顺序与 `all_columns` 一致（可选）
             df = df[all_columns]
-            print(data)
+            # print(data)
             tosql_if_exists = 'append'
             DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types()
             return jsonify({'message': '数据添加成功'}), 200
@@ -535,7 +535,7 @@ class Video:
 
             project_columns = ['品牌', '项目', '产品', '更新日期']
             project_df = project_df[project_columns]
-            print(project_df)
+            # print(project_df)
 
             # 插入数据到 influencer_project_definitions 表
             DF_ToSql(project_df, DATABASE, project_table, 'append').mapping_df_types()
