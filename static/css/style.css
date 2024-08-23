@@ -51,7 +51,7 @@ h1, h2 {
 }
 
 .btn-secondary {
-    background-color: #f44336;
+    background-color: #36abf4;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -164,7 +164,7 @@ textarea {
 }
 
 .btn-secondary {
-    background-color: #f44336;
+    background-color: #36abf4;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -339,4 +339,100 @@ textarea {
     background-color: #f5f5f5; /* 第二组表头的颜色，例如浅灰色 */
 }
 
+.delete-btn-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
 
+.submit-reset-container {
+    display: inline-block;
+}
+.btn-secondary, .btn-danger {
+        padding: 10px 20px; /* 调整按钮的内边距 */
+        font-size: 14px; /* 调整字体大小 */
+        border: none; /* 移除边框 */
+        cursor: pointer; /* 鼠标悬停时显示为指针 */
+    }
+
+.btn-secondary {
+    background-color: #6c757d; /* 灰色背景 */
+    color: white; /* 白色文字 */
+}
+
+.btn-danger {
+    background-color: #dc3545; /* 红色背景 */
+    color: white; /* 白色文字 */
+}
+
+.btn-danger:hover {
+    background-color: #c82333; /* 更深的红色用于悬停效果 */
+}
+
+
+
+/* 指标定义数据表样式 */
+/* 表格样式 */
+#metricsTableContainer {
+    overflow-x: auto;
+    overflow-y: auto; /* 初始状态下不显示滚动条 */
+    margin-top: 20px;
+    max-height: 500px; /* 控制表格的最大高度以显示15行左右 */
+    position: relative;
+}
+
+/* 固定表头样式 */
+#metricsTable thead th {
+    position: sticky;
+    top: 0;
+    background-color: rgba(244, 244, 244, 0.9); /* 添加透明度 */
+    z-index: 5; /* 调低 z-index，确保其他重要内容可以覆盖表头 */
+}
+
+#metricsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#metricsTable th, #metricsTable td {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    line-height: 1.2; /* 统一设置行高 */
+}
+
+#metricsTable th {
+    background-color: #f4f4f4;
+    color: #333;
+    font-weight: bold;
+}
+
+#metricsTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#metricsTable {
+    font-size: 14px;
+}
+
+#metricsTableContainer:hover {
+    overflow-y: auto; /* 鼠标悬停时显示滚动条 */
+}
+
+/* 表头分组颜色 */
+.group1 {
+    background-color: #f0f8ff; /* 与视频数据表第一组表头颜色一致 */
+}
+
+.group2 {
+    background-color: #f5f5f5; /* 与视频数据表第二组表头颜色一致 */
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    #metricsTableContainer {
+        overflow-x: auto;
+        width: 100%;
+        margin-top: 20px;
+        max-height: 500px; /* 保持移动端也能限制高度 */
+    }
+}

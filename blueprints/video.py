@@ -6,7 +6,7 @@ import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import text
 
-from base import ReadDatabase, DF_ToSql, DatabaseUpdater
+from base import ReadDatabase, DF_ToSql, DatabaseUpdater,ExecuteDatabaseQuery
 from log.logger import global_log
 from spider.config import config
 from spider.config.config import order_links, submitted_video_links
@@ -458,3 +458,203 @@ class Video:
         except Exception as e:
             print(e)
             return jsonify({'error': str(e)}), 500
+
+    @staticmethod
+    @video_bp.route('/delete_video_data', methods=['POST'])
+    def delete_video_data():
+        try:
+            data = request.get_json()
+            video_id = data.get('id')
+
+            if not video_id:
+                current_app.logger.error("删除操作缺少ID参数")
+                return jsonify({'message': '缺少ID参数'}), 400
+
+            # 构建删除SQL语句
+            sqlcmd = 'DELETE FROM influencers_video_project_data WHERE id = :id'
+            current_app.logger.info(f"执行SQL删除: {sqlcmd}, 参数: {video_id}")
+
+            # 使用ReadDatabase类执行删除操作
+            db_reader = ReadDatabase(database='marketing')
+            rows_deleted = db_reader.execute_database_query(sqlcmd=sqlcmd, params={'id': video_id})
+
+            if rows_deleted > 0:
+                current_app.logger.info(f"ID为{video_id}的记录删除成功")
+                return jsonify({'success': True, 'message': '删除成功'}), 200
+            else:
+                current_app.logger.warning(f"ID为{video_id}的记录未找到")
+                return jsonify({'success': False, 'message': '未找到对应的记录'}), 404
+
+        except Exception as e:
+            current_app.logger.error(f"删除过程中发生错误: {e}")
+            return jsonify({'message': f'删除过程中发生错误: {e}'}), 500
+
+
+    # 指标定义板块
+    # 新增数据
+    @staticmethod
+    @video_bp.route('/add_metrics_data', methods=['POST'])
+    def add_metrics_data():
+        DATABASE = 'marketing'
+        project_table = 'influencer_project_definitions'
+
+        try:
+            data = request.json
+            brand = data.get('brand')
+            project = data.get('project')
+            product = data.get('product')
+            manager = data.get('manager')
+
+            # 确保输入数据都不为空
+            if not brand:
+                return jsonify({'message': '品牌不能为空'}), 400
+
+            # 构建检查组合是否存在的SQL查询
+            check_sql = f"""
+                SELECT COUNT(*) as count FROM influencer_project_definitions
+                WHERE 品牌='{brand}' AND 项目='{project}' AND 产品='{product}'
+            """
+            current_app.logger.info(f"执行SQL查询: {check_sql}")
+            result = ReadDatabase(DATABASE, check_sql).vm()
+
+            # 检查DataFrame中的计数值
+            if result.iloc[0]['count'] > 0:
+                current_app.logger.info("该品牌、项目和产品组合已存在，无需重复添加")
+                return jsonify({'message': '该品牌、项目和产品组合已存在，无需重复添加'}), 400
+
+            # 准备插入数据
+            update_date = datetime.date.today()
+            project_data = {
+                '品牌': brand,
+                '项目': project or None,
+                '产品': product or None,
+                '更新日期': update_date
+            }
+
+            project_df = pd.DataFrame([project_data])
+
+            project_columns = ['品牌', '项目', '产品', '更新日期']
+            project_df = project_df[project_columns]
+            print(project_df)
+
+            # 插入数据到 influencer_project_definitions 表
+            DF_ToSql(project_df, DATABASE, project_table, 'append').mapping_df_types()
+
+            # 如果有负责人，则插入到 influencer_name_definitions 表
+            if manager:
+                manager_data = {
+                    '负责人': manager,
+                    '更新日期': update_date
+                }
+                manager_df = pd.DataFrame([manager_data])
+
+                manager_columns = ['负责人', '更新日期']
+                manager_df = manager_df[manager_columns]
+
+                DF_ToSql(manager_df, DATABASE, 'influencer_name_definitions', 'append').mapping_df_types()
+
+            return jsonify({'message': '数据添加成功'}), 200
+
+        except Exception as e:
+            current_app.logger.error(f"添加数据时发生错误: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # 查询指标
+    @staticmethod
+    @video_bp.route('/get_metrics_options', methods=['GET'])
+    def get_metrics_options():
+        try:
+            DATABASE = 'marketing'
+
+            # 获取品牌、项目、产品数据
+            sql_project = 'SELECT DISTINCT 品牌, 项目, 产品 FROM influencer_project_definitions'
+            current_app.logger.info(f"执行SQL查询: {sql_project}")
+            project_info_df = ReadDatabase(DATABASE, sql_project).vm()
+            current_app.logger.info(f"查询结果: {project_info_df}")
+
+            # 获取负责人数据
+            sql_manager = 'SELECT DISTINCT 负责人 FROM influencer_name_definitions'
+            current_app.logger.info(f"执行SQL查询: {sql_manager}")
+            manager_info_df = ReadDatabase(DATABASE, sql_manager).vm()
+            current_app.logger.info(f"查询结果: {manager_info_df}")
+
+            # 替换 NaN 或 None 值
+            project_info_df = project_info_df.fillna('')
+            manager_info_df = manager_info_df.fillna('')
+
+            # 过滤空值并去重
+            brands = list(set([b for b in project_info_df['品牌'].tolist() if b]))
+            projects = list(set([p for p in project_info_df['项目'].tolist() if p]))
+            products = list(set([prod for prod in project_info_df['产品'].tolist() if prod]))
+            managers = list(set([m for m in manager_info_df['负责人'].tolist() if m]))
+
+            return jsonify({
+                'brands': brands,
+                'projects': projects,
+                'products': products,
+                'managers': managers,
+            }), 200
+
+        except Exception as e:
+            current_app.logger.error(f"获取选项数据失败: {e}")
+            return jsonify({'message': f'获取选项数据失败: {e}'}), 500
+
+
+    # 数据表
+    @staticmethod
+    @video_bp.route('/get_metrics_data', methods=['GET'])
+    def get_metrics_data():
+        DATABASE = 'marketing'
+        project_table = 'influencer_project_definitions'
+
+        try:
+            # 从 influencer_project_definitions 获取品牌、项目、产品
+            project_data = ReadDatabase(DATABASE, f'SELECT id,品牌, 项目, 产品 FROM {project_table}').vm()
+
+            # 处理空值和特殊值
+            project_data = project_data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+
+            # 将 DataFrame 转换为字典列表
+            project_result = project_data.to_dict(orient='records')
+
+            return jsonify(project_result)
+
+        except Exception as e:
+            return jsonify({'数据表获取错误': str(e)}), 500
+
+    # 删除数据行
+    @staticmethod
+    @video_bp.route('/delete_metrics_data', methods=['POST'])
+    def delete_metrics_data():
+        try:
+            # 获取前端发送的数据
+            data = request.get_json()
+            metrics_id = data.get('id')
+
+            # 检查是否提供了ID
+            if not metrics_id:
+                current_app.logger.error("删除操作缺少ID参数")
+                return jsonify({'message': '缺少ID参数'}), 400
+
+            # 构建删除SQL语句
+            sqlcmd = 'DELETE FROM influencer_project_definitions WHERE id = :id'
+            current_app.logger.info(f"执行SQL删除: {sqlcmd}, 参数: {metrics_id}")
+
+            # 使用ReadDatabase类执行删除操作
+            db_reader = ReadDatabase(database='marketing')
+            rows_deleted = db_reader.execute_database_query(sqlcmd=sqlcmd, params={'id': metrics_id})
+
+            # 判断是否成功删除记录
+            if rows_deleted > 0:
+                current_app.logger.info(f"ID为{metrics_id}的记录删除成功")
+                return jsonify({'success': True, 'message': '删除成功'}), 200
+            else:
+                current_app.logger.warning(f"ID为{metrics_id}的记录未找到")
+                return jsonify({'success': False, 'message': '未找到对应的记录'}), 404
+
+        except Exception as e:
+            current_app.logger.error(f"删除过程中发生错误: {e}")
+            return jsonify({'message': f'删除过程中发生错误: {e}'}), 500
+
+
+
