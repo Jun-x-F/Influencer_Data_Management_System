@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
 from flask_cors import CORS
 
 from blueprints.get_file import image_bp
@@ -40,10 +40,32 @@ app.register_blueprint(image_bp, url_prefix='/image')
 
 
 @app.route('/')
-def index():
-    project_form = ProjectForm()
-    return render_template('index.html', form=project_form)
+def root():
+    # 重定向到红人页面
+    return redirect(url_for('influencers_page'))
 
+
+@app.route('/influencers')
+def influencers_page():
+    return render_template('influencers.html')
+
+
+@app.route('/videos')
+def videos_page():
+    return render_template('videos.html')
+def root():
+    # 重定向到红人页面
+    return redirect(url_for('influencers_page'))
+
+
+@app.route('/influencers')
+def influencers_page():
+    return render_template('influencers.html')
+
+
+@app.route('/videos')
+def videos_page():
+    return render_template('videos.html')
 
 if __name__ == '__main__':
     # 在后台启动线程
@@ -53,4 +75,4 @@ if __name__ == '__main__':
     thread_background_task.start()
     thread_cleanNoneNotice.start()
     thread_getTrackInfo.start()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)
