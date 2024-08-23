@@ -240,13 +240,14 @@ class DF_ToSql(object):
 
 
 class ReadDatabase(object):
-    def __init__(self,database,sqlcmd):
+    def __init__(self, database, sqlcmd=None):
         self.database = database
         self.sqlcmd = sqlcmd
 
-    def create_engine(self, host, user, password, port):
-        db_uri = f'mysql+pymysql://{user}:{password}@{host}:{port}/{self.database}?charset=utf8'
+    def create_engine(self, host, user, password, port, driver='mysql+pymysql', charset='utf8'):
+        db_uri = f'{driver}://{user}:{password}@{host}:{port}/{self.database}?charset={charset}'
         return create_engine(db_uri)
+
     def vm(self):
         engine = self.create_engine('172.16.11.163', 'user1', 'user1', 3306)
         df = pd.read_sql(self.sqlcmd, con=engine)
@@ -267,8 +268,8 @@ class ReadDatabase(object):
         df = pd.read_sql(self.sqlcmd, con=engine)
         return df
 
-
     def sqlserver(self):
+        import pyodbc
         server = "172.16.11.236"
         database = self.database
         username = "sa"
@@ -282,6 +283,20 @@ class ReadDatabase(object):
         query = self.sqlcmd
         df = pd.read_sql_query(query, connection)
         return df
+
+    def execute_database_query(self, sqlcmd, params=None):
+        """
+        执行数据库查询或操作，如INSERT、UPDATE、DELETE。
+
+        :param sqlcmd: 要执行的SQL命令
+        :param params: SQL命令中的参数
+        :return: 执行结果，通常是受影响的行数
+        """
+        engine = self.create_engine('172.16.11.163', 'user1', 'user1', 3306)  # 根据需要选择合适的连接
+        with engine.connect() as connection:
+            result = connection.execute(text(sqlcmd), params or {})
+            connection.commit()  # 提交事务
+            return result.rowcount  # 返回受影响的行数
 
 # sql server 使用
 class sheet_insert_sql():
@@ -409,9 +424,6 @@ class DatabaseUpdater:
             print(f"Database table {table_name} successfully updated.")
         except SQLAlchemyError as e:
             print(f"Error updating database: {e}")
-
-
-
 
     def data_monitor(self, task_content=None):
 
