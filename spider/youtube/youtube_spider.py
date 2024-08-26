@@ -6,7 +6,6 @@
 @Time：2024/7/30 下午1:37
 """
 import random
-import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
@@ -18,6 +17,8 @@ from log.logger import global_log
 from spider.config.config import headerLess, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from spider.template.exception_template import RetryableError
+from spider.youtube.youtube_public_func import get_view_count, get_like_count, get_comment_count, has_chinese, \
+    clean_and_convert
 from tool.download_file import download_image_file
 from tool.grading_criteria import convert_words_to_numbers, grade_criteria
 
@@ -64,10 +65,10 @@ class Task:
         get_person_radar_item = self.page.query_selector('//tr[.//*[@icon="person_radar"]]').text_content()
         get_person_radar_item = get_person_radar_item.replace("位订阅者", "").strip()
         follower_count = 1
-        if self.has_chinese(get_person_radar_item):
+        if has_chinese(get_person_radar_item):
             get_person_radar_str = get_person_radar_item[-1]
             numbers = convert_words_to_numbers.get(get_person_radar_str)
-            cur = self.clean_and_convert(get_person_radar_item[:-1])
+            cur = clean_and_convert(get_person_radar_item[:-1])
             follower_count = cur * numbers
         else:
             follower_count = int(get_person_radar_item)
@@ -89,10 +90,6 @@ class Task:
         self.page.query_selector('//tp-yt-paper-dialog[@role="dialog"]//button[@aria-label="关闭"]').click()
         self.page.wait_for_timeout(self.human_wait_time)
 
-    def has_chinese(self, s):
-        """检查字符串是否包含任何中文字符"""
-        return bool(re.search(r'[\u4e00-\u9fff]', s))
-
     def get_10_video_list(self):
         video_contents: List[ElementHandle] = self.page.query_selector_all(
             '//*[@id="primary"]//*[@id="contents"]//ytd-thumbnail[@size="large"]/a')
@@ -102,38 +99,6 @@ class Task:
         for _ in self.all_urls_list[:10]:
             self.urls_list.put(_)
         self.max_len = self.urls_list.qsize()
-
-    def clean_and_convert(self, s):
-        """
-        清理字符串中的非数字字符并将其转换为整数。
-        :param s: 原始字符串
-        :return: 转换后的整数值，如果转换失败则返回 None
-        """
-        # 去除字符串中的空格和换行符
-        s = s.strip()
-
-        # 去除非数字字符（保留小数点和千位分隔符）
-        s = ''.join(filter(lambda x: x.isdigit() or x in ['.', ','], s))
-
-        # 替换千位分隔符
-        s = s.replace(',', '')
-
-        try:
-            # 将清理后的字符串转换为浮点数（可以处理千位分隔符）
-            return float(s)
-        except ValueError:
-            return None  # 或者返回一个合适的默认值
-
-    def extract_number(self, text) -> Optional[float]:
-        """提取并转换字符串中的数字"""
-        if self.has_chinese(text):
-            match_str = text[-1]
-            numbers = convert_words_to_numbers.get(match_str)  # 默认为 1 如果未找到
-            if numbers is None:
-                raise ValueError(f"字段替换数字报错 {text} {match_str}")
-            return self.clean_and_convert(text[:-1]) * numbers
-        else:
-            return self.clean_and_convert(text)
 
     def block_media_requests(self, route: Route, request):
         url = request.url
@@ -185,24 +150,10 @@ class Task:
                 like_button_view_model = page.query_selector(
                     '//like-button-view-model//div[@class="yt-spec-button-shape-next__button-text-content"]')
                 if like_button_view_model:
-                    global_log.info("url: " + page_url + "点赞：" + like_button_view_model.text_content())
-                    # //like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button
-                    # aria-label="与另外 433 人一起赞此视频"
-                    like_count_str = like_button_view_model.text_content()
-                    if "赞" in like_count_str:
-                        like_count_str = "0"
-
-                    if "12345678901234567890123456789" in like_button_view_model.text_content():
-                        aria_label = page.query_selector(
-                            '//like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button').get_attribute(
-                            "aria-label")
-                        like_count_str = aria_label.split(" ")[1]
-                    like_count = self.extract_number(like_count_str)
+                    like_count = get_like_count(page, like_button_view_model.text_content())
                 view_info = page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
                 if view_info:
-                    global_log.info("观看量：" + view_info.text_content())
-                    view_info_str = view_info.text_content().split(" ")[0]
-                    view_count = self.extract_number(view_info_str)
+                    view_count = get_view_count(view_info.text_content())
                 # 滚动到页面底部
                 # while True:
                 page.wait_for_timeout(self.human_wait_time)
@@ -217,10 +168,7 @@ class Task:
 
                     commend_info = page.query_selector('//div[@id="leading-section"]//span')
                     if commend_info is not None:
-                        if "评论" in commend_info.text_content():
-                            commend_info = page.query_selector('//div[@id="leading-section"]//span[2]')
-                        global_log.info("评论：" + commend_info.text_content())
-                        comment_count = self.extract_number(commend_info.text_content())
+                        comment_count = get_comment_count(page, commend_info.text_content())
                         break
 
                 if like_count is not None \

@@ -13,9 +13,8 @@ from typing import Optional
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Route
 
-from log.logger import global_log
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
-from tool.grading_criteria import convert_words_to_numbers
+from spider.youtube.youtube_public_func import get_like_count, get_view_count, get_comment_count
 
 
 class Task:
@@ -64,17 +63,6 @@ class Task:
         except ValueError:
             return None  # 或者返回一个合适的默认值
 
-    def extract_number(self, text) -> Optional[float]:
-        """提取并转换字符串中的数字"""
-        if self.has_chinese(text):
-            match_str = text[-1]
-            numbers = convert_words_to_numbers.get(match_str)  # 默认为 1 如果未找到
-            if numbers is None:
-                raise ValueError(f"字段替换数字报错 {match_str}")
-            return self.clean_and_convert(text[:-1]) * numbers
-        else:
-            return self.clean_and_convert(text)
-
     def block_media_requests(self, route: Route, request):
         url = request.url
         if url.endswith('.jpg') or url.endswith('.png') or 'video' in url:
@@ -98,24 +86,11 @@ class Task:
         like_button_view_model = self.page.query_selector(
             '//like-button-view-model//div[@class="yt-spec-button-shape-next__button-text-content"]')
         if like_button_view_model:
-            # //like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button
-            # aria-label="与另外 433 人一起赞此视频"
-            like_count_str = like_button_view_model.text_content()
-            if "赞" in like_count_str:
-                like_count_str = "0"
-
-            if "12345678901234567890123456789" in like_button_view_model.text_content():
-                aria_label = self.page.query_selector(
-                    '//like-button-view-model/toggle-button-view-model/button-view-model[@class="yt-spec-button-view-model"]/button').get_attribute(
-                    "aria-label")
-                like_count_str = aria_label.split(" ")[1]
-            like_count = self.extract_number(like_count_str)
+            like_count = get_like_count(self.page, like_button_view_model.text_content())
             self.finish_data["likes"] = like_count
         view_info = self.page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
         if view_info:
-            global_log.info("观看量：" + view_info.text_content())
-            view_info_str = view_info.text_content().split(" ")[0]
-            view_count = self.extract_number(view_info_str)
+            view_count = get_view_count(view_info.text_content())
             self.finish_data["views"] = view_count
 
         self.page.click('//tp-yt-paper-button[@id="expand"]')
@@ -138,10 +113,7 @@ class Task:
 
             commend_info = self.page.query_selector('//div[@id="leading-section"]//span')
             if commend_info is not None:
-                if "评论" in commend_info.text_content():
-                    commend_info = self.page.query_selector('//div[@id="leading-section"]//span[2]')
-                global_log.info("评论：" + commend_info.text_content())
-                comment_count = self.extract_number(commend_info.text_content())
+                comment_count = get_comment_count(self.page, commend_info.text_content())
                 self.finish_data["comments"] = comment_count
                 break
 
