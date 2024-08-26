@@ -10,7 +10,6 @@ from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
 from spider.config import config
 from spider.config.config import order_links, submitted_video_links
-from spider.spider_threading import threading_influencersVideo
 from spider.sql.data_inner_db import check_InfluencersVideoProjectData_in_db
 from utils import determine_platform
 
@@ -302,7 +301,8 @@ class Video:
                 order_list.append(logistics_number)
                 order_links[send_id] = order_list
             else:
-                config.submitted_one_video_error = True
+                # 不需要执行物流信息
+                config.submitted_pass_track = True
 
             seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
             isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
@@ -395,15 +395,15 @@ class Video:
                 print('更新开始时间', datetime.datetime.now())
                 print('更新结束时间', datetime.datetime.now())
                 print('更新的数据日期', update_date)
+            print(isExecutedWithinSeven, config.submitted_pass_track, config.submitted_pass_video)
             if isExecutedWithinSeven is True:
                 # 避免等待过久
-                threading_influencersVideo.set()
-                if config.submitted_one_video_error is True:
-                    config.submitted_pass_video = True
+                config.submitted_pass_video = True
                 return jsonify({
                     'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}，执行序号为{unique_id}的视频更新任务失败\n失败原因为7天内更新过视频'}),200
-            return jsonify({
-                'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
+            else:
+                return jsonify({
+                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")

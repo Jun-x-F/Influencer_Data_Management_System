@@ -89,19 +89,19 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
         code = work(url, cur, flag, _id)
         if code == 200:
             message["code"] = 200
-            message["message"] = "成功"
+            message["message"] = "抓取成功"
         else:
             message["code"] = code
             message["message"] = "链接解析失败"
     except Exception as e:
         global_log.error(f"{url} 异常: {e}")
         message["code"] = 500
-        message["message"] = "爬虫异常, 检查日志"
+        message["message"] = "网络异常, 检查日志"
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         redis_conn.set_value(url, json.dumps(cur))
     message_queue.add(_id,
                       f"任务链接: {url} 执行结果为 {message.get('message')}",
-                      status="error" if message.get("code") == 500 else "finish")
+                      status="error" if message.get("code") == 500 else "doing")
     return message
 
 #

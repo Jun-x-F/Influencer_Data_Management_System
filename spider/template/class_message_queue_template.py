@@ -46,8 +46,11 @@ class Notice:
         with self.lock:
             message_info = self.__message_dict.get(uid)
             message_queue: Queue = message_info.get("message_queue")
-            last_message: Message = list(message_queue.queue)[-1]
-            message_info["status"] = last_message.status
+            for last_message in list(message_queue.queue):
+                info = last_message.status
+                if info == "finish" or info == "error":
+                    message_info["status"] = last_message.status
+                    break
             self.__message_dict[uid] = message_info
 
     def get(self, uid) -> list:

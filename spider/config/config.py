@@ -35,10 +35,10 @@ submitted_video_links = FIFODict()
 order_links = FIFODict()
 # 用于存储用户提交的红人链接
 submitted_influencer_links = FIFODict()
-# 提交视频异常
-submitted_one_video_error = True
+# 不执行物流信息
+submitted_pass_track = False
 # 视频在7天之内，不需要执行其他任务
-submitted_pass_video = None
+submitted_pass_video = False
 
 global_log.info(f"初始化线程队列，检查redis连接")
 

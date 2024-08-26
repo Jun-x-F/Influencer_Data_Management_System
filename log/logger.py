@@ -78,7 +78,7 @@ class LoguruLogger:
                 config_path,
                 level=log_level.upper(),
                 format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra[filename]}:{extra[lineno]} | {message}",
-                rotation="100 MB",  # 每个日志文件最大10MB
+                rotation="10 MB",  # 每个日志文件最大10MB
                 retention="10 days",  # 只保留最近10天的日志文件
             )
         # 添加控制台输出记录器

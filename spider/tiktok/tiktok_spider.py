@@ -9,6 +9,7 @@ from typing import Optional
 
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, Response
 
+from log.logger import global_log
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from tool.download_file import download_image_file
 from tool.grading_criteria import grade_criteria
@@ -38,7 +39,7 @@ class Task:
     def verify_bar_close(self) -> None:
         """关闭验证，并更新"""
         verify_bar_item = self.page.query_selector('//*[@id="verify-bar-close"]')
-        print(verify_bar_item)
+        global_log.info(f"是否出现验证: {verify_bar_item}")
         if verify_bar_item:
             self.page.wait_for_timeout(self.human_wait_time)
             verify_bar_item.click()

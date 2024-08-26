@@ -26,13 +26,15 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     send_id, links = _queue.dequeue()
 
     # 执行爬虫任务
+    message = None
     for link in links:
-        run_spider.run_spider(link, {}, flag, send_id)
+        message = run_spider.run_spider(link, {}, flag, send_id)
 
-    # 完成通知
-    if flag == 2 and config.submitted_one_video_error is False:
+    # 完成通知 如果需要执行物流信息
+    if flag == 2 and config.submitted_pass_track is False:
         threading_influencersVideo.set()
     else:
+        message_queue.add(send_id, "抓取成功" if message.get("code") == 500 else "抓取失败", status="error" if message.get("code") == 500 else "finish")
         message_queue.to_end(send_id)
 
 
@@ -51,12 +53,13 @@ def getTrackInfo():
             sendId, order_list = order_links.dequeue()
             message_queue.add(sendId, f"开始执行获取物流信息任务, 接收到{len(order_list)}个订单号")
             res = track_spider(isRequest=True, order_numbers=order_list)
-            message_queue.add(sendId, f"任务：获取物流信息结果为{res}，开始执行下一步")
+            message_queue.add(sendId, f"任务：获取物流信息结果为{'成功' if res is True else '失败'}，开始执行下一步")
+            print(config.submitted_pass_video)
             if config.submitted_pass_video is False:
                 threading_influencersVideo.wait(timeout=60 * 2)
             for order in order_list:
                 res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
-            message_queue.add(sendId, f"物流信息同步结果为{res}，任务结束", "finish")
+            message_queue.add(sendId, f"抓取任务结果为 {'成功' if res is True else '失败'} ，任务结束", "finish")
             message_queue.to_end(sendId)
         time.sleep(5)
 
