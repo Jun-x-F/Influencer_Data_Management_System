@@ -45,18 +45,13 @@ def add_header(response):
     """
     根据请求路径设置不同的缓存策略。
     """
-    if '/image/' in request.path:
-        # 对于 images 路径，不进行缓存控制
-        response.cache_control.max_age = 86400
-        response.cache_control.public = True
-    else:
+    if 'image' not in request.path:
         # 对于其他路径，设置为不缓存
         response.cache_control.no_store = True
         response.cache_control.no_cache = True
         response.cache_control.must_revalidate = True
         response.headers['Expires'] = '0'
         response.headers['Pragma'] = 'no-cache'
-
     return response
 
 
