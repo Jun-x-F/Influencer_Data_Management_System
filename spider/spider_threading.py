@@ -10,8 +10,7 @@ import time
 
 from spider import run_spider
 from spider.config import config
-from spider.config.config import order_links, submitted_influencer_links, submitted_video_links
-from spider.spider_notice import spider_notice_to_influencersVideo, spider_notice_to_celebrity
+from spider.config.config import order_links, submitted_influencer_links, submitted_video_links, message_queue
 from spider.sql.data_inner_db import sync_logistics_information_sheet_to_InfluencersVideoProjectData
 from spider.template.class_dict_template import FIFODict
 from spider.track.track_spider import run as track_spider
@@ -26,14 +25,6 @@ def process_links(_queue: FIFODict, flag: int) -> None:
 
     send_id, links = _queue.dequeue()
 
-    # 选择合适地处理对象
-    notice_handler = (spider_notice_to_celebrity
-                      if flag == 1
-                      else spider_notice_to_influencersVideo)
-
-    # 设置使用的ID
-    notice_handler.use_id = send_id
-
     # 执行爬虫任务
     for link in links:
         run_spider.run_spider(link, {}, flag, send_id)
@@ -42,7 +33,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     if flag == 2 and config.submitted_one_video_error is False:
         threading_influencersVideo.set()
     else:
-        notice_handler.finish_notice(send_id)
+        message_queue.to_end(send_id)
 
 
 def background_task():
@@ -58,23 +49,22 @@ def getTrackInfo():
     while True:
         if order_links:
             sendId, order_list = order_links.dequeue()
-            spider_notice_to_influencersVideo.add_notice(sendId,
-                                                         f"开始获取物流信息, 接收到{len(order_list)}个订单号")
+            message_queue.add(sendId, f"开始执行获取物流信息任务, 接收到{len(order_list)}个订单号")
             res = track_spider(isRequest=True, order_numbers=order_list)
-            spider_notice_to_influencersVideo.add_notice(sendId,
-                                                         f"获取物流信息结果为{res}，等待同步表格数据")
-            threading_influencersVideo.wait(timeout=60 * 2)
-            spider_notice_to_influencersVideo.add_notice(sendId,
-                                                         f"开始同步物流信息")
+            message_queue.add(sendId, f"任务：获取物流信息结果为{res}，开始执行下一步")
+            if config.submitted_pass_video is False:
+                threading_influencersVideo.wait(timeout=60 * 2)
             for order in order_list:
                 res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
-            spider_notice_to_influencersVideo.add_notice(sendId, f"物流信息同步执行完毕，结果为{res}")
-            spider_notice_to_influencersVideo.finish_notice(sendId)
+            message_queue.add(sendId, f"物流信息同步结果为{res}，任务结束", "finish")
+            message_queue.to_end(sendId)
         time.sleep(5)
 
 
 def cleanNoneNotice():
+    """删除超时的队列信息"""
     while True:
-        spider_notice_to_celebrity.clean_none_notice()
-        spider_notice_to_influencersVideo.clean_none_notice()
+        expired_list = message_queue.is_expired()
+        for expired_item in expired_list:
+            message_queue.delete(expired_item)
         time.sleep(10)

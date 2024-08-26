@@ -44,33 +44,6 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         }
     }
 
-    // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider/influencersVideo
-    const intervalId = setInterval(() => {
-        fetch('/notice/spider/influencersVideo', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({send_id: uid})
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'clean' || data.isSuccess) {
-                    clearInterval(intervalId); // 任务完成或任务需要关闭时，清除定时任务
-                    updateVideoTable()
-                }
-                if (data.status !== 'wait'){
-                    responseMessage.innerHTML += `<p style="font-size: 14px">${data.message.replace(/\n/g, '<br>')}</p>`;
-                }
-
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                responseMessage.innerHTML += `<p style="font-size: 14px">访问 http://172.16.11.245:5000/notice/spider/influencersVideo 时出错，请重试。</p>`;
-                responseMessage.style.color = 'red';
-                clearInterval(intervalId);
-            });
-    }, 5000);
 
     var submissions = links.length ? links : [''];
 
@@ -94,7 +67,8 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
                 currency: currency,
                 product: product,
                 estimatedViews: estimatedViews,
-                estimatedLaunchDate: estimatedLaunchDate
+                estimatedLaunchDate: estimatedLaunchDate,
+                uid: uid
             })
         })
         .then(response => response.json())
@@ -122,6 +96,9 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         responseMessage.innerHTML = `<p>提交表单时发生错误，请稍后再试。</p>`;
         console.error('提交表单时发生错误:', error);
     });
+
+    // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider/influencersVideo
+    const {intervalId, timeoutId} =startFetchSpiderNoticeWithTimeout('video', responseMessage, uid, 5000, updateVideoTable)
 });
 
 // 更新唯一ID下拉菜单

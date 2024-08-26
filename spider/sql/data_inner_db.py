@@ -145,4 +145,5 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
 
             db.session.commit()
             return True
+        global_log.error(f"物流信息{logistics_numbers}同步失败...")
     return False

@@ -17,7 +17,7 @@ class Influencer:
         try:
             data = request.json
             link = data.get('link')
-            send_id = data.get('id')
+            send_id = f"influencer_{data.get('id')}"
 
             # Validate input
             if not link:

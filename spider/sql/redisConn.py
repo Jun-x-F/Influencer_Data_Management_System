@@ -28,7 +28,7 @@ class RedisClient:
     def set_value(self, key, value, expiration=None):
         try:
             self.connection.set(key, value, ex=expiration)
-            global_log.info(f"Set {key} = {value} with expiration = {expiration}")
+            global_log.info(f"Set {key} with expiration = {expiration}")
         except Exception as e:
             global_log.error()
 

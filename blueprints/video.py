@@ -294,8 +294,8 @@ class Video:
             product = data.get('product')
             estimated_views = data.get('estimatedViews')
             estimated_launch_date = data.get('estimatedLaunchDate')
-            send_id = data.get('send_id')
-
+            send_id = f"video_{data.get('uid')}"
+            global_log.info(f"接受到的uid为{send_id}")
             # 将物流信息加入队列中
             if logistics_number is not None and logistics_number != "":
                 order_list = order_links.get(send_id, [])
@@ -401,9 +401,9 @@ class Video:
                 if config.submitted_one_video_error is True:
                     config.submitted_pass_video = True
                 return jsonify({
-                    'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]\n上次更新视频信息在7天内'}), 200
+                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}，执行序号为{unique_id}的视频更新任务失败\n失败原因为7天内更新过视频'}),200
             return jsonify({
-                'message': f'项目信息[project_name={project_name},manager={manager},brand={brand},unique_id={unique_id}]提交成功。\nurl={link}'}), 200
+                'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")

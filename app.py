@@ -2,18 +2,19 @@
 import logging
 import os
 import threading
+import uuid
 
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request
 from flask_cors import CORS
 
 from blueprints.get_file import image_bp
 from blueprints.influencer import influencer_bp
 from blueprints.project_information import project_information_bp
+from blueprints.spider_notice import spider_notice_bp
 from blueprints.update import update_bp
 from blueprints.video import video_bp
-from forms import ProjectForm
 from log.logger import InterceptHandler
-from spider.spider_notice import spider_notice_bp
+# from spider.spider_notice import spider_notice_bp
 from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task
 
 app = Flask(__name__)
@@ -39,6 +40,26 @@ app.register_blueprint(spider_notice_bp, url_prefix='/notice')
 app.register_blueprint(image_bp, url_prefix='/image')
 
 
+@app.after_request
+def add_header(response):
+    """
+    根据请求路径设置不同的缓存策略。
+    """
+    if '/image/' in request.path:
+        # 对于 images 路径，不进行缓存控制
+        response.cache_control.max_age = 86400
+        response.cache_control.public = True
+    else:
+        # 对于其他路径，设置为不缓存
+        response.cache_control.no_store = True
+        response.cache_control.no_cache = True
+        response.cache_control.must_revalidate = True
+        response.headers['Expires'] = '0'
+        response.headers['Pragma'] = 'no-cache'
+
+    return response
+
+
 @app.route('/')
 def root():
     # 重定向到红人页面
@@ -47,12 +68,12 @@ def root():
 
 @app.route('/influencers')
 def influencers_page():
-    return render_template('influencers.html')
+    return render_template('influencers.html', version=uuid.uuid4())
 
 
 @app.route('/videos')
 def videos_page():
-    return render_template('videos.html')
+    return render_template('videos.html', version=uuid.uuid4())
 
 
 if __name__ == '__main__':
@@ -63,4 +84,4 @@ if __name__ == '__main__':
     thread_background_task.start()
     thread_cleanNoneNotice.start()
     thread_getTrackInfo.start()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

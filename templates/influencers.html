@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>红人和视频数据收集器</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -162,7 +162,8 @@
 
 
 
-    <script src="{{ url_for('static', filename='js/influencers.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/influencers.js') }}?v={{ version }}"></script>
+    <script src="{{ url_for('static', filename='js/intervalId_func.js') }}?v={{ version }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
 </body>

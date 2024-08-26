@@ -264,7 +264,9 @@ class LoguruLogger:
             "exception_info": exception_info,
             "exception_func": exception_func,
             "errorFileName": errorFileName,
-            "errorFileLine": errorFileLine
+            "errorFileLine": errorFileLine,
+            "filename": exception_file,
+            "lineno": exception_line
         }
         if errorNotice:
             logger.bind(**message).error(errorNotice)

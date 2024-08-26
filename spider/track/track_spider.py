@@ -550,10 +550,10 @@ def thread_work():
 
 
 def run(isRequest: bool = False, order_numbers: list = None):
+    global isSavePath
     try:
         global_log.info("执行获取订单任务详情")
         if isRequest is False:
-            global isSavePath
             isSavePath = True
             global_log.info("判断为人工手动操作")
             file_path = r"D:\wzhData\BaiduSyncdisk\project\python\DataAnalysis\物流-4-2024-08-14-1723627893.xlsx"
@@ -568,6 +568,9 @@ def run(isRequest: bool = False, order_numbers: list = None):
             commit_thread = threading.Thread(target=commit_to_db, daemon=True)
         commit_thread.start()
         thread_work()
+        if isSavePath is False:
+            if error_queue.qsize() > 0:
+                raise ValueError(f"error_queue存在数据: {error_queue}")
         return True
     except Exception:
         return False

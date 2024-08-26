@@ -5,6 +5,7 @@
 @Author：Libre
 @Time：2024/7/23 下午4:41
 """
+import json
 import random
 import re
 from typing import Optional, Union
@@ -212,23 +213,19 @@ class Task:
         self._close_data()
         self.page.wait_for_timeout(self.human_wait_time)
 
-        # account_name = self.extract_username(_url)
-        # if account_name:
-        #     account_name_src = self.page.wait_for_selector(f'img[@alt="{account_name}的头像"]').get_attribute("src")
-        # https://scontent-nrt1-2.cdninstagram.com/v/t51.2885-19/418140547_1016600006095323_5211962420708439817_n.jpg?stp=dst-jpg_s150x150\u0026_nc_ht=scontent-nrt1-2.cdninstagram.com\u0026_nc_cat=1\u0026_nc_ohc=jXhMDiivcaYQ7kNvgGXgVfH\u0026edm=APHcPcMBAAAA\u0026ccb=7-5\u0026oh=00_AYB7iEQpOc_C5y4Q4UE2YuqAwKIgtOrhCLCI6E0sUXqJ6g\u0026oe=66A683EA\u0026_nc_sid=bef7bc
-        # https://scontent-nrt1-2.cdninstagram.com/v/t51.2885-19/418140547_1016600006095323_5211962420708439817_n.jpg?stp=dst-jpg_s150x150&_nc_ht=scontent-nrt1-2.cdninstagram.com&_nc_cat=1&_nc_ohc=jXhMDiivcaYQ7kNvgGXgVfH&edm=AFg4Q8wBAAAA&ccb=7-5&oh=00_AYC4EoqHtR0BwntqPi4eHD-jDcDY_ZdKiDHbhPJuchIJ7A&oe=66A683EA&_nc_sid=0b30b7"
-        # https://scontent-nrt1-2.cdninstagram.com/v/t51.2885-19/418140547_1016600006095323_5211962420708439817_n.jpg?_nc_ht=scontent-nrt1-2.cdninstagram.com\u0026_nc_cat=1\u0026_nc_ohc=jXhMDiivcaYQ7kNvgGXgVfH\u0026edm=APHcPcMBAAAA\u0026ccb=7-5\u0026oh=00_AYBIb8tPiKJiITrWXhXsaRrI3QYKzhoj21qT6zG-Y01PAQ\u0026oe=66A683EA\u0026_nc_sid=bef7bc
-        # 等待页面加载完毕
-        # 拿到姓名，头像，粉丝数，国家，平台，近10个视频的播放量，参与率，点赞数，评论数，
-        # 保留红人信息，地址信息，标签信息
+    def save_cookies(self, file_path):
+        # 获取当前页面上下文的 cookies
+        cookies = self.page.context.cookies()
+
+        # 将 cookies 保存为 JSON 文件
+        with open(file_path, 'w') as file:
+            json.dump(cookies, file)
 
     def run(self, url):
         if self.page is None or self.page.query_selector('//input[@name="username"]'):
             self._login()
+        self.save_cookies("ins_cookies.json")
         self.work(url)
-        # https://www.instagram.com/gem0816/
-        # https://www.instagram.com/reel/C9rcLz8vFkI/
-
 
 if __name__ == '__main__':
     with sync_playwright() as playwright:
