@@ -34,7 +34,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     if flag == 2 and config.submitted_pass_track is False:
         threading_influencersVideo.set()
     else:
-        message_queue.add(send_id, "抓取成功" if message.get("code") == 500 else "抓取失败", status="error" if message.get("code") == 500 else "finish")
+        message_queue.add(send_id, "抓取成功" if message.get("code") == 200 else "异常", status="error" if message.get("code") == 500 else "finish")
         message_queue.to_end(send_id)
 
 

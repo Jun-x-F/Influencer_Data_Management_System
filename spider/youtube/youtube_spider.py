@@ -197,7 +197,7 @@ class Task:
         self.get_10_video_list()
         # 增加并发速 5 -> 稳定
         while self.urls_list.empty() is False:
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            with ThreadPoolExecutor(max_workers=5) as executor:
 
                 future_to_url = {}
                 """映射 Future 对象到任务"""

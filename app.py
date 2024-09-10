@@ -13,6 +13,7 @@ from blueprints.project_information import project_information_bp
 from blueprints.spider_notice import spider_notice_bp
 from blueprints.update import update_bp
 from blueprints.video import video_bp
+from blueprints.watch_log import log_bp
 from log.logger import InterceptHandler
 # from spider.spider_notice import spider_notice_bp
 from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task
@@ -38,7 +39,7 @@ app.register_blueprint(update_bp, url_prefix='/update')
 app.register_blueprint(project_information_bp, url_prefix='/project_information')
 app.register_blueprint(spider_notice_bp, url_prefix='/notice')
 app.register_blueprint(image_bp, url_prefix='/image')
-
+app.register_blueprint(log_bp, url_prefix='/log')
 
 @app.after_request
 def add_header(response):

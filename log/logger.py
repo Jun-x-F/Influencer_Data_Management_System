@@ -334,19 +334,28 @@ class InterceptHandler(logging.Handler):
         log_level = record.levelno
         info = record.getMessage()
         # 修改werkzeug的配置日志
-        if " - - " in info:
-            info_list = info.split(" - - ")
-            ip = info_list[0].strip()
-            ms_list = info_list[1].split('"')
-            _cur_message = ms_list[1]
-            code = int(ms_list[2].strip().replace("-", ""))
-            if 100 <= code < 400:
-                log_level = logging.INFO
-            elif 400 <= code < 500:
-                log_level = logging.WARN
-            elif 500 <= code < 600:
-                log_level = logging.INFO
-            info = f"The address is {ip} to request {_cur_message} is {code}"
+        try:
+            if " - - " in info:
+                info_list = info.split(" - - ")
+                ip = info_list[0].strip()
+                ms_list = info_list[1].split('"')
+                if len(ms_list) > 1:
+                    _cur_message = ms_list[1]
+                    code = int(ms_list[2].strip().replace("-", ""))
+                else:
+                    _cur_message = "Default message or handle the error appropriately"
+                    code = 201
+
+                # code = int(ms_list[2].strip().replace("-", ""))
+                if 100 <= code < 400:
+                    log_level = logging.INFO
+                elif 400 <= code < 500:
+                    log_level = logging.WARN
+                elif 500 <= code < 600:
+                    log_level = logging.INFO
+                info = f"The address is {ip} to request {_cur_message} is {code}"
+        except Exception:
+            info = "Default message or handle the error appropriately"
 
         if log_level == logging.INFO:
             global_log.info(info)

@@ -7,6 +7,7 @@
 """
 import datetime
 import json
+import time
 
 from playwright.sync_api import sync_playwright
 
@@ -85,18 +86,26 @@ def work(url: str, cur: dict, flag, _id) -> int:
 def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
     message_queue.add(_id, f"接收到任务链接: {url}, 开始解析url")
     message = {}
-    try:
-        code = work(url, cur, flag, _id)
-        if code == 200:
-            message["code"] = 200
-            message["message"] = "抓取成功"
-        else:
-            message["code"] = code
-            message["message"] = "链接解析失败"
-    except Exception as e:
-        global_log.error(f"{url} 异常: {e}")
+    isFinish = False
+    for _ in range(5):
+        try:
+            code = work(url, cur, flag, _id)
+            if code == 200:
+                message["code"] = 200
+                message["message"] = "抓取成功"
+            else:
+                message["code"] = code
+                message["message"] = "链接解析失败"
+            isFinish = True
+            break
+        except Exception as e:
+            global_log.error(f"{url} 异常: {e}")
+        finally:
+            time.sleep(1)
+
+    if isFinish is False:
         message["code"] = 500
-        message["message"] = "网络异常, 检查日志"
+        message["message"] = "网络异常, 检查日志，稍后重试..."
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         redis_conn.set_value(url, json.dumps(cur))
     message_queue.add(_id,
