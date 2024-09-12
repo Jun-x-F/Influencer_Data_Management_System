@@ -463,5 +463,5 @@ textarea {
 }
 
 .highlight-animation {
-    animation: highlightAnimation 2s ease-in-out; /* 应用动画效果 */
+    animation: highlightAnimation 1.5s ease-in-out; /* 应用动画效果 */
 }
