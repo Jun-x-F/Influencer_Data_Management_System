@@ -5,6 +5,7 @@
 @Author：Libre
 @Time：2024/8/15 下午2:39
 """
+
 global_json = {
     "country": [
         {
@@ -2443,3 +2444,70 @@ global_json = {
         }
     ]
 }
+
+global_track_info = [
+    {
+        "key": "00",
+        "_iconBgColor": "757575",
+        "_name": "查询不到",
+        "_order": "01",
+        "_tips": "您的包裹查询不到跟踪信息。"
+    },
+    {
+        "key": "05",
+        "_iconBgColor": "00bcd4",
+        "_name": "收到信息",
+        "_order": "02",
+        "_tips": "您的包裹正在等待运输商揽收。"
+    },
+    {
+        "key": "10",
+        "_iconBgColor": "2196f3",
+        "_name": "运输途中",
+        "_order": "03",
+        "_tips": "您的包裹正在运输途中。"
+    },
+    {
+        "key": "20",
+        "_iconBgColor": "b71c1c",
+        "_name": "运输过久",
+        "_order": "09",
+        "_tips": "您的包裹已经运输了很长时间而仍未投递成功。"
+    },
+    {
+        "key": "30",
+        "_iconBgColor": "0d47a1",
+        "_name": "到达待取",
+        "_order": "04",
+        "_tips": "您的包裹已经到达目的地的投递点。"
+    },
+    {
+        "key": "32",
+        "_iconBgColor": "2962ff",
+        "_name": "派送途中",
+        "_order": "05",
+        "_tips": "您的包裹正在派送中。"
+    },
+    {
+        "key": "35",
+        "_iconBgColor": "f44336",
+        "_name": "投递失败",
+        "_order": "06",
+        "_tips": "您的包裹尝试派送但未能成功交付。"
+    },
+    {
+        "key": "40",
+        "_iconBgColor": "43a047",
+        "_name": "成功签收",
+        "_order": "07",
+        "_tips": "您的包裹已经成功签收。"
+    },
+    {
+        "key": "50",
+        "_iconBgColor": "ff6f00",
+        "_name": "可能异常",
+        "_order": "08",
+        "_tips": "您的包裹运输途中可能出现异常。"
+    }
+]
+

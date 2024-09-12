@@ -28,7 +28,7 @@ from spider.sql.data_inner_db import db
 from spider.template.class_dict_template import FIFODict
 from spider.template.proxy_template import proxy_user, proxy_pass, proxy_url
 from spider.template.spider_db_template import logistics_information_sheet
-from spider.track.track_global_info import global_json
+from spider.track.track_global_info import global_json, global_track_info
 from spider.translator.microsofttranslator import translate
 
 isSavePath = False
@@ -190,6 +190,7 @@ class Task:
         for info in self.response_data:
             number = info.get("number")
             try:
+                pre_status = None
                 shipper_country_zn = None
                 recipient_country_zn = None
                 alias = None
@@ -198,6 +199,7 @@ class Task:
                 description = None,
                 days_after_order = None,
                 prior_status = info.get("prior_status")
+                pre_status = info.get("pre_status")
 
                 if prior_status == "NotFound" or prior_status is None:
                     order_cur_data = {
@@ -269,13 +271,19 @@ class Task:
                     })
 
                 prior_status_zh_text = None
+
+                for _info in global_track_info:
+                    _key = _info.get("key")
+                    if int(_key) == pre_status:
+                        prior_status_zh_text = _info.get("_name")
+
                 # 发送翻译请求
                 translations = translate(json.dumps(queryTranslate))
-                if len(translations) == 1:
+                if len(translations) == 1 and prior_status_zh_text is None:
                     prior_status_zh_translations = translations[0].get("translations")
                     prior_status_zh_text = prior_status_zh_translations[0].get("text").encode('unicode_escape').decode(
                         'unicode_escape')
-                elif len(translations) == 2:
+                elif len(translations) == 2 and prior_status_zh_text is None:
                     prior_status_zh_translations = translations[0].get("translations")
                     prior_status_zh_text = prior_status_zh_translations[0].get("text").encode('unicode_escape').decode(
                         'unicode_escape')

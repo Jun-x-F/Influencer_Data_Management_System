@@ -197,6 +197,40 @@ function updateInfluencerNameDropdown(brand, project, manager) {
 }
 
 
+// 根据输入的url解析并判断类型
+document.addEventListener('DOMContentLoaded', function () {
+    const textarea = document.getElementById('videoLinks');
+    const select = document.getElementById('videoType');
+
+    textarea.addEventListener('input', function () {
+        const value = textarea.value.trim();
+        let newValue = ''; // 默认值为空
+
+        // 依据文本内容设置 select 的值
+        if (value.includes('/reel/') || value.includes('/video/') || value.includes('/watch/')
+            || value.includes('/video?') || value.includes('/watch?')|| value.includes('/reel?')) {
+            newValue = '视频';
+        } else if (value.includes('/p/')|| value.includes('/p?')) {
+            newValue = '图片';
+        } else if (value.includes('/shorts/')|| value.includes('/shorts?')) {
+            newValue = '短视频';
+        }
+
+        // 更新 select 的值
+        select.value = newValue;
+
+        // 添加高亮效果
+        if (newValue) {
+            select.classList.add('highlight-animation');
+
+            // 移除高亮效果（在 2 秒后）
+            setTimeout(() => {
+                select.classList.remove('highlight-animation');
+            }, 2000); // 2 秒钟
+        }
+    });
+});
+
 
 // 当品牌、项目或负责人改变时，更新唯一ID下拉菜单
 // 当品牌、项目、负责人或红人名称改变时，更新唯一ID下拉菜单
