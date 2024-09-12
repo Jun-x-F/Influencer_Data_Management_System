@@ -71,12 +71,15 @@ class Video:
         try:
             DATABASE = 'marketing'
             sql = 'SELECT DISTINCT 品牌, 项目, 负责人, 红人名称 FROM influencers_video_project_data'
-            current_app.logger.info(f"执行SQL查询: {sql}")
+            # current_app.logger.info(f"执行SQL查询: {sql}")
             project_info_df = ReadDatabase(DATABASE, sql).vm()
-            current_app.logger.info(f"查询结果: {project_info_df}")
-
+            # current_app.logger.info(f"查询结果: {project_info_df}")
+            sql_influencer = 'SELECT DISTINCT  红人名称 FROM celebrity_profile'
+            # current_app.logger.info(f"执行SQL查询: {sql}")
+            influencer_info_df = ReadDatabase(DATABASE, sql_influencer).vm()
             # 替换 NaN 或 None 值
             project_info_df = project_info_df.fillna('')
+            influencer_info_df = influencer_info_df.fillna('')
 
             # 构建品牌、项目、负责人、红人名称之间的关系
             relationships = []
@@ -92,7 +95,7 @@ class Video:
             brands = list(set([b for b in project_info_df['品牌'].tolist() if b]))
             projects = list(set([p for p in project_info_df['项目'].tolist() if p]))
             managers = list(set([m for m in project_info_df['负责人'].tolist() if m]))
-            influencers = list(set([i for i in project_info_df['红人名称'].tolist() if i]))  # 新增红人名称字段
+            influencers = list(set([i for i in influencer_info_df['红人名称'].tolist() if i]))  # 新增红人名称字段
 
             return jsonify({
                 'brands': brands,
@@ -420,7 +423,10 @@ class Video:
             brand = data.get('品牌')
             project_name = data.get('项目')
             manager = data.get('负责人')
+            influencer_name = data.get('红人名称')  # 新增红人名称
+            video_links = data.get('视频链接')  # 新增视频链接
             cost = data.get('花费')
+            currency = data.get('币种')
             product = data.get('产品')
             ProgressCooperation = data.get('合作进度')
             estimatedViews = data.get('预估观看量')
@@ -431,7 +437,10 @@ class Video:
                 '品牌': [brand or None],
                 '项目': [project_name or None],
                 '负责人': [manager or None],
+                '红人名称': [influencer_name or None],  # 将红人名称添加到数据
+                '视频链接': [video_links or None],  # 将视频链接添加到数据
                 '花费': [cost or None],
+                '币种': [currency or None],
                 '产品': [product or None],
                 '合作进度': [ProgressCooperation or None],
                 '预估观看量': [estimatedViews or None],
@@ -440,20 +449,24 @@ class Video:
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
+
             # 添加缺失的列，初始化为空值
             all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数',
                            '转发数', '参与率', '视频链接',
                            '更新日期', '品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号',
-                           '花费', '产品', '预估观看量', '预估上线时间']
+                           '花费', '币种', '产品', '预估观看量', '预估上线时间']
+
             # 将缺失的列添加到 DataFrame 中，并将其初始化为 None（或 np.nan）
             for col in all_columns:
                 if col not in df.columns:
                     df[col] = None
+
             # 确保列的顺序与 `all_columns` 一致（可选）
             df = df[all_columns]
-            # print(data)
+
             tosql_if_exists = 'append'
             DF_ToSql(df, DATABASE, sql_t, tosql_if_exists).mapping_df_types()
+
             return jsonify({'message': '数据添加成功'}), 200
         except Exception as e:
             print(e)
@@ -568,31 +581,40 @@ class Video:
 
             # 获取品牌、项目、产品数据
             sql_project = 'SELECT DISTINCT 品牌, 项目, 产品 FROM influencer_project_definitions'
-            current_app.logger.info(f"执行SQL查询: {sql_project}")
+            # current_app.logger.info(f"执行SQL查询: {sql_project}")
             project_info_df = ReadDatabase(DATABASE, sql_project).vm()
-            current_app.logger.info(f"查询结果: {project_info_df}")
+            # current_app.logger.info(f"查询结果: {project_info_df}")
 
             # 获取负责人数据
             sql_manager = 'SELECT DISTINCT 负责人 FROM influencer_name_definitions'
-            current_app.logger.info(f"执行SQL查询: {sql_manager}")
+            # current_app.logger.info(f"执行SQL查询: {sql_manager}")
             manager_info_df = ReadDatabase(DATABASE, sql_manager).vm()
-            current_app.logger.info(f"查询结果: {manager_info_df}")
+            # current_app.logger.info(f"查询结果: {manager_info_df}")
+
+            # 获取负责人数据
+            sql_InfluencerName = 'SELECT DISTINCT 红人名称 FROM celebrity_profile'
+            # current_app.logger.info(f"执行SQL查询: {sql_InfluencerName}")
+            sql_InfluencerName_info_df = ReadDatabase(DATABASE, sql_InfluencerName).vm()
+            # current_app.logger.info(f"查询结果: {sql_InfluencerName_info_df}")
 
             # 替换 NaN 或 None 值
             project_info_df = project_info_df.fillna('')
             manager_info_df = manager_info_df.fillna('')
+            sql_InfluencerName_info_df = sql_InfluencerName_info_df.fillna('')
 
             # 过滤空值并去重
             brands = list(set([b for b in project_info_df['品牌'].tolist() if b]))
             projects = list(set([p for p in project_info_df['项目'].tolist() if p]))
             products = list(set([prod for prod in project_info_df['产品'].tolist() if prod]))
             managers = list(set([m for m in manager_info_df['负责人'].tolist() if m]))
+            InfluencerName = list(set([m for m in sql_InfluencerName_info_df['红人名称'].tolist() if m]))
 
             return jsonify({
                 'brands': brands,
                 'projects': projects,
                 'products': products,
                 'managers': managers,
+                'InfluencerNames': InfluencerName
             }), 200
 
         except Exception as e:

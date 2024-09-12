@@ -4,6 +4,25 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     event.preventDefault();
     removeHighlightVideo(); // 移除外层的红框
 
+    var uniqueIdInput = document.getElementById('videoUniqueId').value.trim();
+    var influencerNameInput = document.getElementById('videoInfluencerName').value.trim();
+    var responseMessage = document.getElementById('responseMessageVideo');
+    responseMessage.innerHTML = ''; // 清空之前的信息
+    // 获取datalist中的所有选项
+    var uniqueIdOptions = Array.from(document.querySelectorAll('#videoUniqueIdList option')).map(option => option.value);
+    var influencerNameOptions = Array.from(document.querySelectorAll('#videoInfluencerNameList option')).map(option => option.value);
+    // 验证用户输入的唯一ID是否在可用选项中
+    if (!uniqueIdOptions.includes(uniqueIdInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">唯一ID不存在，请选择有效的ID。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的红人名称是否在可用选项中
+    if (!influencerNameOptions.includes(influencerNameInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">红人名称不存在，请选择有效的红人名称。</p>';
+        return; // 阻止表单提交
+    }
+
+
     // 获取字段值
     var productlist = document.getElementById('productOptions');
     var videoLinks = document.getElementById('videoLinks').value.trim();
@@ -74,6 +93,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         .then(response => response.json())
         .then(data => {
             responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
+            window.location.reload();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -1040,6 +1060,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     managerOptions.appendChild(option);
                 });
             }
+            if (data.InfluencerNames) {
+                var InfluencerNameOptions = document.getElementById('addInfluencerNameOptions');
+                data.managers.forEach(function (InfluencerName) {
+                    var option = document.createElement('option');
+                    option.value = InfluencerName;
+                    InfluencerNameOptions.appendChild(option);
+                });
+            }
         })
         .catch(error => console.error('Error fetching metrics options:', error));
 });
@@ -1048,15 +1076,74 @@ document.addEventListener('DOMContentLoaded', function () {
 // 提交新增表单时处理数据
 document.getElementById('addVideoData').addEventListener('submit', function (event) {
     event.preventDefault();
+    var responseMessage = document.getElementById('responseMessageVideo');
+    responseMessage.innerHTML = ''; // 清空之前的信息
 
+    // 获取表单值
+    var brandInput = document.getElementById('addbrand').value.trim();
+    var projectInput = document.getElementById('addprojectName').value.trim();
+    var managerInput = document.getElementById('addmanager').value.trim();
+    var influencerNameInput = document.getElementById('addInfluencerName').value.trim();
+    var currencyInput = document.getElementById('addcurrency').value.trim();
+    var productInput = document.getElementById('addproduct').value.trim();
+    var progressInput = document.getElementById('addProgress').value.trim();
+
+    // 获取选择框中的所有选项值
+    var brandOptions = Array.from(document.querySelectorAll('#addBrandOptions option')).map(option => option.value);
+    var projectOptions = Array.from(document.querySelectorAll('#addProjectOptions option')).map(option => option.value);
+    var managerOptions = Array.from(document.querySelectorAll('#addManagerOptions option')).map(option => option.value);
+    var influencerNameOptions = Array.from(document.querySelectorAll('#addInfluencerNameList option')).map(option => option.value);
+    var currencyOptions = Array.from(document.querySelectorAll('#addcurrency option')).map(option => option.value);
+    var productOptions = Array.from(document.querySelectorAll('#addProductOptions option')).map(option => option.value);
+    var progressOptions = Array.from(document.querySelectorAll('#addProgressOptions option')).map(option => option.value);
+
+    // 验证用户输入的品牌是否在可用选项中
+    if (!brandOptions.includes(brandInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">品牌不存在，请选择有效的品牌。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的项目是否在可用选项中
+    if (!projectOptions.includes(projectInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">项目不存在，请选择有效的项目。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的负责人是否在可用选项中
+    if (!managerOptions.includes(managerInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">负责人不存在，请选择有效的负责人。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的红人名称是否在可用选项中
+    if (!influencerNameOptions.includes(influencerNameInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">红人名称不存在，请选择有效的红人名称。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的币种是否在可用选项中
+    if (!currencyOptions.includes(currencyInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">币种不存在，请选择有效的币种。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的产品是否在可用选项中
+    if (!productOptions.includes(productInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">产品不存在，请选择有效的产品。</p>';
+        return; // 阻止表单提交
+    }
+    // 验证用户输入的合作进度是否在可用选项中
+    if (!progressOptions.includes(progressInput)) {
+        responseMessage.innerHTML = '<p style="color:red;">合作进度不存在，请选择有效的合作进度。</p>';
+        return; // 阻止表单提交
+    }
+
+    // 如果所有验证通过，组装表单数据并提交
     var formData = {
-        "品牌": document.getElementById('addbrand').value,
-        "项目": document.getElementById('addprojectName').value,
-        "负责人": document.getElementById('addmanager').value,
+        "品牌": brandInput,
+        "项目": projectInput,
+        "负责人": managerInput,
+        "红人名称": influencerNameInput,  // 新增红人名称字段
+        "视频链接": document.getElementById('addLinks').value,  // 新增视频链接字段
         "花费": document.getElementById('addcost').value,
-        "币种": document.getElementById('addcurrency').value,
-        "产品": document.getElementById('addproduct').value,
-        "合作进度": document.getElementById('addProgress').value,
+        "币种": currencyInput,
+        "产品": productInput,
+        "合作进度": progressInput,
         "预估观看量": document.getElementById('addestimatedViews').value,
         "预估上线时间": document.getElementById('addestimatedLaunchDate').value
     };
@@ -1071,16 +1158,41 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
         .then(response => response.json())
         .then(data => {
             alert(data.message);
+
+            // 清空表单字段
+            document.getElementById('addbrand').value = '';
+            document.getElementById('addprojectName').value = '';
+            document.getElementById('addmanager').value = '';
+            document.getElementById('addInfluencerName').value = '';  // 清空红人名称
+            document.getElementById('addLinks').value = '';  // 清空视频链接
+            document.getElementById('addcost').value = '';
+            document.getElementById('addcurrency').value = '';
+            document.getElementById('addproduct').value = '';
+            document.getElementById('addProgress').value = '';
+            document.getElementById('addestimatedViews').value = '';
+            document.getElementById('addestimatedLaunchDate').value = '';
+
             document.getElementById('addVideoDataForm').style.display = 'none';
             updateVideoTable();  // 提交成功后更新表格
+            // 提交成功后刷新页面
+            window.location.reload();
         })
         .catch(error => console.error('Error:', error));
+});
+
+// 表单重置
+document.getElementById('addresetMetricsForm').addEventListener('click', function() {
+    const form = document.getElementById('addVideoData');
+    form.reset(); // 重置表单内容
+
+    // 重新加载品牌、项目、负责人和产品选项
+    loadAllOptions();
+    updateMetricsTable();
 });
 
 
 
 
-// 指标定义板块
 // 指标定义板块
 document.addEventListener('DOMContentLoaded', function() {
     // 初始加载所有选项
