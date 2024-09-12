@@ -16,7 +16,7 @@ from blueprints.video import video_bp
 from blueprints.watch_log import log_bp
 from log.logger import InterceptHandler
 # from spider.spider_notice import spider_notice_bp
-from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task
+from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task, update_video_times
 
 app = Flask(__name__)
 CORS(app)  # 允许所有跨域请求
@@ -76,6 +76,7 @@ if __name__ == '__main__':
     # 在后台启动线程
     thread_background_task = threading.Thread(target=background_task, daemon=True)
     thread_cleanNoneNotice = threading.Thread(target=cleanNoneNotice, daemon=True)
+    thread_update_data = threading.Thread(target=update_video_times, daemon=True)
     thread_getTrackInfo = threading.Thread(target=getTrackInfo, daemon=True)
     thread_background_task.start()
     thread_cleanNoneNotice.start()

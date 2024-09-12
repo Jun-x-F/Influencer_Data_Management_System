@@ -571,9 +571,9 @@ def run(isRequest: bool = False, order_numbers: list = None):
         if isSavePath is False:
             if error_queue.qsize() > 0:
                 raise ValueError(f"error_queue存在数据: {error_queue}")
-        return True
+        return True, "成功"
     except Exception:
-        return False
+        return False, "网络异常"
 
 
 if __name__ == '__main__':

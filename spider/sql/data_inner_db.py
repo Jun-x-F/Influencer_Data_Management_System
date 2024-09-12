@@ -5,7 +5,7 @@
 @Author：Libre
 @Time：2024/8/12 下午5:22
 """
-from sqlalchemy import and_, update
+from sqlalchemy import and_, update, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from log.logger import global_log
@@ -147,3 +147,18 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
             return True
         global_log.error(f"物流信息{logistics_numbers}同步失败...")
     return False
+
+
+def select_video_urls(select_, filter_):
+    if db.check_connection() is not True:
+        db.reconnect_session()
+    # 使用 SQLAlchemy 的 select 语句进行查询，只获取 URL 字段
+    if filter_ is None:
+        stmt = select(select_)
+    else:
+        stmt = select(select_).filter(filter_)
+
+    # 执行查询
+    results = db.session.execute(stmt).scalars().all()
+
+    return results

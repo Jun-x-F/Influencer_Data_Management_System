@@ -95,7 +95,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
                 message["message"] = "抓取成功"
             else:
                 message["code"] = code
-                message["message"] = "链接解析失败"
+                message["message"] = f"链接 {url} \n格式错误，重新检查..."
             isFinish = True
             break
         except Exception as e:
@@ -108,9 +108,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
         message["message"] = "网络异常, 检查日志，稍后重试..."
         cur["error_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         redis_conn.set_value(url, json.dumps(cur))
-    message_queue.add(_id,
-                      f"任务链接: {url} 执行结果为 {message.get('message')}",
-                      status="error" if message.get("code") == 500 else "doing")
+
     return message
 
 #
