@@ -8,11 +8,14 @@
 import threading
 import time
 
+import schedule
+
 from spider import run_spider
 from spider.config import config
 from spider.config.config import order_links, submitted_influencer_links, submitted_video_links, message_queue
-from spider.sql.data_inner_db import sync_logistics_information_sheet_to_InfluencersVideoProjectData
+from spider.sql.data_inner_db import sync_logistics_information_sheet_to_InfluencersVideoProjectData, select_video_urls
 from spider.template.class_dict_template import FIFODict
+from spider.template.spider_db_template import InfluencersVideoProjectData, CelebrityProfile
 from spider.track.track_spider import run as track_spider
 
 threading_influencersVideo = threading.Event()
@@ -32,9 +35,12 @@ def process_links(_queue: FIFODict, flag: int) -> None:
 
     # 完成通知 如果需要执行物流信息
     if flag == 2 and config.submitted_pass_track is False:
+        message_queue.add(send_id, message.get("message"),
+                          status="error" if message.get("code") == 500 else "doing")
         threading_influencersVideo.set()
     else:
-        message_queue.add(send_id, "抓取成功" if message.get("code") == 200 else "异常", status="error" if message.get("code") == 500 else "finish")
+        message_queue.add(send_id, "成功" if message.get("code") == 200 else message.get("message"),
+                          status="error" if message.get("code") == 500 else "finish")
         message_queue.to_end(send_id)
 
 
@@ -52,15 +58,17 @@ def getTrackInfo():
         if order_links:
             sendId, order_list = order_links.dequeue()
             message_queue.add(sendId, f"开始执行获取物流信息任务, 接收到{len(order_list)}个订单号")
-            res = track_spider(isRequest=True, order_numbers=order_list)
-            message_queue.add(sendId, f"任务：获取物流信息结果为{'成功' if res is True else '失败'}，开始执行下一步")
+            res, res_message = track_spider(isRequest=True, order_numbers=order_list)
+            message_queue.add(sendId, f"获取物流信息结果为{'成功' if res is True else res_message}...", "finish" if res is True else "error")
+            message_queue.to_end(sendId)
             print(config.submitted_pass_video)
             if config.submitted_pass_video is False:
                 threading_influencersVideo.wait(timeout=60 * 2)
+            if res is False:
+                continue
             for order in order_list:
                 res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
-            message_queue.add(sendId, f"抓取任务结果为 {'成功' if res is True else '失败'} ，任务结束", "finish")
-            message_queue.to_end(sendId)
+                print("同步物流信息", res)
         time.sleep(5)
 
 
@@ -71,3 +79,33 @@ def cleanNoneNotice():
         for expired_item in expired_list:
             message_queue.delete(expired_item)
         time.sleep(10)
+
+
+def to_update_video_data():
+    res = select_video_urls(InfluencersVideoProjectData.video_url,
+                            InfluencersVideoProjectData.progressCooperation.notlike(f"%完成%"))
+    for item in res:
+        run_spider.run_spider(item, {}, 2, "schedule_test")
+
+
+def to_celebrity_video_data():
+    res = select_video_urls(CelebrityProfile.index_url,
+                            None)
+    for item in res:
+        run_spider.run_spider(item, {}, 1, "schedule_test")
+
+
+schedule.every(2).days.at("02:00").do(to_update_video_data)
+
+schedule.every(14).days.at("02:00").do(to_celebrity_video_data)
+
+
+def update_video_times():
+    """每2天更新一次视频数据"""
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+# if __name__ == '__main__':
+#     to_update_video_data()
