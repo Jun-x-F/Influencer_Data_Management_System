@@ -16,7 +16,7 @@ from blueprints.video import video_bp
 from blueprints.watch_log import log_bp
 from log.logger import InterceptHandler
 # from spider.spider_notice import spider_notice_bp
-from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task
+from spider.spider_threading import getTrackInfo, cleanNoneNotice, background_task, update_video_times
 
 app = Flask(__name__)
 CORS(app)  # 允许所有跨域请求
@@ -40,6 +40,7 @@ app.register_blueprint(project_information_bp, url_prefix='/project_information'
 app.register_blueprint(spider_notice_bp, url_prefix='/notice')
 app.register_blueprint(image_bp, url_prefix='/image')
 app.register_blueprint(log_bp, url_prefix='/log')
+
 
 @app.after_request
 def add_header(response):
@@ -72,12 +73,20 @@ def videos_page():
     return render_template('videos.html', version=uuid.uuid4())
 
 
+def start_thread(target):
+    """辅助函数用于创建和启动线程"""
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    return thread
+
+
 if __name__ == '__main__':
     # 在后台启动线程
-    thread_background_task = threading.Thread(target=background_task, daemon=True)
-    thread_cleanNoneNotice = threading.Thread(target=cleanNoneNotice, daemon=True)
-    thread_getTrackInfo = threading.Thread(target=getTrackInfo, daemon=True)
-    thread_background_task.start()
-    thread_cleanNoneNotice.start()
-    thread_getTrackInfo.start()
+    # 启动所有线程
+    threads = [
+        start_thread(background_task),
+        start_thread(cleanNoneNotice),
+        start_thread(update_video_times),
+        start_thread(getTrackInfo),
+    ]
     app.run(host='0.0.0.0', port=5000, debug=False)
