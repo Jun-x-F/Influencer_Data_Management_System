@@ -2,7 +2,7 @@
 import logging
 import os
 import threading
-import uuid
+import time
 
 from flask import Flask, render_template, redirect, url_for, request
 from flask_cors import CORS
@@ -65,12 +65,12 @@ def root():
 
 @app.route('/influencers')
 def influencers_page():
-    return render_template('influencers.html', version=uuid.uuid4())
+    return render_template('influencers.html', version=int(time.time()))
 
 
 @app.route('/videos')
 def videos_page():
-    return render_template('videos.html', version=uuid.uuid4())
+    return render_template('videos.html', version=int(time.time()))
 
 
 def start_thread(target):

@@ -3,18 +3,51 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     var uniqueId = uuid.v4();
     var links = document.getElementById('influencerLinks').value.trim().split('\n');
     var responseMessage = document.getElementById('responseMessageInfluencer');
+    // 定义需要排除的子字符串列表
+    const excludedSubstrings = [
+        '/reel/', '/video/', '/watch/',
+        '/video?', '/watch?', '/reel?',
+        '/p/', '/p?', '/shorts/', '/shorts?'
+    ];
+
     responseMessage.innerHTML = '';
 
     // 检查本次提交中的重复链接
     var uniqueLinks = new Set();
     var duplicateLinks = [];
     links.forEach(link => {
-        if (uniqueLinks.has(link)) {
-            duplicateLinks.push(link);
+        const containsExcluded = excludedSubstrings.some(substring => link.includes(substring));
+        if (containsExcluded) {
+            // 检查 duplicateLinks 中是否已存在相同的 link 和 message
+            if (!duplicateLinks.some(item => item.link === link && item.message === "这是视频链接，不是红人链接！！！")) {
+                duplicateLinks.push({ link: link, message: "这是视频链接，不是红人链接！！！" });
+            }
+        } else if (uniqueLinks.has(link)) {
+            // 检查 duplicateLinks 中是否已存在相同的 link 和 message
+            if (!duplicateLinks.some(item => item.link === link && item.message === "链接重复了！！！")) {
+                duplicateLinks.push({ link: link, message: "链接重复了！！！" });
+            }
         } else {
             uniqueLinks.add(link);
         }
     });
+
+    // 在循环结束后，如果存在被排除的链接，显示弹窗
+    if (duplicateLinks.length > 0) {
+        Swal.fire({
+            title: '以下链接有问题，请查看',
+            html: '<h3 class="subtitle">其余链接正常执行</h3>' +
+                '<div class="swal-scrollable-content">'+
+                '<ul class="link-list">' + duplicateLinks.map(item => `<li style="text-align: center"><span class="link-text">${item.link}</span> - <span class="error-message">${item.message}</span></li>`).join('') + '</ul>'
+                + '</div>',
+            icon: 'error',
+            confirmButtonText: '确定',
+            width: '700px',
+            background: '#f9f9f9',
+            confirmButtonColor: '#3085d6',
+        });
+    }
+
     // 测试
     // if (duplicateLinks.length > 0) {
     //     duplicateLinks.forEach(link => {
@@ -25,7 +58,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     // }
 
     // 提交非重复链接
-    links.forEach(link => {
+    uniqueLinks.forEach(link => {
         responseMessage.innerHTML += `<p style="font-size: 14px">链接 ${link} 提交成功...</p>`;
         responseMessage.style.color = 'black';
         fetch('/influencer/submit_link', {
@@ -40,12 +73,13 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
             console.error('Error:', error);
             responseMessage.innerHTML += `<p>提交链接 ${link} 时出错，请重试。</p>`;
             responseMessage.style.color = 'red';
-
         });
     });
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider
-    const {intervalId, timeoutId} = startFetchSpiderNoticeWithTimeout('influencer', responseMessage, uniqueId, 5000, updateInfluencerTable)
+    if (uniqueLinks.length > 0) {
+        const {intervalId, timeoutId} = startFetchSpiderNoticeWithTimeout('influencer', responseMessage, uniqueId, 5000, updateInfluencerTable);
+    }
 });
 
 

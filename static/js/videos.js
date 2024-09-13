@@ -11,6 +11,11 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     // 获取datalist中的所有选项
     var uniqueIdOptions = Array.from(document.querySelectorAll('#videoUniqueIdList option')).map(option => option.value);
     var influencerNameOptions = Array.from(document.querySelectorAll('#videoInfluencerNameList option')).map(option => option.value);
+    console.log("test....");
+    console.log(uniqueIdOptions);
+    console.log(uniqueIdInput);
+    console.log(influencerNameOptions);
+    console.log(influencerNameInput);
     // 验证用户输入的唯一ID是否在可用选项中
     if (!uniqueIdOptions.includes(uniqueIdInput)) {
         responseMessage.innerHTML = '<p style="color:red;">唯一ID不存在，请选择有效的ID。</p>';
@@ -46,20 +51,69 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     var links = [];
     if (videoLinks) {
         links = videoLinks.split('\n').map(link => link.trim()).filter(link => link !== '');
-        var uniqueLinks = new Set();
+
+        if (links.length > 1){
+            Swal.fire({
+                title: '视频链接有问题，数量超过1条',
+                html: '<h3 class="subtitle">重新修改</h3>' +
+                    '<div class="swal-scrollable-content">'+
+                    '<ul class="link-list">' +
+                    links.map(link => `
+                    <li style="text-align: center">
+                        <span class="error-message">${link}</span>
+                    </li>
+                `).join('') +
+                    '</ul>' +
+                    '</div>',
+                icon: 'error',
+                confirmButtonText: '确定',
+                width: '700px',
+                background: '#f9f9f9',
+                confirmButtonColor: '#3085d6',
+            });
+            responseMessage.innerHTML = '视频链接有问题，数量超过1条';
+            responseMessage.style.color = 'red'
+            return
+        }
+
         var duplicateLinks = [];
 
+        // 需要的子字符串列表
+        const excludedSubstrings = [
+            '/reel/', '/video/', '/watch/',
+            '/video?', '/watch?', '/reel?',
+            '/p/', '/p?', '/shorts/', '/shorts?'
+        ];
+
         links.forEach(link => {
-            if (uniqueLinks.has(link)) {
+            const containsExcluded = excludedSubstrings.some(substring => link.includes(substring));
+            if (!containsExcluded) {
                 duplicateLinks.push(link);
-            } else {
-                uniqueLinks.add(link);
             }
         });
 
-        if (duplicateLinks.length > 0) {
-            responseMessage.innerHTML = `<p style="color:red;">以下链接在提交中重复: ${duplicateLinks.join(', ')}</p>`;
-            return;
+        if (duplicateLinks.length > 0){
+            Swal.fire({
+                title: '提交的链接有问题，不是视频链接格式',
+                html: '<h3 class="subtitle">重新修改</h3>' +
+                    '<div class="swal-scrollable-content">'+
+                    '<ul class="link-list">' +
+                    duplicateLinks.map(_link => `
+                    <li style="text-align: center">
+                        <span class="error-message">${_link}</span>
+                    </li>
+                `).join('') +
+                    '</ul>' +
+                    '</div>',
+                icon: 'error',
+                confirmButtonText: '确定',
+                width: '700px',
+                background: '#f9f9f9',
+                confirmButtonColor: '#3085d6',
+            });
+            responseMessage.innerHTML = '提交的链接有问题，不是视频链接格式';
+            responseMessage.style.color = 'red'
+            return
         }
     }
 
@@ -118,7 +172,9 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     });
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider/influencersVideo
-    const {intervalId, timeoutId} =startFetchSpiderNoticeWithTimeout('video', responseMessage, uid, 5000, updateVideoTable)
+    if (links.length > 0){
+        const {intervalId, timeoutId} =startFetchSpiderNoticeWithTimeout('video', responseMessage, uid, 5000, updateVideoTable);
+    }
 });
 
 // 更新唯一ID下拉菜单
