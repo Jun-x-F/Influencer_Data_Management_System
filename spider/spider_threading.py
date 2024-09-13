@@ -95,8 +95,13 @@ def to_celebrity_video_data():
         run_spider.run_spider(item, {}, 1, "schedule_test")
 
 
-schedule.every(2).days.at("02:00").do(to_update_video_data)
+# 每周一、周三、周五、周日执行任务
+schedule.every().monday.at("02:00").do(to_update_video_data)
+schedule.every().wednesday.at("02:00").do(to_update_video_data)
+schedule.every().friday.at("02:00").do(to_update_video_data)
+schedule.every().sunday.at("02:00").do(to_update_video_data)
 
+# 每14天执行一次
 schedule.every(14).days.at("02:00").do(to_celebrity_video_data)
 
 
