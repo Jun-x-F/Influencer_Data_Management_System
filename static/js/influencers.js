@@ -16,8 +16,14 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     var uniqueLinks = new Set();
     var duplicateLinks = [];
     links.forEach(link => {
+        const isValidUrl = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/.test(link);
         const containsExcluded = excludedSubstrings.some(substring => link.includes(substring));
-        if (containsExcluded) {
+        if (!isValidUrl){
+            if (!duplicateLinks.some(item => item.link === link && item.message === "这不是链接格式！！！")) {
+                duplicateLinks.push({ link: link, message: "这不是链接格式！！！" });
+            }
+        }
+        else if (containsExcluded) {
             // 检查 duplicateLinks 中是否已存在相同的 link 和 message
             if (!duplicateLinks.some(item => item.link === link && item.message === "这是视频链接，不是红人链接！！！")) {
                 duplicateLinks.push({ link: link, message: "这是视频链接，不是红人链接！！！" });

@@ -4,38 +4,46 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     event.preventDefault();
     removeHighlightVideo(); // 移除外层的红框
 
+// 统一变量定义，避免重复
     var uniqueIdInput = document.getElementById('videoUniqueId').value.trim();
     var influencerNameInput = document.getElementById('videoInfluencerName').value.trim();
     var responseMessage = document.getElementById('responseMessageVideo');
     responseMessage.innerHTML = ''; // 清空之前的信息
+
     // 获取datalist中的所有选项
-    var uniqueIdOptions = Array.from(document.querySelectorAll('#videoUniqueIdList option')).map(option => option.value);
-    var influencerNameOptions = Array.from(document.querySelectorAll('#videoInfluencerNameList option')).map(option => option.value);
+    // 获取缓存数据 --> 每次更新表格都会更新缓存数据
+    const cachedVideoData = getVideoTableCache();
+    const uniqueIdOptions = cachedVideoData ? cachedVideoData.map(video => video.id) : [];
+    const influencerNameOptions = cachedVideoData ? cachedVideoData.map(video => video.红人名称) : [];
+
+    // 调试日志输出
     console.log("test....");
-    console.log(uniqueIdOptions);
+    console.log(uniqueIdOptions)
+    console.log(uniqueIdOptions.includes(uniqueIdInput));
     console.log(uniqueIdInput);
     console.log(influencerNameOptions);
     console.log(influencerNameInput);
+
     // 验证用户输入的唯一ID是否在可用选项中
-    if (!uniqueIdOptions.includes(uniqueIdInput)) {
+    if (!uniqueIdOptions.includes(Number(uniqueIdInput))) {
         responseMessage.innerHTML = '<p style="color:red;">唯一ID不存在，请选择有效的ID。</p>';
         return; // 阻止表单提交
     }
+
     // 验证用户输入的红人名称是否在可用选项中
     if (!influencerNameOptions.includes(influencerNameInput)) {
         responseMessage.innerHTML = '<p style="color:red;">红人名称不存在，请选择有效的红人名称。</p>';
         return; // 阻止表单提交
     }
 
-
     // 获取字段值
     var productlist = document.getElementById('productOptions');
     var videoLinks = document.getElementById('videoLinks').value.trim();
-    var uniqueId = document.getElementById('videoUniqueId').value.trim();
+    var uniqueId = uniqueIdInput; // 使用已获取的uniqueIdInput
     var projectName = document.getElementById('videoProjectName').value.trim();
     var brand = document.getElementById('videobrand').value.trim();
     var manager = document.getElementById('videoManager').value.trim();
-    var influencerName = document.getElementById('videoInfluencerName').value.trim();
+    var influencerName = influencerNameInput; // 使用已获取的influencerNameInput
     var videoType = document.getElementById('videoType').value.trim();
     var progress = document.getElementById('videoProgress').value.trim();
     var logisticsNumber = document.getElementById('videoLogisticsNumber').value.trim();
@@ -45,7 +53,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     var estimatedViews = document.getElementById('videoestimatedViews').value.trim();
     var estimatedLaunchDate = document.getElementById('videoestimatedLaunchDate').value.trim();
     var uid = uuid.v4();
-    var responseMessage = document.getElementById('responseMessageVideo');
+
     responseMessage.innerHTML = '正在提交...';
 
     var links = [];
@@ -86,8 +94,9 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         ];
 
         links.forEach(link => {
+            const isValidUrl = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/.test(link);
             const containsExcluded = excludedSubstrings.some(substring => link.includes(substring));
-            if (!containsExcluded) {
+            if (!containsExcluded || !isValidUrl) {
                 duplicateLinks.push(link);
             }
         });
@@ -147,7 +156,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         .then(response => response.json())
         .then(data => {
             responseMessage.innerHTML += `<p>${data.message.replace(/\n/g, '<br>')}</p>`;
-            window.location.reload();
+            // window.location.reload();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -958,67 +967,174 @@ document.addEventListener('DOMContentLoaded', function() {
     // 调用函数以更新红人数据表格
     updateVideoTable();
 });
-// 全局定义 updateVideoTable 函数
+
+// 定义缓存的键名
+const VIDEO_TABLE_CACHE_KEY = 'videoTableData';
+
+/**
+ * 清除视频表格的缓存
+ */
+function clearVideoTableCache() {
+    localStorage.removeItem(VIDEO_TABLE_CACHE_KEY);
+}
+
+/**
+ * 设置视频表格的缓存数据
+ * @param {Array} data - 要缓存的视频数据
+ */
+function setVideoTableCache(data) {
+    localStorage.setItem(VIDEO_TABLE_CACHE_KEY, JSON.stringify(data));
+}
+
+/**
+ * 获取视频表格的缓存数据
+ * @returns {Array|null} - 返回缓存的数据数组或 null（如果没有缓存）
+ */
+function getVideoTableCache() {
+    const cachedData = localStorage.getItem(VIDEO_TABLE_CACHE_KEY);
+    return cachedData ? JSON.parse(cachedData) : null;
+}
+
+/**
+ * 填充视频表格
+ * @param {Array} data - 要填充的视频数据
+ */
+function populateVideoTable(data) {
+    const tableBody = document.querySelector('#videoTable tbody');
+    tableBody.innerHTML = ''; // 清空表格内容
+
+    data.forEach(row => {
+        var date = row.更新日期 ? new Date(row.更新日期) : null;
+        var formattedDate = date && !isNaN(date) ? date.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+
+        var date2 = row.预估上线时间 ? new Date(row.预估上线时间) : null;
+        var formattedDate2 = date2 && !isNaN(date2) ? date2.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+
+        var date3 = row.发布时间 ? new Date(row.发布时间) : null;
+        var formattedDate3 = date3 && !isNaN(date3) ? date3.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.id || ''}</td>
+            <td>${row.品牌 || ''}</td>
+            <td>${row.项目 || ''}</td>
+            <td>${row.负责人 || ''}</td>
+            <td>${row.合作进度 || ''}</td>
+            <td>${row.物流进度 || ''}</td>
+            <td>${row.物流单号 || ''}</td>
+            <td>${row.花费 || ''}</td>
+            <td>${row.币种 || ''}</td>
+            <td>${row.产品 || ''}</td>
+            <td>${row.预估观看量 || ''}</td>
+            <td>${formattedDate2}</td>
+            <td>${row.平台 || ''}</td>
+            <td>${row.类型 || ''}</td>
+            <td>${row.红人名称 || ''}</td>
+            <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td> 
+            <td>${formattedDate3}</td>
+            <td>${row.播放量 || ''}</td>
+            <td>${row.点赞数 || ''}</td>
+            <td>${row.评论数 || ''}</td>
+            <td>${row.收藏数 || ''}</td>
+            <td>${row.转发数 || ''}</td>
+            <td>${row.参与率 || ''}</td>
+            <td>${formattedDate}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+
+    // 应用当前筛选条件
+    var currentProject = document.getElementById('videoProjectName').value;
+    var currentBrand = document.getElementById('videobrand').value;
+    var currentManager = document.getElementById('videoManager').value;
+    var currentInfluencerName = document.getElementById('videoInfluencerName').value;
+    if (currentProject || currentBrand || currentManager || currentInfluencerName) {
+        filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager, currentInfluencerName);
+    }
+}
+
+/**
+ * 更新视频表格并缓存数据
+ */
 function updateVideoTable() {
     fetch('/video/get_video_data', {
         method: 'GET'
     })
-    .then(response => response.json())
-    .then(data => {
-        const tableBody = document.querySelector('#videoTable tbody');
-        tableBody.innerHTML = ''; // 清空表格内容
+        .then(response => response.json())
+        .then(data => {
+            // 清除之前的缓存
+            clearVideoTableCache();
 
-        data.forEach(row => {
-            var date = row.更新日期 ? new Date(row.更新日期) : null;
-            var formattedDate = date && !isNaN(date) ? date.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+            // 设置新的缓存
+            setVideoTableCache(data);
 
-            var date2 = row.预估上线时间 ? new Date(row.预估上线时间) : null;
-            var formattedDate2 = date2 && !isNaN(date2) ? date2.toISOString().split('T')[0] : ''; // 检查是否为有效日期
-
-            var date3 = row.发布时间 ? new Date(row.发布时间) : null;
-            var formattedDate3 = date3 && !isNaN(date3) ? date3.toISOString().split('T')[0] : ''; // 检查是否为有效日期
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.id || ''}</td>
-                <td>${row.品牌 || ''}</td>
-                <td>${row.项目 || ''}</td>
-                <td>${row.负责人 || ''}</td>
-                <td>${row.合作进度 || ''}</td>
-                <td>${row.物流进度 || ''}</td>
-                <td>${row.物流单号 || ''}</td>
-                <td>${row.花费 || ''}</td>
-                <td>${row.币种 || ''}</td>
-                <td>${row.产品 || ''}</td>
-                <td>${row.预估观看量 || ''}</td>
-                <td>${formattedDate2}</td>
-                <td>${row.平台 || ''}</td>
-                <td>${row.类型 || ''}</td>
-                <td>${row.红人名称 || ''}</td>
-                <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td> 
-                <td>${formattedDate3}</td>
-                <td>${row.播放量 || ''}</td>
-                <td>${row.点赞数 || ''}</td>
-                <td>${row.评论数 || ''}</td>
-                <td>${row.收藏数 || ''}</td>
-                <td>${row.转发数 || ''}</td>
-                <td>${row.参与率 || ''}</td>
-                <td>${formattedDate}</td>
-            `;
-            tableBody.appendChild(tr);
-        });
-
-        // 应用当前筛选条件
-        var currentProject = document.getElementById('videoProjectName').value;
-        var currentBrand = document.getElementById('videobrand').value;
-        var currentManager = document.getElementById('videoManager').value;
-        var currentInfluencerName = document.getElementById('videoInfluencerName').value;
-        if (currentProject || currentBrand || currentManager || currentInfluencerName) {
-            filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager,currentInfluencerName);
-        }
-    })
-    .catch(error => console.error('Error fetching video table data:', error));
+            // 用新数据填充表格
+            populateVideoTable(data);
+        })
+        .catch(error => console.error('Error fetching video table data:', error));
 }
+
+// 全局定义 updateVideoTable 函数
+// function updateVideoTable() {
+//     fetch('/video/get_video_data', {
+//         method: 'GET'
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         const tableBody = document.querySelector('#videoTable tbody');
+//         tableBody.innerHTML = ''; // 清空表格内容
+//
+//         data.forEach(row => {
+//             var date = row.更新日期 ? new Date(row.更新日期) : null;
+//             var formattedDate = date && !isNaN(date) ? date.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+//
+//             var date2 = row.预估上线时间 ? new Date(row.预估上线时间) : null;
+//             var formattedDate2 = date2 && !isNaN(date2) ? date2.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+//
+//             var date3 = row.发布时间 ? new Date(row.发布时间) : null;
+//             var formattedDate3 = date3 && !isNaN(date3) ? date3.toISOString().split('T')[0] : ''; // 检查是否为有效日期
+//
+//             const tr = document.createElement('tr');
+//             tr.innerHTML = `
+//                 <td>${row.id || ''}</td>
+//                 <td>${row.品牌 || ''}</td>
+//                 <td>${row.项目 || ''}</td>
+//                 <td>${row.负责人 || ''}</td>
+//                 <td>${row.合作进度 || ''}</td>
+//                 <td>${row.物流进度 || ''}</td>
+//                 <td>${row.物流单号 || ''}</td>
+//                 <td>${row.花费 || ''}</td>
+//                 <td>${row.币种 || ''}</td>
+//                 <td>${row.产品 || ''}</td>
+//                 <td>${row.预估观看量 || ''}</td>
+//                 <td>${formattedDate2}</td>
+//                 <td>${row.平台 || ''}</td>
+//                 <td>${row.类型 || ''}</td>
+//                 <td>${row.红人名称 || ''}</td>
+//                 <td><a href="${row.视频链接}" target="_blank">${row.视频链接}</a></td>
+//                 <td>${formattedDate3}</td>
+//                 <td>${row.播放量 || ''}</td>
+//                 <td>${row.点赞数 || ''}</td>
+//                 <td>${row.评论数 || ''}</td>
+//                 <td>${row.收藏数 || ''}</td>
+//                 <td>${row.转发数 || ''}</td>
+//                 <td>${row.参与率 || ''}</td>
+//                 <td>${formattedDate}</td>
+//             `;
+//             tableBody.appendChild(tr);
+//         });
+//
+//         // 应用当前筛选条件
+//         var currentProject = document.getElementById('videoProjectName').value;
+//         var currentBrand = document.getElementById('videobrand').value;
+//         var currentManager = document.getElementById('videoManager').value;
+//         var currentInfluencerName = document.getElementById('videoInfluencerName').value;
+//         if (currentProject || currentBrand || currentManager || currentInfluencerName) {
+//             filterTableByProjectBrandAndManager(currentProject, currentBrand, currentManager,currentInfluencerName);
+//         }
+//     })
+//     .catch(error => console.error('Error fetching video table data:', error));
+// }
 
 // 确保页面加载完成后调用 updateVideoTable 函数
 document.addEventListener('DOMContentLoaded', function() {
@@ -1152,7 +1268,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (data.InfluencerNames) {
                 var InfluencerNameOptions = document.getElementById('addInfluencerNameOptions');
-                data.managers.forEach(function (InfluencerName) {
+                data.InfluencerNames.forEach(function (InfluencerName) {
                     var option = document.createElement('option');
                     option.value = InfluencerName;
                     InfluencerNameOptions.appendChild(option);
@@ -1166,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // 提交新增表单时处理数据
 document.getElementById('addVideoData').addEventListener('submit', function (event) {
     event.preventDefault();
-    var responseMessage = document.getElementById('responseMessageVideo');
+    var responseMessage = document.getElementById('formErrorMessage');
     responseMessage.innerHTML = ''; // 清空之前的信息
 
     // 获取表单值
@@ -1182,7 +1298,7 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
     var brandOptions = Array.from(document.querySelectorAll('#addBrandOptions option')).map(option => option.value);
     var projectOptions = Array.from(document.querySelectorAll('#addProjectOptions option')).map(option => option.value);
     var managerOptions = Array.from(document.querySelectorAll('#addManagerOptions option')).map(option => option.value);
-    var influencerNameOptions = Array.from(document.querySelectorAll('#addInfluencerNameList option')).map(option => option.value);
+    var influencerNameOptions = Array.from(document.querySelectorAll('#addInfluencerNameOptions option')).map(option => option.value);
     var currencyOptions = Array.from(document.querySelectorAll('#addcurrency option')).map(option => option.value);
     var productOptions = Array.from(document.querySelectorAll('#addProductOptions option')).map(option => option.value);
     var progressOptions = Array.from(document.querySelectorAll('#addProgressOptions option')).map(option => option.value);
