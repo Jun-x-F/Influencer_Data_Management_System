@@ -16,9 +16,8 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     var uniqueLinks = new Set();
     var duplicateLinks = [];
     links.forEach(link => {
-        const isValidUrl = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/.test(link);
         const containsExcluded = excludedSubstrings.some(substring => link.includes(substring));
-        if (!isValidUrl){
+        if (link.indexOf("http") === -1){
             if (!duplicateLinks.some(item => item.link === link && item.message === "这不是链接格式！！！")) {
                 duplicateLinks.push({ link: link, message: "这不是链接格式！！！" });
             }
@@ -74,7 +73,6 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
             },
             body: JSON.stringify({ link: link, id: uniqueId })
         })
-        .then(response => response.json())
         .catch(error => {
             console.error('Error:', error);
             responseMessage.innerHTML += `<p>提交链接 ${link} 时出错，请重试。</p>`;
@@ -83,9 +81,7 @@ document.getElementById('influencerForm').addEventListener('submit', function(ev
     });
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider
-    if (uniqueLinks.length > 0) {
-        const {intervalId, timeoutId} = startFetchSpiderNoticeWithTimeout('influencer', responseMessage, uniqueId, 5000, updateInfluencerTable);
-    }
+    const {intervalId, timeoutId} = startFetchSpiderNoticeWithTimeout('influencer', responseMessage, uniqueId, 5000, updateInfluencerTable);
 });
 
 
@@ -390,12 +386,37 @@ function fillCountryDetails(type) {
     }
 }
 
+// 定义缓存键
+const InfluencerDataCacheKey = 'influencerData';
 
+/**
+ * 清除视频表格的缓存
+ */
+function clearInfluencerDataCache() {
+    localStorage.removeItem(InfluencerDataCacheKey);
+}
+
+/**
+ * 设置视频表格的缓存数据
+ * @param {Array} data - 要缓存的视频数据
+ */
+function setInfluencerDataCache(data) {
+    localStorage.setItem(InfluencerDataCacheKey, JSON.stringify(data));
+}
+
+/**
+ * 获取视频表格的缓存数据
+ * @returns {Array|null} - 返回缓存的数据数组或 null（如果没有缓存）
+ */
+function getInfluencerDataCache() {
+    const cachedData = localStorage.getItem(InfluencerDataCacheKey);
+    return cachedData ? JSON.parse(cachedData) : null;
+}
 
 
 document.getElementById('updateInfluencerForm').addEventListener('submit', function(event) {
     event.preventDefault();
-    updateInfluencerTable();
+    // updateInfluencerTable();
     // 移除红色边框
     removeHighlight();
     // 在这里定义 datalist
@@ -414,6 +435,33 @@ document.getElementById('updateInfluencerForm').addEventListener('submit', funct
     var tag3 = document.getElementById('tag3').value;
     var country = document.getElementById('country').value;
     var country_code = document.getElementById('country_code').value;
+
+    const cacheData = getInfluencerDataCache()
+
+    // 检查名称是否存在
+    if (cacheData && cacheData.some(item => item['红人名称'] !== name)) {
+        console.log(`名称 "${name}" 不存在于缓存数据中。`);
+        Swal.fire({
+            title: '红人数据不存在',
+            html: `
+        <h3 class="subtitle">没有这个红人数据，先提交红人链接进行抓取！</h3>
+        <div class="swal-scrollable-content">
+            <ul class="link-list">
+                <li style="text-align: center; font-size: 14px;">
+                    <span class="link-text">${name}</span> -  
+                    <span class="error-message">没有这个红人姓名的数据！！！</span>
+                </li>
+            </ul>
+        </div>
+    `,
+            icon: 'error',
+            confirmButtonText: '确定',
+            width: '700px',
+            background: '#f9f9f9',
+            confirmButtonColor: '#3085d6',
+        });
+        return;
+    }
 
     // Basic validation
     if (!platform || !name) {
@@ -480,67 +528,130 @@ document.getElementById('resetUpdateInfluencerForm').addEventListener('click', f
     updateInfluencerTable();
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    updateInfluencerTable();
-});
-// 更新数据库表格的函数
 function updateInfluencerTable() {
+    // 清除本地缓存中的数据
+    clearInfluencerDataCache();
+
     fetch('/update/get_influencer_data', {
         method: 'GET'
     })
-    .then(response => response.json())
-    .then(data => {
-        const tableBody = document.querySelector('#influencerTable tbody');
-        tableBody.innerHTML = ''; // 清空表格内容
+        .then(response => response.json())
+        .then(data => {
+            // 将数据存储到本地缓存中
+            setInfluencerDataCache(data);
+            console.log(getInfluencerDataCache())
+            // 使用数据更新表格
+            renderInfluencerTable(data);
 
-        if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
-        } else {
-            data.forEach(row => {
-                var date = new Date(row.更新日期);
-                var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
-                const tr = document.createElement('tr');
-                const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
-
-                tr.innerHTML = `
-                    <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
-                    <td>${row.平台 || ''}</td>
-                    <td><a href="${row.红人主页地址}" target="_blank">${row.红人名称 || ''}</a></td> <!-- 红人名称变为超链接 -->
-                    <td>${row.红人全名 || ''}</td>
-                    <td>${row.地区 || ''}</td>
-                    <td>${row.国家编码 || ''}</td>
-                    <td>${row.评级 || ''}</td>
-                    <td>${row.粉丝数量 || ''}</td>
-                    <td>${row.平均播放量 || ''}</td>
-                    <td>${row.平均点赞数量 || ''}</td>
-                    <td>${row.平均评论数量 || ''}</td>
-                    <td>${row.平均参与率 || ''}</td>
-                    <td>${row.邮箱 || ''}</td>
-                    <td>${row.WhatsApp || ''}</td>
-                    <td>${row.Discord || ''}</td>
-                    <td>${row.地址信息1 || ''}</td>
-                    <td>${row.地址信息2 || ''}</td>
-                    <td>${row.地址信息3 || ''}</td>
-                    <td>${row.标签功能1 || ''}</td>
-                    <td>${row.标签功能2 || ''}</td>
-                    <td>${row.标签功能3 || ''}</td>
-                    <td>${formattedDate || ''}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-        // 应用当前筛选条件
-        var currentPlatform = document.getElementById('updatePlatform').value;
-        var currentInfluencerName = document.getElementById('updateInfluencerName').value;
-        filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
-    })
-    .catch(error => {
-        console.error('Error fetching influencer table data:', error);
-    });
+            // 应用当前筛选条件
+            var currentPlatform = document.getElementById('updatePlatform').value;
+            var currentInfluencerName = document.getElementById('updateInfluencerName').value;
+            filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
+        })
+        .catch(error => {
+            console.error('Error fetching influencer table data:', error);
+        });
 }
-document.addEventListener('DOMContentLoaded', function() {
-    updateInfluencerTable();
-});
+
+// 渲染表格的函数
+function renderInfluencerTable(data) {
+    const tableBody = document.querySelector('#influencerTable tbody');
+    tableBody.innerHTML = ''; // 清空表格内容
+
+    if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
+    } else {
+        data.forEach(row => {
+            var date = new Date(row.更新日期);
+            var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+            const tr = document.createElement('tr');
+            const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
+
+            tr.innerHTML = `
+                <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
+                <td>${row.平台 || ''}</td>
+                <td><a href="${row.红人主页地址}" target="_blank">${row.红人名称 || ''}</a></td> <!-- 红人名称变为超链接 -->
+                <td>${row.红人全名 || ''}</td>
+                <td>${row.地区 || ''}</td>
+                <td>${row.国家编码 || ''}</td>
+                <td>${row.评级 || ''}</td>
+                <td>${row.粉丝数量 || ''}</td>
+                <td>${row.平均播放量 || ''}</td>
+                <td>${row.平均点赞数量 || ''}</td>
+                <td>${row.平均评论数量 || ''}</td>
+                <td>${row.平均参与率 || ''}</td>
+                <td>${row.邮箱 || ''}</td>
+                <td>${row.WhatsApp || ''}</td>
+                <td>${row.Discord || ''}</td>
+                <td>${row.地址信息1 || ''}</td>
+                <td>${row.地址信息2 || ''}</td>
+                <td>${row.地址信息3 || ''}</td>
+                <td>${row.标签功能1 || ''}</td>
+                <td>${row.标签功能2 || ''}</td>
+                <td>${row.标签功能3 || ''}</td>
+                <td>${formattedDate || ''}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+}
+
+
+// // 更新数据库表格的函数
+// function updateInfluencerTable() {
+//     fetch('/update/get_influencer_data', {
+//         method: 'GET'
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         const tableBody = document.querySelector('#influencerTable tbody');
+//         tableBody.innerHTML = ''; // 清空表格内容
+//
+//         if (data.length === 0) {
+//             tableBody.innerHTML = '<tr><td colspan="25">没有数据</td></tr>';
+//         } else {
+//             data.forEach(row => {
+//                 var date = new Date(row.更新日期);
+//                 var formattedDate = date.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
+//                 const tr = document.createElement('tr');
+//                 const avatarUrl = row.红人头像地址 || ''; // 保留原始头像地址，即使为空
+//
+//                 tr.innerHTML = `
+//                     <td><img src="${avatarUrl}" alt="头像" style="width: 50px; height: 50px;"></td>
+//                     <td>${row.平台 || ''}</td>
+//                     <td><a href="${row.红人主页地址}" target="_blank">${row.红人名称 || ''}</a></td> <!-- 红人名称变为超链接 -->
+//                     <td>${row.红人全名 || ''}</td>
+//                     <td>${row.地区 || ''}</td>
+//                     <td>${row.国家编码 || ''}</td>
+//                     <td>${row.评级 || ''}</td>
+//                     <td>${row.粉丝数量 || ''}</td>
+//                     <td>${row.平均播放量 || ''}</td>
+//                     <td>${row.平均点赞数量 || ''}</td>
+//                     <td>${row.平均评论数量 || ''}</td>
+//                     <td>${row.平均参与率 || ''}</td>
+//                     <td>${row.邮箱 || ''}</td>
+//                     <td>${row.WhatsApp || ''}</td>
+//                     <td>${row.Discord || ''}</td>
+//                     <td>${row.地址信息1 || ''}</td>
+//                     <td>${row.地址信息2 || ''}</td>
+//                     <td>${row.地址信息3 || ''}</td>
+//                     <td>${row.标签功能1 || ''}</td>
+//                     <td>${row.标签功能2 || ''}</td>
+//                     <td>${row.标签功能3 || ''}</td>
+//                     <td>${formattedDate || ''}</td>
+//                 `;
+//                 tableBody.appendChild(tr);
+//             });
+//         }
+//         // 应用当前筛选条件
+//         var currentPlatform = document.getElementById('updatePlatform').value;
+//         var currentInfluencerName = document.getElementById('updateInfluencerName').value;
+//         filterTableByPlatformAndInfluencerName(currentPlatform, currentInfluencerName);
+//     })
+//     .catch(error => {
+//         console.error('Error fetching influencer table data:', error);
+//     });
+// }
 
 // 根据平台和红人名称自动筛选表格
 function filterTableByPlatformAndInfluencerName(platform, influencerName) {

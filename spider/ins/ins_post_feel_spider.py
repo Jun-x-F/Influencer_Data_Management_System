@@ -49,8 +49,9 @@ class Task:
         # 筛选出包含 "like_count" 的 <script> 标签
         script_with_like_count = [script for script in script_tags if
                                   "like_count" in script.get_text()
-                                  and "adp_PolarisPostRootDirectQueryRelayPreloader_" in script.get_text()]
-
+                                  and ("adp_PolarisPostRootDirectQueryRelayPreloader_" in script.get_text()
+                                       or "adp_PolarisPostRootQueryRelayPreloader_" in script.get_text())]
+        print(script_with_like_count)
         # 返回包含 "like_count" 的 <script> 标签列表
         return script_with_like_count
 
@@ -59,6 +60,8 @@ class Task:
         scripts = self.extract_script_with_like_count(self.cur_html)
 
         global_log.info(f"{self.cur_url}获取到scripts：{len(scripts)}个")
+        for script in scripts:
+            global_log.info(script)
         if len(scripts) != 1:
             global_log.error(f"{self.cur_url}\n{repr(scripts)}")
             raise ValueError("获取到scripts出现多个，注意排除")

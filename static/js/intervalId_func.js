@@ -43,8 +43,8 @@ function startFetchSpiderNoticeWithTimeout(url_path, responseMessage, uniqueId, 
                     clearTimeout(timeoutId);
                     timeoutId = setTimeout(() => {
                         clearInterval(intervalId);  // 超时时间到后关闭定时任务
-                        console.log('定时任务因超时60s被清除');
-                    }, 60000);
+                        console.log('定时任务因超时120s被清除');
+                    }, 120000);
                 }
             })
             .catch(error => {

@@ -95,14 +95,6 @@ h1, h2 {
     height: 100px; /* 可以调整这个值来延长文本框 */
 }
 
-.btn-primary {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
 
 .btn-secondary {
     background-color: #36abf4;
@@ -604,4 +596,57 @@ button:active{
     font-style: italic;
     color: #6c757d;
     font-size: 16px;
+}
+
+/* 容器定位 */
+.textarea-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* 错误提示样式 */
+.error-tooltip {
+    display: none;
+    position: absolute;
+    /*top: 100%; !* 紧贴在 textarea 下方 *!*/
+    /*left: 0;*/
+    background-color: #818181;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 10;
+    white-space: pre-wrap;
+    /*max-width: 250px;*/
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* 显示错误提示 */
+.error-tooltip.show {
+    display: block;
+    opacity: 1;
+}
+
+/* 错误提示的小箭头 */
+.error-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent #f44336 transparent;
+}
+
+/* textarea 错误状态 */
+.addLinks-error {
+    border-color: #f44336;
+}
+
+/* 禁用按钮样式 */
+.btn:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+    opacity: 0.6;
 }

@@ -7,6 +7,7 @@
 """
 import datetime
 import json
+import re
 import time
 
 from playwright.sync_api import sync_playwright
@@ -15,8 +16,10 @@ from log.logger import global_log
 from spider.config.config import headerLess, return_viewPort, user_agent, redis_conn, message_queue
 from spider.ins import ins_spider
 from spider.ins.ins_post_feel_spider import ins_videos_start_spider
+from spider.ins.ins_spider import ins_start_spider
 from spider.tiktok import tiktok_spider
 from spider.tiktok import tiktok_video_spider
+from spider.x import x_celerity, x_influencer
 from spider.youtube import youtube_spider
 from spider.youtube import youtube_video_spider
 from tool.get_ws import get_ws_id
@@ -52,9 +55,37 @@ def run_task(spider_class, url, ws_id=None):
         spider_class.Task(browser, context).run(url)
 
 
+def get_platform(url):
+    """
+    根据 URL 判断平台名称。
+
+    参数：
+        url (str): 要判断的平台 URL。
+
+    返回：
+        str 或 None: 对应的平台名称，若未匹配则返回 None。
+    """
+    # 定义平台的正则表达式模式及其对应的名称
+    platform_patterns = {
+        re.compile(r'youtube.com', re.IGNORECASE): "YouTube",
+        re.compile(r'tiktok.com', re.IGNORECASE): "TikTok",
+        re.compile(r'instagram.com', re.IGNORECASE): "Instagram",
+        re.compile(r'x.com', re.IGNORECASE): "X",
+        re.compile(r'twitter.com', re.IGNORECASE): "X"
+    }
+
+    # 遍历字典，检查是否有模式匹配 URL
+    for pattern, platform_name in platform_patterns.items():
+        if pattern.search(url):
+            return platform_name
+
+    # 如果没有匹配，返回 None
+    return None
+
+
 @global_log.log_exceptions
-def work(url: str, cur: dict, flag, _id) -> int:
-    platform = "YouTube" if "youtube" in url else "TikTok" if "tiktok" in url else "Instagram" if "instagram" in url else None
+def work(url: str, cur: dict, flag, _id, times) -> int:
+    platform = get_platform(url)
     if not platform:
         message_queue.add(_id, "链接无法解析...")
         return 404
@@ -63,21 +94,26 @@ def work(url: str, cur: dict, flag, _id) -> int:
     spider_map = {
         "YouTube": (youtube_spider if is_influencer_task else youtube_video_spider),
         "TikTok": (tiktok_spider if is_influencer_task else tiktok_video_spider),
-        "Instagram": (ins_spider if is_influencer_task else "ins_post_feel_spider"),
+        "Instagram": (ins_spider if is_influencer_task else ins_videos_start_spider),
+        "X": (x_celerity if is_influencer_task else x_influencer)
     }
 
     spider_class = spider_map[platform]
     task_type = "红人信息" if is_influencer_task else "视频信息"
-
-    message_queue.add(_id,
-                      f"后台判断为获取{platform} {task_type}的任务，开始解析浏览器ws_id" if is_influencer_task else f"后台判断为获取{platform} {task_type}的任务，开始执行任务")
-
-    ws_id = get_ws_id() if is_influencer_task else None
+    if times > 0:
+        message_queue.add(_id, f"重试...")
+    else:
+        message_queue.add(_id,
+                          f"后台判断为获取{platform} {task_type}的任务，开始解析浏览器ws_id" if is_influencer_task else f"后台判断为获取{platform} {task_type}的任务，开始执行任务")
+    ws_id = get_ws_id() if (is_influencer_task or platform in ["YouTube", "X"]) else None
     if ws_id:
         message_queue.add(_id, f"解析浏览器ws_id为{ws_id}，开始执行任务")
-    global_log.info(f"平台{platform} {task_type}任务开始执行，url为{url}，ws_id为{ws_id}")
-    if spider_class == "ins_post_feel_spider":
+    global_log.info(f"平台 {platform} {task_type}任务开始执行，url为{url}，ws_id为{ws_id}, spider_class {spider_class}")
+    if spider_class == ins_videos_start_spider:
         ins_videos_start_spider(url)
+    elif spider_class == ins_spider:
+        global_log.info("进入新的ins红人启动器")
+        ins_start_spider(url)
     else:
         run_task(spider_class, url, ws_id)
     return 200
@@ -87,9 +123,9 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
     message_queue.add(_id, f"接收到任务链接: {url}, 开始解析url")
     message = {}
     isFinish = False
-    for _ in range(5):
+    for item in range(5):
         try:
-            code = work(url, cur, flag, _id)
+            code = work(url, cur, flag, _id, item)
             if code == 200:
                 message["code"] = 200
                 message["message"] = "抓取成功"
@@ -111,6 +147,8 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
 
     return message
 
-#
-# if __name__ == '__main__':
-#     run_spider()
+
+if __name__ == "__main__":
+    url = "https://x.com/webflite/status/1837947053928075349"
+    platform = get_platform(url)
+    print(platform)  # 输出: X

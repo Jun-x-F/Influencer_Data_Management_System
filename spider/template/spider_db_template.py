@@ -69,7 +69,7 @@ class InfluencersVideoProjectData(Base):
     progressCooperation = Column('合作进度', VARCHAR(255), nullable=True, comment='合作进度')
     progressLogistics = Column('物流进度', VARCHAR(255), nullable=True, comment='物流进度')
     trackingNumber = Column('物流单号', VARCHAR(255), nullable=True, comment='物流单号')
-    cost = Column('花费', Integer, nullable=True, comment='花费')
+    cost = Column('花费', Text, nullable=True, comment='花费')
     currency = Column('币种', VARCHAR(30), nullable=True, comment='币种')
     product = Column('产品', VARCHAR(255), nullable=True, comment='产品')
     brand = Column('品牌', VARCHAR(255), nullable=True, comment='品牌')

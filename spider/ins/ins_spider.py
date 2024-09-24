@@ -8,26 +8,25 @@
 import json
 import random
 import re
-from typing import Optional, Union
+import time
+from typing import Optional
 
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
 
 from log.logger import global_log
+from spider.config.config import headerLess, return_viewPort, user_agent, ins_cookies
 from spider.sql.data_inner_db import inner_CelebrityProfile
+from tool.JsonUtils import dfs_get_all_values_by_path_extended
 from tool.download_file import download_image_file
 from tool.grading_criteria import grade_criteria
 from tool.ins_code import get_deOne_code
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext):
+    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page):
         self.browser = _browser
         self.context = _context
-        self.page: Optional[Page] = None
-        for page in self.context.pages:
-            if "instagram" in page.url:
-                self.page = page
-                break
+        self.page: Optional[Page] = page
         self.account = "wagwanalbs"
         self.password = "Nokia1202$$"
         self.human_wait_time = 6000
@@ -110,66 +109,13 @@ class Task:
             # "PolarisProfileReelsTabContentQuery_connection" --> 滚动生成10条视频
             # "PolarisProfileReelsTabContentQuery" --> 前10条视频
             # "PolarisUserHoverCardContentV2DirectQuery" --> 获取单条视频url的用户详情, 进行二次匹配
-            if fb_api_req_friendly_name in ["PolarisProfilePageContentDirectQuery",
-                                            "PolarisProfileReelsTabContentQuery"]:
+            if fb_api_req_friendly_name in ["PolarisProfilePageContentQuery",
+                                            "PolarisProfileReelsTabContentQuery",
+                                            "PolarisProfileReelsTabContentQuery_connection"]:
                 body = response.json()
                 cur_data = self.response_data.get(fb_api_req_friendly_name, [])
                 cur_data.append(body)
                 self.response_data[fb_api_req_friendly_name] = cur_data
-
-    def _fetch_polarisProfilePageContentDirectQuery_data(self) -> None:
-        PolarisProfilePageContentDirectQuery_Json = self.response_data.get("PolarisProfilePageContentDirectQuery")
-        for item in PolarisProfilePageContentDirectQuery_Json:
-            PolarisProfilePageContentDirectQuery_data = item.get("data")
-            PolarisProfilePageContentDirectQuery_user_data = PolarisProfilePageContentDirectQuery_data.get("user")
-            city_name = PolarisProfilePageContentDirectQuery_user_data.get("city_name", None)
-            full_name = PolarisProfilePageContentDirectQuery_user_data.get("full_name", None)
-            profile_pic_url = PolarisProfilePageContentDirectQuery_user_data.get("profile_pic_url", None)
-            follower_count = PolarisProfilePageContentDirectQuery_user_data.get("follower_count", None)
-            user_id = PolarisProfilePageContentDirectQuery_user_data.get("id", None)
-            self.finish_data["user_id"] = user_id
-            # self.finish_data["city"] = city_name
-            self.finish_data["full_name"] = full_name
-            download_image_head_url = download_image_file(profile_pic_url,
-                                                          self.finish_data["user_name"])
-            global_log.info(download_image_head_url)
-            self.finish_data["profile_picture_url"] = download_image_head_url
-            self.finish_data["follower_count"] = follower_count
-
-    def _fetch_same_info(self, param: str) -> None:
-        PolarisProfilePostsDirectQuery_Json = self.response_data.get(param)
-        for item in PolarisProfilePostsDirectQuery_Json:
-            data = item.get("data")
-            xdt_api__v1__clips__user__connection_v2 = data.get(
-                "xdt_api__v1__clips__user__connection_v2")
-            edges = xdt_api__v1__clips__user__connection_v2.get("edges")
-
-            for edge in edges:
-                node = edge.get("node")
-                media = node.get("media")
-                like_count = media.get("like_count")
-                comment_count = media.get("comment_count")
-                play_count = media.get("play_count")
-                self.response_sort_data.append({
-                    "like_count": like_count,
-                    "comment_count": comment_count,
-                    "play_count": play_count
-                })
-
-    @global_log.log_exceptions
-    def _calculate_average(self) -> tuple[Union[float, int], Union[float, int], Union[float, int]]:
-        recent_10_data = self.response_sort_data[:10]
-        # 提取所有字段的值
-        like_counts = [item['like_count'] for item in recent_10_data if item['like_count'] is not None]
-        comment_counts = [item['comment_count'] for item in recent_10_data if item['comment_count'] is not None]
-        taken_ats = [item['play_count'] for item in recent_10_data if item['play_count'] is not None]
-
-        # 计算平均值
-        avg_like_count = sum(like_counts) / len(like_counts) if like_counts else 0
-        avg_comment_count = sum(comment_counts) / len(comment_counts) if comment_counts else 0
-        avg_play_count = sum(taken_ats) / len(taken_ats) if taken_ats else 0
-
-        return avg_like_count, avg_comment_count, avg_play_count
 
     def work(self, _url):
         user_name = self.extract_username(_url)
@@ -178,7 +124,8 @@ class Task:
         self.finish_data["index_url"] = _url
         self.page.on('response', self._get_user_info)
         if "reels" not in _url:
-            _url = _url.removesuffix('/') + "/reels"
+            _url = _url.strip().removesuffix('/') + "/reels"
+        print(_url)
         self.page.goto(_url, wait_until="domcontentloaded")
         self.page.wait_for_timeout(self.human_wait_time)
         # 获取国家信息
@@ -189,26 +136,60 @@ class Task:
         self.page.wait_for_timeout(self.human_wait_time / 2)
         self.finish_data["region"] = region
 
-        self.page.mouse.wheel(0, random.randint(100, 1000))
-        while True:
+        isFinish = False
+        self.page.mouse.wheel(0, 1000)
+        for _ in range(30):
             if len(self.response_data) == 2:
+                isFinish = True
                 break
+            time.sleep(random.randint(1, 3))
 
-        self._fetch_polarisProfilePageContentDirectQuery_data()
-        self._fetch_same_info("PolarisProfileReelsTabContentQuery")
+        if isFinish is False:
+            raise ValueError("获取self.response_data 报错")
+        for key, values in self.response_data.items():
+            global_log.info(f"ins -->reponse.name  {key}")
+            if key == "PolarisProfilePageContentQuery":
+                # 姓名
+                cur_full_name_ls = dfs_get_all_values_by_path_extended(values, ["data", "full_name"])
+                self.finish_data["full_name"] = cur_full_name_ls[0]
+                # 粉丝数
+                cur_fans_ls = dfs_get_all_values_by_path_extended(values, ["data", "follower_count"])
+                self.finish_data["follower_count"] = cur_fans_ls[0]
+                # 缓存照片
+                cur_ptc_ls = dfs_get_all_values_by_path_extended(values, ["data", "profile_pic_url"])
+                # 下载照片
+                cur_url = download_image_file(cur_ptc_ls[0], self.finish_data["user_name"])
+                self.finish_data["profile_picture_url"] = cur_url
+                # pk
+                cur_pk_ls = dfs_get_all_values_by_path_extended(values, ["data", "user", "pk"])
+                self.finish_data["user_id"] = cur_pk_ls[0]
+            else:
+                # 播放量
+                cur_play_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
+                                                                           "edges", "node", "media", "play_count"
+                                                                           ])
+                avg_play_count = sum(cur_play_ls)/len(cur_play_ls)
+                # 评论数
+                cur_comment_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
+                                                                              "edges", "node", "media", "comment_count"
+                                                                              ])
+                avg_comment_count = sum(cur_comment_ls) / len(cur_comment_ls)
+                # 点赞
+                like_comment_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
+                                                                               "edges", "node", "media", "like_count"
+                                                                               ])
+                avg_like_count = sum(like_comment_ls) / len(like_comment_ls)
+                self.finish_data["average_likes"] = avg_like_count
+                self.finish_data["average_comments"] = avg_comment_count
+                self.finish_data["average_views"] = avg_play_count
 
-        # self.response_sort_data.sort(key=lambda x: x["taken_at"], reverse=True)
 
-        avg_like_count, avg_comment_count, avg_play_count = self._calculate_average()
-
-        self.finish_data["average_likes"] = avg_like_count
-        self.finish_data["average_comments"] = avg_comment_count
-        self.finish_data["average_views"] = avg_play_count
         self.finish_data["level"] = grade_criteria(self.finish_data["platform"], self.finish_data["average_views"])
         self.finish_data["average_engagement_rate"] = \
             ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
              / self.finish_data["average_views"])
-
+        global_log.info(
+            f"ins -->self.finish_data  {self.finish_data}")
         inner_CelebrityProfile(self.finish_data, isById=True)
         self._close_data()
         self.page.wait_for_timeout(self.human_wait_time)
@@ -224,12 +205,30 @@ class Task:
     def run(self, url):
         if self.page is None or self.page.query_selector('//input[@name="username"]'):
             self._login()
+        global_log.info("进入ins页面")
+        self.page.wait_for_timeout(6000)
         self.save_cookies("ins_cookies.json")
         self.work(url)
 
-if __name__ == '__main__':
+
+def ins_start_spider(url):
+    """新的启动器"""
     with sync_playwright() as playwright:
-        # Connect to the running browser instance
-        browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0]
-        Task(browser, context).run()
+        ins_videos_browser = playwright.chromium.launch(
+            headless=headerLess,
+            channel="chrome",
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        ins_videos_context = ins_videos_browser.new_context(viewport=return_viewPort(),
+                                                            user_agent=user_agent, )
+
+        with open(ins_cookies, 'r') as file:
+            cookies = json.load(file)
+
+        ins_videos_context.add_cookies(cookies)
+        ins_videos_context.add_init_script(
+            "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
+        )
+        ins_videos_page = ins_videos_context.new_page()
+        Task(ins_videos_browser, ins_videos_context, ins_videos_page).work(url)
+        time.sleep(5)

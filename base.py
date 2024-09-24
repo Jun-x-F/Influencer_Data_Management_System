@@ -6,14 +6,10 @@
 # @Project : share_class
 
 
-from sqlalchemy.types import DATE,CHAR,VARCHAR,NVARCHAR, Float, Integer,BigInteger
-from sqlalchemy import String, SmallInteger, Integer, BigInteger, Float, Boolean, DateTime, Interval, DATE,DateTime,Text,text
-import sqlalchemy
 import pandas as pd
-import pymysql
-
+from sqlalchemy import DATE
 from sqlalchemy import String, BigInteger, Float, Boolean, SmallInteger, Integer, DateTime, Interval, text, Text
-from sqlalchemy.connectors import pyodbc
+from sqlalchemy.types import NVARCHAR
 
 # 共享的数据库主机配置
 SHARED_DB_CONFIG = {
@@ -393,6 +389,7 @@ class DatabaseUpdater:
         for index, row in df.iterrows():
             processed_row = row.where(pd.notnull(row), None)
             set_clause_parts = [f"`{col}` = VALUES(`{col}`)" for col in df_columns if col not in unique_fields]
+            print(set_clause_parts)
             insert_columns = ', '.join('`' + col + '`' for col in df_columns)
             insert_values = ', '.join(':' + col.replace('-', '_') for col in df_columns)
 

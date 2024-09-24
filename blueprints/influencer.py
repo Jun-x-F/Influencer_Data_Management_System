@@ -41,10 +41,10 @@ class Influencer:
             submitted_influencer_links[send_id] = send_id_links
 
             # Simulate data fetching
-            # message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'
+            message = f'{platform.capitalize()}的红人链接提交成功。\n数据抓取中...'
             # message += '\n数据抓取成功。\n存储数据中...'
             # message += '\n数据存储成功。'
-            message = ""
+            # message = ""
             # while True:
             #     if notice_flag is True:
             #         for i in range(spider_notice.qsize()):
@@ -64,6 +64,8 @@ class Influencer:
         sql_t = 'celebrity_profile'
         try:
             data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            # 使用 Pandas 对数据按照 'id' 降序排序
+            data = data.sort_values(by='id', ascending=False)
             data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
             result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
             return jsonify(result)

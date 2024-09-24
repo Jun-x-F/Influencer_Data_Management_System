@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-
 </head>
 <body>
 <div class="container">
@@ -271,8 +270,10 @@
                     <div>
                         <label for="addLinks">视频链接:</label>
                         <textarea id="addLinks" class="addLinks" placeholder="请输入视频链接"></textarea>
+                        <!-- 错误提示 -->
+                        <span id="addLinksMessage" class="error-tooltip"></span>
                     </div>
-                    <button type="submit" class="btn-primary">提交</button>
+                    <button type="submit" id="addLinksBtn" class="btn-primary">提交</button>
                     <button type="button" id="addresetMetricsForm" class="btn-secondary">重置</button>
                     <button type="button" id="cancelAddVideoData" class="btn-secondary">取消</button>
                     <div id="formErrorMessage" style="color:red;"></div> <!-- 错误提示容器 -->
@@ -376,5 +377,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </body>
 </html>

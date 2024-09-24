@@ -188,7 +188,7 @@ class Video:
         DATABASE = 'marketing'
         sql_t = 'influencers_video_project_data'
         try:
-            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t} order by id desc ').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
             # 处理空值和特殊值
             # 处理 NaN 和 inf 值
             data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
@@ -231,7 +231,12 @@ class Video:
                 product = str(result_df['产品'].iloc[0]) if pd.notna(result_df['产品'].iloc[0]) else ''
                 progress = str(result_df['合作进度'].iloc[0]) if pd.notna(result_df['合作进度'].iloc[0]) else ''
                 logistics_number = str(result_df['物流单号'].iloc[0]) if pd.notna(result_df['物流单号'].iloc[0]) else ''
-                cost = float(result_df['花费'].iloc[0]) if pd.notna(result_df['花费'].iloc[0]) else 0.0
+                # 解决花费空值的问题
+                try:
+                    print(result_df['花费'].iloc[0])
+                    cost = float(result_df['花费'].iloc[0])
+                except (ValueError, TypeError):
+                    cost = ''
                 currency = str(result_df['币种'].iloc[0]) if pd.notna(result_df['币种'].iloc[0]) else ''
                 estimated_views = int(result_df['预估观看量'].iloc[0]) if pd.notna(
                     result_df['预估观看量'].iloc[0]) else 0
@@ -292,9 +297,16 @@ class Video:
             progress = data.get('progress')
             logistics_number = data.get('logisticsNumber')
             cost = data.get('cost')
+            if cost == '':
+                cost = ''
+            print("submit_link cost", cost)
             currency = data.get('currency')  # 接收币种
             product = data.get('product')
             estimated_views = data.get('estimatedViews')
+            if estimated_views == '':
+                estimated_views = None
+            else:
+                estimated_views = int(estimated_views)
             estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = f"video_{data.get('uid')}"
             global_log.info(f"接受到的uid为{send_id}")
@@ -350,9 +362,10 @@ class Video:
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
+            print(df)
             # 删除空列
-            df.replace('', pd.NA, inplace=True)
-            df = df.dropna(axis=1, how='all')
+            # df.replace('', pd.NA, inplace=True)
+            # df = df.dropna(axis=1, how='all')
 
             # 定义索引字段
             index_fields = ['id']
@@ -361,7 +374,7 @@ class Video:
             DATABASE = 'marketing'
             sql_t = 'influencers_video_project_data'
             try:
-                existing_data = ReadDatabase(DATABASE, f'select * from {sql_t}').vm()
+                existing_data = ReadDatabase(DATABASE, f'select * from {sql_t} order by id desc').vm()
                 table_exists = not existing_data.empty
             except Exception as e:
                 table_exists = False
@@ -420,6 +433,7 @@ class Video:
         sql_t = 'influencers_video_project_data'
         try:
             data = request.json  # 假设你是通过 JSON 发送数据
+            uid = data.get('uid') # 唯一id
             brand = data.get('品牌')
             project_name = data.get('项目')
             manager = data.get('负责人')
@@ -431,6 +445,26 @@ class Video:
             ProgressCooperation = data.get('合作进度')
             estimatedViews = data.get('预估观看量')
             estimatedLaunchDate = data.get('预估上线时间')
+
+            send_id = f"video_{uid}"
+            global_log.info(f"接受到的uid为{send_id}")
+
+            # 链接可以为空，如果存在则进行验证
+            url_pattern = re.compile(r'^(http|https)://')
+            if not url_pattern.match(video_links):
+                return jsonify({'message': '无效的URL格式。'}), 400
+
+            # Determine platform based on URL
+            platform_from_link = determine_platform(video_links)
+            if not platform_from_link:
+                return jsonify({'message': '不支持的平台。'}), 400
+
+            # Add submitted_video_links link
+            send_id_links: deque = submitted_video_links.get(send_id, deque())
+            if video_links in send_id_links:
+                return jsonify({'message': f'链接{video_links} 存在队列中, 请勿重复生成任务'}), 200
+            send_id_links.append(video_links)
+            submitted_video_links[send_id] = send_id_links
 
             # 处理空字符串，将其转换为 None
             video_data = {
@@ -631,7 +665,7 @@ class Video:
 
         try:
             # 从 influencer_project_definitions 获取品牌、项目、产品
-            project_data = ReadDatabase(DATABASE, f'SELECT id,品牌, 项目, 产品 FROM {project_table}').vm()
+            project_data = ReadDatabase(DATABASE, f'SELECT id,品牌, 项目, 产品 FROM {project_table} order by id desc').vm()
 
             # 处理空值和特殊值
             project_data = project_data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
@@ -643,6 +677,19 @@ class Video:
 
         except Exception as e:
             return jsonify({'数据表获取错误': str(e)}), 500
+
+    @staticmethod
+    @video_bp.route('/check_url_existing', methods=['POST'])
+    def check_url_existing():
+        data = request.get_json()
+        video_url = data.get('url')
+        sqlcmd = f"select id from influencers_video_project_data where 视频链接='{video_url}'"
+        # 使用ReadDatabase类执行查询操作
+        db_reader = ReadDatabase(database='marketing', sqlcmd=sqlcmd).vm()
+        if len(db_reader) > 0:
+            ls = db_reader['id'].tolist()
+            return jsonify({'isSame': True, 'data': ls}), 200
+        return jsonify({'isSame': False, 'data': []}), 200
 
     # 删除数据行
     @staticmethod

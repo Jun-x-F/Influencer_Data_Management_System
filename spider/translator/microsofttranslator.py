@@ -76,12 +76,6 @@ def translate(text):
     global_log.info(f"请求翻译接口结果为: {response.status_code}")
     return response.json()
 
-# print(translate(
-#     '[{"text":"Delivered to your community mailbox, parcel locker or apt./condo mailbox"},{"text":"Item out for '
-#     'delivery"},{"text":"Item processed"},{"text":"BURNABY, Item in transit"},{"text":"BURNABY, Item processed"},'
-#     '{"text":"DELTA, Item processed"},{"text":"VANCOUVER, Item was released by Customs and is now with Canada Post '
-#     'for processing"},{"text":"Pick up by local carrier at destination port"},{"text":"Batch delivery to carrier"},'
-#     '{"text":"Port of destination - Arrival"},{"text":"Shipment arrived in Canada and will be presented for customs '
-#     'review"},{"text":"Port of departure - Departure"},{"text":"Arrived at domestic terminal station"},'
-#     '{"text":"Yanwen facility - Outbound"},{"text":"Electronic information submitted by shipper"},{"text":"Processing '
-#     'information input"},{"text":"Yanwen Pickup Scan"},{"text":"Order processed by shipper"}]'))
+
+if __name__ == '__main__':
+    print(translate('[{"text":"italia"}]'))

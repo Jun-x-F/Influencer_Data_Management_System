@@ -16,14 +16,6 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
     const uniqueIdOptions = cachedVideoData ? cachedVideoData.map(video => video.id) : [];
     const influencerNameOptions = cachedVideoData ? cachedVideoData.map(video => video.红人名称) : [];
 
-    // 调试日志输出
-    console.log("test....");
-    console.log(uniqueIdOptions)
-    console.log(uniqueIdOptions.includes(uniqueIdInput));
-    console.log(uniqueIdInput);
-    console.log(influencerNameOptions);
-    console.log(influencerNameInput);
-
     // 验证用户输入的唯一ID是否在可用选项中
     if (!uniqueIdOptions.includes(Number(uniqueIdInput))) {
         responseMessage.innerHTML = '<p style="color:red;">唯一ID不存在，请选择有效的ID。</p>';
@@ -90,7 +82,7 @@ document.getElementById('videoForm').addEventListener('submit', function(event) 
         const excludedSubstrings = [
             '/reel/', '/video/', '/watch/',
             '/video?', '/watch?', '/reel?',
-            '/p/', '/p?', '/shorts/', '/shorts?'
+            '/p/', '/p?', '/shorts/', '/shorts?', '/status/'
         ];
 
         links.forEach(link => {
@@ -330,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
 document.getElementById('videoUniqueId').addEventListener('input', function(event) {
     const uniqueId = event.target.value;
     // 检查是否是唯一ID的下拉菜单触发了事件
-    if (uniqueId) {
+    if (uniqueId.length !== 0) {
         fetch('/video/get_video_details', {
             method: 'POST',
             headers: {
@@ -351,7 +343,7 @@ document.getElementById('videoUniqueId').addEventListener('input', function(even
             const product = data.product || '';
             const progress = data.progress || '';
             const logisticsNumber = data.logisticsNumber || '';
-            const cost = data.cost || '';
+            const cost = data.cost;
             const currency = data.currency || '';
             const estimatedViews = data.estimatedViews || '';
             const estimatedLaunchDate = data.estimatedLaunchDate || '';
@@ -381,8 +373,7 @@ document.getElementById('videoUniqueId').addEventListener('input', function(even
         })
         .catch(error => console.error('Error:', error));
     } else {
-        // 如果唯一ID为空，清空并解锁相关输入框
-        resetFields(document.getElementById('videoForm'));
+        document.getElementById('resetVideoForm').click();
     }
 });
 
@@ -1278,6 +1269,45 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => console.error('Error fetching metrics options:', error));
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    const addLinksTextarea = document.getElementById('addLinks');
+    const errorMessage = document.getElementById('addLinksMessage');
+    const addLinksBtn = document.getElementById('addLinksBtn');
+
+    addLinksTextarea.addEventListener('input', function(event) {
+        const currentValue = event.target.value.trim();
+        const cacheVideoTable = getVideoTableCache(); // 获取缓存的视频链接表
+
+        // 获取输入的链接
+        const inputLinks = currentValue.split('\n').map(link => link.trim()).filter(link => link !== '');
+
+        // 查找重复的链接及其对应的 id
+        const duplicateEntries = inputLinks
+            .map(link => {
+                const matchedItem = cacheVideoTable && cacheVideoTable.find(item => item['视频链接'] === link);
+                if (matchedItem) {
+                    return { id: matchedItem.id, link: matchedItem['视频链接'] };
+                } else {
+                    return null;
+                }
+            })
+            .filter(item => item !== null);
+
+        if (duplicateEntries.length > 0) {
+            errorMessage.classList.add('show');
+            const duplicateInfo = duplicateEntries.map(item => `ID: ${item.id}, 链接: ${item.link}`).join('\n');
+            errorMessage.textContent = `链接已存在，请检查：\n${duplicateInfo}`;
+            addLinksTextarea.classList.add('addLinks-error');
+            addLinksBtn.disabled = true;
+        } else {
+            // 清除错误状态
+            addLinksTextarea.classList.remove('addLinks-error');
+            errorMessage.classList.remove('show');
+            errorMessage.textContent = '';
+            addLinksBtn.disabled = false;
+        }
+    });
+});
 
 // 提交新增表单时处理数据
 document.getElementById('addVideoData').addEventListener('submit', function (event) {
@@ -1293,7 +1323,8 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
     var currencyInput = document.getElementById('addcurrency').value.trim();
     var productInput = document.getElementById('addproduct').value.trim();
     var progressInput = document.getElementById('addProgress').value.trim();
-
+    // 视频链接
+    var videoLinks = document.getElementById('addLinks').value.trim();
     // 获取选择框中的所有选项值
     var brandOptions = Array.from(document.querySelectorAll('#addBrandOptions option')).map(option => option.value);
     var projectOptions = Array.from(document.querySelectorAll('#addProjectOptions option')).map(option => option.value);
@@ -1302,6 +1333,7 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
     var currencyOptions = Array.from(document.querySelectorAll('#addcurrency option')).map(option => option.value);
     var productOptions = Array.from(document.querySelectorAll('#addProductOptions option')).map(option => option.value);
     var progressOptions = Array.from(document.querySelectorAll('#addProgressOptions option')).map(option => option.value);
+    var uid = uuid.v4();
 
     // 验证用户输入的品牌是否在可用选项中
     if (!brandOptions.includes(brandInput)) {
@@ -1339,8 +1371,42 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
         return; // 阻止表单提交
     }
 
+    fetch('/video/check_url_existing', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            "url": videoLinks
+        })
+    }).then(response => response.json()).then(data => {
+        if (data.isSame){
+            Swal.fire({
+                title: '链接已存在，请检查',
+                html: `
+            <h3 class="subtitle">重新确认</h3>
+            <div class="swal-scrollable-content">
+                <ul class="link-list">
+                    <li style="text-align: center; font-size: 14px;">
+                        <span class="link-text">${videoLinks}</span> - 对应唯一id为 
+                        <span class="error-message">${data.data}</span>
+                    </li>
+                </ul>
+            </div>
+        `,
+                icon: 'error',
+                confirmButtonText: '确定',
+                width: '700px',
+                background: '#f9f9f9',
+                confirmButtonColor: '#3085d6',
+            });
+            return;
+        }
+    })
+
     // 如果所有验证通过，组装表单数据并提交
     var formData = {
+        "uid": uid,
         "品牌": brandInput,
         "项目": projectInput,
         "负责人": managerInput,

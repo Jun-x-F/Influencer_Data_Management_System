@@ -5,7 +5,7 @@
 @Author：Libre
 @Time：2024/8/12 下午5:22
 """
-from sqlalchemy import and_, update, select
+from sqlalchemy import and_, update, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from log.logger import global_log
@@ -26,10 +26,16 @@ def inner_InfluencersVideoProjectDataByDate(finish_data):
             db.reconnect_session()
 
         # 提取查询条件
-        filters = and_(
-            InfluencersVideoProjectDataByDate.platform == finish_data.get("platform"),
-            InfluencersVideoProjectDataByDate.user_name == finish_data.get("user_name"),
-            InfluencersVideoProjectDataByDate.updated_at == finish_data.get("updated_at"),
+        filters = or_(
+            and_(
+                InfluencersVideoProjectDataByDate.platform == finish_data.get("platform"),
+                InfluencersVideoProjectDataByDate.user_name == finish_data.get("user_name"),
+                InfluencersVideoProjectDataByDate.updated_at == finish_data.get("updated_at"),
+            ),
+            and_(
+                InfluencersVideoProjectDataByDate.video_url == finish_data.get("video_url"),
+                InfluencersVideoProjectDataByDate.updated_at == finish_data.get("updated_at")
+            )
         )
 
         # 检查是否已有记录
@@ -61,9 +67,14 @@ def inner_InfluencersVideoProjectData(finish_data):
             db.reconnect_session()
 
         # 提取查询条件
-        filters = and_(
-            InfluencersVideoProjectData.platform == finish_data.get("platform"),
-            InfluencersVideoProjectData.user_name == finish_data.get("user_name"),
+        filters = or_(
+            and_(
+                InfluencersVideoProjectData.platform == finish_data.get("platform"),
+                InfluencersVideoProjectData.user_name == finish_data.get("user_name"),
+            ),
+            and_(
+                InfluencersVideoProjectData.video_url == finish_data.get("video_url")
+            )
         )
 
         db_history_data = (db.session.query(InfluencersVideoProjectData).filter(filters).first())
@@ -149,14 +160,14 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
     return False
 
 
-def select_video_urls(select_, filter_):
+def select_video_urls(select_, filter_, order_):
     if db.check_connection() is not True:
         db.reconnect_session()
     # 使用 SQLAlchemy 的 select 语句进行查询，只获取 URL 字段
     if filter_ is None:
-        stmt = select(select_)
+        stmt = select(select_).order_by(order_.desc())
     else:
-        stmt = select(select_).filter(filter_)
+        stmt = select(select_).filter(filter_).order_by(order_.desc())
 
     # 执行查询
     results = db.session.execute(stmt).scalars().all()
