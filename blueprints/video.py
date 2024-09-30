@@ -10,7 +10,6 @@ from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
 from spider.config import config
 from spider.config.config import order_links, submitted_video_links
-from spider.sql.data_inner_db import check_InfluencersVideoProjectData_in_db
 from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
@@ -188,10 +187,11 @@ class Video:
         DATABASE = 'marketing'
         sql_t = 'influencers_video_project_data'
         try:
-            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t} order by id desc ').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
             # 处理空值和特殊值
             # 处理 NaN 和 inf 值
             data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+            data[['红人名称', '红人全称']] = data[['红人全称', '红人名称']].values
 
             # 将 DataFrame 转换为字典列表
             result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
@@ -293,7 +293,7 @@ class Video:
             project_name = data.get('projectName')
             brand = data.get('brand')
             manager = data.get('manager')
-            influencer = data.get('influencer')  # 新增红人名称字段
+            influencer = data.get('influencerName')  # 新增红人名称字段
             progress = data.get('progress')
             logistics_number = data.get('logisticsNumber')
             cost = data.get('cost')
@@ -319,12 +319,13 @@ class Video:
                 # 不需要执行物流信息
                 config.submitted_pass_track = True
 
-            seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
-            isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
-            global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
+            # seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+            # isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
+            # global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
 
             # 链接可以为空，如果存在则进行验证
-            if link and isExecutedWithinSeven is False:
+            # if link and isExecutedWithinSeven is False:
+            if link is not None and link != '':
                 url_pattern = re.compile(r'^(http|https)://')
                 if not url_pattern.match(link):
                     return jsonify({'message': '无效的URL格式。'}), 400
@@ -362,7 +363,7 @@ class Video:
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
-            print(df)
+            global_log.info(df)
             # 删除空列
             # df.replace('', pd.NA, inplace=True)
             # df = df.dropna(axis=1, how='all')
@@ -411,15 +412,15 @@ class Video:
                 print('更新开始时间', datetime.datetime.now())
                 print('更新结束时间', datetime.datetime.now())
                 print('更新的数据日期', update_date)
-            print(isExecutedWithinSeven, config.submitted_pass_track, config.submitted_pass_video)
-            if isExecutedWithinSeven is True:
-                # 避免等待过久
-                config.submitted_pass_video = True
-                return jsonify({
-                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}，执行序号为{unique_id}的视频更新任务失败\n失败原因为7天内更新过视频'}),200
-            else:
-                return jsonify({
-                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
+            # print(isExecutedWithinSeven, config.submitted_pass_track, config.submitted_pass_video)
+            # if isExecutedWithinSeven is True:
+            #     # 避免等待过久
+            #     config.submitted_pass_video = True
+            #     return jsonify({
+            #         'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}，执行序号为{unique_id}的视频更新任务失败\n失败原因为7天内更新过视频'}),200
+            # else:
+            return jsonify({
+                'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
@@ -450,21 +451,22 @@ class Video:
             global_log.info(f"接受到的uid为{send_id}")
 
             # 链接可以为空，如果存在则进行验证
-            url_pattern = re.compile(r'^(http|https)://')
-            if not url_pattern.match(video_links):
-                return jsonify({'message': '无效的URL格式。'}), 400
+            if video_links is not None and video_links != '':
+                url_pattern = re.compile(r'^(http|https)://')
+                if not url_pattern.match(video_links):
+                    return jsonify({'message': '无效的URL格式。'}), 400
 
-            # Determine platform based on URL
-            platform_from_link = determine_platform(video_links)
-            if not platform_from_link:
-                return jsonify({'message': '不支持的平台。'}), 400
+                # Determine platform based on URL
+                platform_from_link = determine_platform(video_links)
+                if not platform_from_link:
+                    return jsonify({'message': '不支持的平台。'}), 400
 
-            # Add submitted_video_links link
-            send_id_links: deque = submitted_video_links.get(send_id, deque())
-            if video_links in send_id_links:
-                return jsonify({'message': f'链接{video_links} 存在队列中, 请勿重复生成任务'}), 200
-            send_id_links.append(video_links)
-            submitted_video_links[send_id] = send_id_links
+                # Add submitted_video_links link
+                send_id_links: deque = submitted_video_links.get(send_id, deque())
+                if video_links in send_id_links:
+                    return jsonify({'message': f'链接{video_links} 存在队列中, 请勿重复生成任务'}), 200
+                send_id_links.append(video_links)
+                submitted_video_links[send_id] = send_id_links
 
             # 处理空字符串，将其转换为 None
             video_data = {
@@ -604,6 +606,41 @@ class Video:
 
         except Exception as e:
             current_app.logger.error(f"添加数据时发生错误: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @staticmethod
+    @video_bp.route('/get_metrics_all', methods=['GET'])
+    def get_metrics_all():
+        DATABASE = 'marketing'
+        sql_t = 'influencer_project_definitions'
+        try:
+            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t} order by id desc').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            # 处理空值和特殊值
+            # 处理 NaN 和 inf 值
+            data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+
+            # 将 DataFrame 转换为字典列表
+            result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @staticmethod
+    @video_bp.route('/get_manager_all', methods=['GET'])
+    def get_manager_all():
+        DATABASE = 'marketing'
+        sql_t = 'influencer_name_definitions'
+        try:
+            data = ReadDatabase(DATABASE,
+                                f'SELECT distinct 负责人 FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            # 处理空值和特殊值
+            # 处理 NaN 和 inf 值
+            data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+
+            # 将 DataFrame 转换为字典列表
+            result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
+            return jsonify(result)
+        except Exception as e:
             return jsonify({'error': str(e)}), 500
 
     # 查询指标

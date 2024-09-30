@@ -42,7 +42,7 @@ def find_existing_page(context: BrowserContext, domain: str) -> Optional[Page]:
             global_log.info(f"找到匹配的页面: {page.url}")
             return page
     global_log.info(f"未找到包含 '{domain}' 的页面。")
-    return None
+    return context.new_page()
 
 
 def create_new_page(page: Page, url: str) -> Page:

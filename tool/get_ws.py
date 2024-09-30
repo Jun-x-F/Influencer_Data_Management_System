@@ -14,22 +14,22 @@ from log.logger import LoguruLogger
 log = LoguruLogger(console=True, isOpenError=True)
 
 
-def start_chrome():
+def start_chrome(port, file_dir):
     chrome_command = (
-        r'"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 '
-        r'--user-data-dir="C:\chrome-user-data"')
+        rf'"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port={port} '
+        rf'--user-data-dir={file_dir}')
     subprocess.Popen(chrome_command, shell=True)
 
 
-def get_ws_id():
+def get_ws_id(port=9222, file_dir=r"C:\chrome-user-data"):
     try:
-        response = requests.get('http://localhost:9222/json/version')
+        response = requests.get(f'http://localhost:{port}/json/version')
         log.info(response.text)
         webSocketDebuggerUrl = response.json().get("webSocketDebuggerUrl")
         return webSocketDebuggerUrl
     except Exception as e:
-        start_chrome()
-        response = requests.get('http://localhost:9222/json/version')
+        start_chrome(port, file_dir)
+        response = requests.get(f'http://localhost:{port}/json/version')
         log.info(response.text)
         webSocketDebuggerUrl = response.json().get("webSocketDebuggerUrl")
         return webSocketDebuggerUrl

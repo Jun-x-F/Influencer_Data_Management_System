@@ -14,21 +14,25 @@ from typing import Optional
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
 
 from log.logger import global_log
-from spider.config.config import headerLess, return_viewPort, user_agent, ins_cookies
+from spider.config.config import redis_conn
+from spider.ins.ins_new import to_int, save_cookies, random_account_
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from tool.JsonUtils import dfs_get_all_values_by_path_extended
 from tool.download_file import download_image_file
+from tool.get_ws import get_ws_id
 from tool.grading_criteria import grade_criteria
 from tool.ins_code import get_deOne_code
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page):
+    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page, account, password, code, isCheckLogin):
         self.browser = _browser
         self.context = _context
-        self.page: Optional[Page] = page
-        self.account = "wagwanalbs"
-        self.password = "Nokia1202$$"
+        self.page: Page = page
+        self.account = account
+        self.password = password
+        self.code = code
+        self.isCheckLogin = isCheckLogin
         self.human_wait_time = 6000
         self.response_data = {}
         self.response_sort_data = []
@@ -40,12 +44,10 @@ class Task:
         self.finish_data = {}
 
     def _login(self):
-        if (self.page is None or
-                ("accounts/login" in self.page.url and "two_factor" not in self.page.url)):
-            if self.page is None:
-                self.page = self.context.new_page()
-            global_log.info("ins任务 开始登录...")
-            self.page.goto("https://www.instagram.com/accounts/login/", wait_until="domcontentloaded")
+        global_log.info("ins 红人 -> ins任务 开始登录...")
+        self.page.goto("https://www.instagram.com/accounts/login/", wait_until="domcontentloaded")
+
+        if "accounts/login" in self.page.url and "two_factor" not in self.page.url:
             try:
                 self.page.wait_for_timeout(self.human_wait_time)
                 self.page.wait_for_selector('//input[@name="username"]').fill(self.account)
@@ -54,7 +56,7 @@ class Task:
                 self.page.wait_for_timeout(self.human_wait_time / 3)
                 self.page.click('//button[@type="submit"]')
             except Exception:
-                global_log.info("ins任务 存在登录...")
+                global_log.info("ins 红人 -> ins任务 存在登录...")
         else:
             global_log.info("ins任务 页面存在...")
         self.page.wait_for_timeout(self.human_wait_time)
@@ -62,7 +64,7 @@ class Task:
 
     def _check_login(self):
         if "two_factor" in self.page.url:
-            get_safe_code = get_deOne_code()
+            get_safe_code = get_deOne_code(self.code)
             self.page.wait_for_selector('//input[@name="verificationCode"]').fill(get_safe_code)
             self.page.wait_for_timeout(self.human_wait_time)
             self.page.click('//button[@type="button"]')
@@ -109,11 +111,13 @@ class Task:
             # "PolarisProfileReelsTabContentQuery_connection" --> 滚动生成10条视频
             # "PolarisProfileReelsTabContentQuery" --> 前10条视频
             # "PolarisUserHoverCardContentV2DirectQuery" --> 获取单条视频url的用户详情, 进行二次匹配
-            if fb_api_req_friendly_name in ["PolarisProfilePageContentQuery",
+            if fb_api_req_friendly_name in ["PolarisProfilePostsQuery",
+                                            "PolarisProfilePageContentQuery",
                                             "PolarisProfileReelsTabContentQuery",
                                             "PolarisProfileReelsTabContentQuery_connection"]:
                 body = response.json()
                 cur_data = self.response_data.get(fb_api_req_friendly_name, [])
+                # global_log.info(f"ins 红人 -->{fb_api_req_friendly_name} --> {body}")
                 cur_data.append(body)
                 self.response_data[fb_api_req_friendly_name] = cur_data
 
@@ -125,7 +129,6 @@ class Task:
         self.page.on('response', self._get_user_info)
         if "reels" not in _url:
             _url = _url.strip().removesuffix('/') + "/reels"
-        print(_url)
         self.page.goto(_url, wait_until="domcontentloaded")
         self.page.wait_for_timeout(self.human_wait_time)
         # 获取国家信息
@@ -145,7 +148,7 @@ class Task:
             time.sleep(random.randint(1, 3))
 
         if isFinish is False:
-            raise ValueError("获取self.response_data 报错")
+            raise ValueError("ins 红人 --> 获取self.response_data 报错")
         for key, values in self.response_data.items():
             global_log.info(f"ins -->reponse.name  {key}")
             if key == "PolarisProfilePageContentQuery":
@@ -163,72 +166,111 @@ class Task:
                 # pk
                 cur_pk_ls = dfs_get_all_values_by_path_extended(values, ["data", "user", "pk"])
                 self.finish_data["user_id"] = cur_pk_ls[0]
+            elif key == "PolarisProfilePostsQuery":
+                # 播放量
+                cur_play_ls = dfs_get_all_values_by_path_extended(values, [
+                    "xdt_api__v1__feed__user_timeline_graphql_connection",
+                    "edges", "node", "play_count"])
+                try:
+                    avg_play_count = sum(to_int(cur_play_ls)) / len(to_int(cur_play_ls))
+                except Exception:
+                    avg_play_count = 0
+                # 评论数
+                cur_comment_ls = dfs_get_all_values_by_path_extended(values, [
+                    "xdt_api__v1__feed__user_timeline_graphql_connection",
+                    "edges", "node", "comment_count"])
+                avg_comment_count = sum(to_int(cur_comment_ls)) / len(to_int(cur_comment_ls))
+                # 点赞
+                like_comment_ls = dfs_get_all_values_by_path_extended(values, [
+                    "xdt_api__v1__feed__user_timeline_graphql_connection",
+                    "edges", "node", "like_count"])
+                avg_like_count = sum(to_int(like_comment_ls)) / len(to_int(like_comment_ls))
+                self.finish_data["average_likes"] = avg_like_count
+                self.finish_data["average_comments"] = avg_comment_count
+                self.finish_data["average_views"] = avg_play_count
             else:
                 # 播放量
                 cur_play_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
                                                                            "edges", "node", "media", "play_count"
                                                                            ])
-                avg_play_count = sum(cur_play_ls)/len(cur_play_ls)
+                try:
+                    avg_play_count = sum(to_int(cur_play_ls)) / len(to_int(cur_play_ls))
+                except ZeroDivisionError:
+                    avg_play_count = 0
                 # 评论数
                 cur_comment_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
                                                                               "edges", "node", "media", "comment_count"
                                                                               ])
-                avg_comment_count = sum(cur_comment_ls) / len(cur_comment_ls)
+                avg_comment_count = sum(to_int(cur_comment_ls)) / len(to_int(cur_comment_ls))
                 # 点赞
-                like_comment_ls = dfs_get_all_values_by_path_extended(values, ["xdt_api__v1__clips__user__connection_v2",
-                                                                               "edges", "node", "media", "like_count"
-                                                                               ])
-                avg_like_count = sum(like_comment_ls) / len(like_comment_ls)
+                like_comment_ls = dfs_get_all_values_by_path_extended(values,
+                                                                      ["xdt_api__v1__clips__user__connection_v2",
+                                                                       "edges", "node", "media", "like_count"
+                                                                       ])
+                avg_like_count = sum(to_int(like_comment_ls)) / len(to_int(like_comment_ls))
                 self.finish_data["average_likes"] = avg_like_count
                 self.finish_data["average_comments"] = avg_comment_count
                 self.finish_data["average_views"] = avg_play_count
 
-
         self.finish_data["level"] = grade_criteria(self.finish_data["platform"], self.finish_data["average_views"])
-        self.finish_data["average_engagement_rate"] = \
-            ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
-             / self.finish_data["average_views"])
+        try:
+            self.finish_data["average_engagement_rate"] = \
+                ((self.finish_data["average_likes"] + self.finish_data["average_comments"])
+                 / self.finish_data["average_views"])
+        except Exception:
+            self.finish_data["average_engagement_rate"] = 0
         global_log.info(
             f"ins -->self.finish_data  {self.finish_data}")
         inner_CelebrityProfile(self.finish_data, isById=True)
-        self._close_data()
-        self.page.wait_for_timeout(self.human_wait_time)
-
-    def save_cookies(self, file_path):
-        # 获取当前页面上下文的 cookies
-        cookies = self.page.context.cookies()
-
-        # 将 cookies 保存为 JSON 文件
-        with open(file_path, 'w') as file:
-            json.dump(cookies, file)
 
     def run(self, url):
-        if self.page is None or self.page.query_selector('//input[@name="username"]'):
+        self.page.wait_for_timeout(self.human_wait_time)
+        if self.isCheckLogin is True:
             self._login()
-        global_log.info("进入ins页面")
-        self.page.wait_for_timeout(6000)
-        self.save_cookies("ins_cookies.json")
+        global_log.info("ins 红人 -> 进入ins页面")
+        self.page.wait_for_timeout(self.human_wait_time)
         self.work(url)
+        save_cookies(self.page, f"ins_{self.account}_cookies")
+        global_log.info(f"ins 红人 ==> {self.finish_data}")
 
 
 def ins_start_spider(url):
     """新的启动器"""
+    account_info = random_account_()
+    # {'user': 'danielkroesche94', 'password': 'Provia312CH@@123', 'code': 'IU4X NUVZ E5HJ ZMTL AYYD RWJC 7D63 TGW2', 'fileDir': 'C:\\browser\\ins\\chrome-danielkroesche94-data', 'port': 9225}
+
+    user = account_info.get("user")
+    password = account_info.get("password")
+    code = account_info.get("code")
+    port = account_info.get("port")
+    fileDir = account_info.get("fileDir")
+    ws_id = get_ws_id(port, fileDir)
+    global_log.info(f"ins 红人->获取到对应的账号为 {account_info}, 浏览器id为{ws_id}")
     with sync_playwright() as playwright:
-        ins_videos_browser = playwright.chromium.launch(
-            headless=headerLess,
-            channel="chrome",
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        ins_videos_context = ins_videos_browser.new_context(viewport=return_viewPort(),
-                                                            user_agent=user_agent, )
+        cdp = playwright.chromium.connect_over_cdp(ws_id)
+        contexts = cdp.contexts[0]
 
-        with open(ins_cookies, 'r') as file:
-            cookies = json.load(file)
-
-        ins_videos_context.add_cookies(cookies)
-        ins_videos_context.add_init_script(
+        cookies_str = redis_conn.get_value(f"ins_{user}_cookies")
+        isCheckLogin = True
+        if cookies_str is not None:
+            cookies = json.loads(cookies_str)
+            # 重新update
+            contexts.add_cookies(cookies)
+            isCheckLogin = False
+        contexts.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
         )
-        ins_videos_page = ins_videos_context.new_page()
-        Task(ins_videos_browser, ins_videos_context, ins_videos_page).work(url)
+        for cur_page in contexts.pages:
+            # 页面清除
+            if "instagram" in cur_page.url:
+                cur_page.close()
+
+        ins_videos_page = contexts.new_page()
+        Task(cdp, contexts, ins_videos_page, user, password, code, isCheckLogin).run(url)
+
         time.sleep(5)
+
+
+if __name__ == '__main__':
+    ins_start_spider("https://www.instagram.com/mel_junerose/#")
+    # ins_start_spider("https://www.instagram.com/life_inthemadhouse/reels/#")

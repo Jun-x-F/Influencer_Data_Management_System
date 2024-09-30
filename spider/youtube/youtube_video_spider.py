@@ -13,8 +13,10 @@ from typing import Optional
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Route
 
+from log.logger import global_log
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from spider.youtube.youtube_public_func import get_like_count, get_view_count, get_comment_count
+from tool.JsonUtils import dfs_get_all_values_by_path_extended
 
 
 class Task:
@@ -82,6 +84,9 @@ class Task:
             '//div[@id="upload-info"]//yt-formatted-string[@id="text"]/a').get_attribute(
             "href")
         self.finish_data["user_name"] = user_name.replace("/", "")
+        # 添加全称
+        self.finish_data["full_name"] = self.page.query_selector(
+            '//div[@id="upload-info"]//yt-formatted-string[@id="text"]').text_content().strip()
 
         like_button_view_model = self.page.query_selector(
             '//like-button-view-model//div[@class="yt-spec-button-shape-next__button-text-content"]')
@@ -152,6 +157,17 @@ class Task:
             raise ValueError("获取不到ytInitialData")
 
         h5_json = json.loads(match_str)
+        # engagementPanels -> engagementPanelSectionListRenderer -> structuredDescriptionContentRenderer -> items ->
+        # videoDescriptionHeaderRenderer -> channel -> simpleText
+        full_name_list = dfs_get_all_values_by_path_extended(h5_json,
+                                                             ["engagementPanels", "engagementPanelSectionListRenderer",
+                                                              "structuredDescriptionContentRenderer", "items",
+                                                              "videoDescriptionHeaderRenderer",
+                                                              "channel", "simpleText"])
+        if len(full_name_list) == 0:
+            raise ValueError("youtube -> 查询不到full name --> h5_json -> dfs_get_all_values_by_path_extended")
+        self.finish_data["full_name"] = full_name_list[0]
+
         overlay = h5_json.get("overlay")
         reelPlayerOverlayRenderer = overlay.get("reelPlayerOverlayRenderer")
         likeButton = reelPlayerOverlayRenderer.get("likeButton")
@@ -208,11 +224,13 @@ class Task:
         self.page.route('**/*', self.block_media_requests)
 
         self.page.goto(_url, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(self.human_wait_time)
+        self.page.wait_for_timeout(self.human_wait_time * 2)
+        truth_url = self.page.url
+        global_log.info(f"youtube video -->{_url} --> {truth_url}")
         self.finish_data["platform"] = "youtube"
         self.finish_data["video_url"] = _url
-        if "shorts" in _url:
-            self.fetch_page_info(_url)
+        if "shorts" in truth_url:
+            self.fetch_page_info(truth_url)
             self.finish_data["type"] = "短视频"
         else:
             self.process_page()
@@ -244,4 +262,5 @@ if __name__ == '__main__':
         # Connect to the running browser instance
         browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
         context = browser.contexts[0]
-        Task(browser, context).run()
+        # https://www.youtube.com/watch?v=YEoihc-EI3o
+        Task(browser, context).run("https://www.youtube.com/shorts/WR0TsR6QuqQ")

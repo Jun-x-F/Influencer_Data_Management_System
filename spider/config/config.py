@@ -53,3 +53,21 @@ global_log.info(f"初始化消息队列成功，设置消息队列超时时间�
 
 ins_cookies = os.path.join(get_project_path(), "spider", "ins", "ins_cookies.json")
 global_log.info(f"ins cookies 路径为{ins_cookies}")
+
+# 账号分流管理
+ins_account = [
+    {
+        "user": r"basharov_aleks",
+        "password": r"Provia312AM@@123",
+        "code": r"BJ32 NT4C X5O4 6QKS GHBC EBAC D24U 3QRZ",
+        "fileDir": r"C:\browser\ins\chrome-basharov_aleks-data",
+        "port": 9224
+    },
+    {
+        "user": r"danielkroesche94",
+        "password": r"Provia312CH@@123",
+        "code": r"IU4X NUVZ E5HJ ZMTL AYYD RWJC 7D63 TGW2",
+        "fileDir": r"C:\browser\ins\chrome-danielkroesche94-data",
+        "port": 9225
+    }
+]

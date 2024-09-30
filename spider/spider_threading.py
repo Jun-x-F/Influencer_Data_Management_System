@@ -98,10 +98,11 @@ def to_update_video_data():
     # res = select_video_urls(InfluencersVideoProjectData.video_url,
     #                         InfluencersVideoProjectData.progressCooperation.notlike(f"合作完成"))
     res = select_video_urls(InfluencersVideoProjectData.video_url,
-                            None,
+                            InfluencersVideoProjectData.full_name == None,
                             InfluencersVideoProjectData.id)
+    print(res)
     for item in res:
-        # print(item)
+        print(item)
         run_spider.run_spider(item, {}, 2, "schedule_test")
 
 

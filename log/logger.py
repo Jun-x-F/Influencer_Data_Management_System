@@ -179,6 +179,8 @@ class LoguruLogger:
         self._log_to_db(_to_message)
 
     def find_deepest_file_in_tree(self, filename, tree, current_depth=0):
+        if tree is None:
+            self.error("find_deepest_file_in_tree -> not found tree")
         _cur = None
         for file_name, deepest in tree.items():
             if filename == file_name:

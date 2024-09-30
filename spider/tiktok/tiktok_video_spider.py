@@ -11,6 +11,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
+from log.logger import global_log
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from tool.TimeUtils import TimeUtils
 
@@ -49,10 +50,12 @@ class Task:
 
         author = itemStruct.get("author")
         uniqueId = author.get("uniqueId")
+        nickname = author.get("nickname")
         stats = itemStruct.get("stats")
         self.finish_data["video_url"] = _url
         self.finish_data["platform"] = "tiktok"
         self.finish_data["user_name"] = uniqueId
+        self.finish_data["full_name"] = nickname
         self.finish_data["type"] = "视频"
         self.finish_data["releasedTime"] = formatted_time
         self.finish_data["views"] = stats.get("playCount")
@@ -62,6 +65,7 @@ class Task:
         self.finish_data["collections"] = stats.get("collectCount")
         self.finish_data["engagement_rate"] = ((self.finish_data["likes"] + self.finish_data["comments"])
                                                / self.finish_data["views"])
+        global_log.info(f"tiktok -> {self.finish_data}")
         inner_InfluencersVideoProjectData(self.finish_data)
         inner_InfluencersVideoProjectDataByDate(self.finish_data)
         self._close_data()
@@ -85,4 +89,4 @@ if __name__ == '__main__':
         # Connect to the running browser instance
         browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
         context = browser.contexts[0]
-        Task(browser, context).run()
+        Task(browser, context).run("https://www.tiktok.com/@bbbigdeer/video/7329382270496804139")

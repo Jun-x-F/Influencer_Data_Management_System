@@ -335,7 +335,7 @@
 
                 <div style="position: relative; width: 100%;">
                     <div style="display: inline-block;">
-                        <button type="submit" class="btn-primary">提交视频</button>
+                        <button type="submit" class="btn-primary">提交指标</button>
                         <button type="button" id="resetMetricsForm" class="btn-secondary">重置</button>
                     </div>
                     <div style="position: absolute; right: 0; top: 0;">
@@ -370,9 +370,10 @@
 </div>
 
 
-
+<script src="{{ url_for('static', filename='js/innodb_tools.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/videos.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/intervalId_func.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/tools.js') }}?v={{ version }}"></script>
 <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
 <!-- SweetAlert2 JS -->

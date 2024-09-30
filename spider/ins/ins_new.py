@@ -13,7 +13,7 @@ from typing import Optional
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
 
 from log.logger import global_log
-from spider.config.config import return_viewPort, user_agent, redis_conn, ins_cookies, headerLess
+from spider.config.config import redis_conn, ins_account
 
 
 class Task:
@@ -46,23 +46,42 @@ class Task:
             # if fb_api_req_friendly_name in ["PolarisProfilePostsTabContentDirectQuery_connection",
             #                                 "PolarisProfilePostsDirectQuery"]:
             if fb_api_req_friendly_name in ["PolarisProfileReelsTabContentQuery_connection",
-                                            "PolarisProfileReelsTabContentQuery"]:
+                                            "PolarisProfileReelsTabContentQuery",
+                                            "PolarisProfilePostsQuery",
+                                            "PolarisProfilePostsTabContentQuery_connection"]:
 
                 body = response.json()
                 data = body.get("data")
-                xdt_api__v1__clips__user__connection_v2 = data.get(
-                    "xdt_api__v1__clips__user__connection_v2")
-                edges = xdt_api__v1__clips__user__connection_v2.get("edges")
-                for edge in edges:
-                    node = edge.get("node")
-                    media = node.get("media")
-                    # 将数据进行缓存
-                    cur_code = media.get("code")
-                    redis_conn.set_value(media.get("code"), json.dumps(media), 12 * 3600)
-                    if cur_code == self.code:
-                        self.response_data[cur_code] = media
-                        self.isFinished = True
-                        break
+
+                if fb_api_req_friendly_name == "PolarisProfilePostsQuery" or fb_api_req_friendly_name == "PolarisProfilePostsTabContentQuery_connection":
+                    xdt_api__v1__feed__user_timeline_graphql_connection = data.get(
+                        "xdt_api__v1__feed__user_timeline_graphql_connection"
+                    )
+                    edges = xdt_api__v1__feed__user_timeline_graphql_connection.get("edges")
+                    for edge in edges:
+                        node = edge.get("node")
+                        # 将数据进行缓存
+                        cur_code = node.get("code")
+                        redis_conn.set_value(node.get("code"), json.dumps(node), 12 * 3600)
+                        if cur_code == self.code:
+                            self.response_data[cur_code] = node
+                            self.isFinished = True
+                            break
+                else:
+
+                    xdt_api__v1__clips__user__connection_v2 = data.get(
+                        "xdt_api__v1__clips__user__connection_v2")
+                    edges = xdt_api__v1__clips__user__connection_v2.get("edges")
+                    for edge in edges:
+                        node = edge.get("node")
+                        media = node.get("media")
+                        # 将数据进行缓存
+                        cur_code = media.get("code")
+                        redis_conn.set_value(media.get("code"), json.dumps(media), 12 * 3600)
+                        if cur_code == self.code:
+                            self.response_data[cur_code] = media
+                            self.isFinished = True
+                            break
 
     def scroll_to_bottom(self):
         # 滚动到页面底部
@@ -72,7 +91,7 @@ class Task:
         self.page.on('response', self._get_user_info)
         # self.page.wait_for_timeout(self.human_wait_time)
         self.page.goto(self.url, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(6000)
+        self.page.wait_for_timeout(12000)
 
         for _ in range(30):
             if self.isFinished:
@@ -90,23 +109,14 @@ class Task:
         return self.response_data
 
 
-def get_ins_info(url, code):
+def get_ins_info(ws_id, url, code):
     with sync_playwright() as playwright:
-        get_ins_info_browser = playwright.chromium.launch(
-            headless=headerLess,
-            channel="chrome",
-            args=["--disable-blink-features=AutomationControlled"],
-            # proxy={
-            #     'server': proxy_url,
-            #     'username': 'brd-customer-hl_c99584d5-zone-datacenter_proxy1',
-            #     'password': '8wt7q8p6682f',
-            # }
-        )
-        get_ins_info_context = get_ins_info_browser.new_context(viewport=return_viewPort(),
-                                                                user_agent=user_agent, )
+        get_ins_info_browser = playwright.chromium.connect_over_cdp(ws_id)
+        get_ins_info_context = get_ins_info_browser.contexts[0]
 
-        with open(ins_cookies, 'r') as f:
-            _cookies = json.load(f)
+        cookies_str = redis_conn.get_value("ins_cookies")
+        if cookies_str is not None:
+            _cookies = json.loads(cookies_str)
 
         get_ins_info_context.add_cookies(_cookies)
         get_ins_info_context.add_init_script(
@@ -116,3 +126,29 @@ def get_ins_info(url, code):
         return Task(get_ins_info_browser, get_ins_info_context, get_ins_info_page).run(url=url, code=code)
 
 
+def to_int(ls: list) -> list:
+    """转int"""
+    cur_ = []
+    for i in ls:
+        if i is None:
+            cur_.append(0)
+        else:
+            cur_.append(int(i))
+    return cur_
+
+
+def save_cookies(page, key):
+    # 获取当前页面上下文的 cookies
+    cookies = page.context.cookies()
+    cookies_str = json.dumps(cookies)
+
+    redis_conn.set_value(key, cookies_str, 30 * 24 * 3600)
+
+
+def random_account_():
+    ial = len(ins_account)
+    return ins_account[random.randint(0, ial - 1)]
+
+
+if __name__ == '__main__':
+    print(random_account_())

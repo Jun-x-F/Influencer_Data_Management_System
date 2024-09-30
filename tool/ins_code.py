@@ -50,9 +50,9 @@ class KeyUtilities:
         return str(otp).zfill(6)
 
 
-def get_deOne_code():
-    return KeyUtilities().generate("JGO3 DSJQ BBCO RQGH C2LB AY6Q QBTS 4KOR")
+def get_deOne_code(code):
+    return KeyUtilities().generate(code)
 
 
 if __name__ == '__main__':
-    print(KeyUtilities().generate("JGO3 DSJQ BBCO RQGH C2LB AY6Q QBTS 4KOR"))
+    print(KeyUtilities().generate("IU4X NUVZ E5HJ ZMTL AYYD RWJC 7D63 TGW2"))

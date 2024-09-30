@@ -68,6 +68,7 @@ def get_platform(url):
     # 定义平台的正则表达式模式及其对应的名称
     platform_patterns = {
         re.compile(r'youtube.com', re.IGNORECASE): "YouTube",
+        re.compile(r'youtu.be', re.IGNORECASE): "YouTube",
         re.compile(r'tiktok.com', re.IGNORECASE): "TikTok",
         re.compile(r'instagram.com', re.IGNORECASE): "Instagram",
         re.compile(r'x.com', re.IGNORECASE): "X",
@@ -123,7 +124,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
     message_queue.add(_id, f"接收到任务链接: {url}, 开始解析url")
     message = {}
     isFinish = False
-    for item in range(5):
+    for item in range(3):
         try:
             code = work(url, cur, flag, _id, item)
             if code == 200:
@@ -149,6 +150,6 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
 
 
 if __name__ == "__main__":
-    url = "https://x.com/webflite/status/1837947053928075349"
+    url = "https://youtu.be/pFVqtVJgk-U?si=FOL94ZI7DY3bhMb2&t=145"
     platform = get_platform(url)
     print(platform)  # 输出: X

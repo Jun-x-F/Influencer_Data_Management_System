@@ -81,7 +81,7 @@ class Task:
         self.finish_data["full_name"] = full_name
         self.finish_data["follower_count"] = follower_count
         self.finish_data["region"] = get_country_item.strip()
-        print(self.finish_data["profile_picture_url"])
+        global_log.info(self.finish_data["profile_picture_url"])
         download_image_head_url = download_image_file(self.finish_data["profile_picture_url"],
                                                       self.finish_data["user_name"])
         global_log.info(download_image_head_url)

@@ -94,6 +94,14 @@ class Task:
                                                                                        "user_results", "result",
                                                                                        "legacy", "screen_name"]
                                                                                       )[0]
+                # 红人全称
+                self.response_data["full_name"] = dfs_get_all_values_by_path_extended(raw_json,
+                                                                                      ["content", "itemContent",
+                                                                                       "tweet_results", "result",
+                                                                                       "core",
+                                                                                       "user_results", "result",
+                                                                                       "legacy", "name"]
+                                                                                      )[0]
                 # 观看量
                 self.response_data["views"] = dfs_get_all_values_by_path_extended(raw_json,
                                                                                   ["content", "itemContent",
@@ -234,4 +242,4 @@ if __name__ == '__main__':
         if page is None:
             page = context.new_page()
 
-        Task(page).run("https://x.com/TheRabbitHole84/status/1837900702527770697")
+        Task(browser, context).run("https://x.com/TheRabbitHole84/status/1837900702527770697")
