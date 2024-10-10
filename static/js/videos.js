@@ -1,6 +1,12 @@
 const dbName = 'videoDatabase';
-const dbVersion = 3;
+const dbVersion = 4;
 const storeSchemas = {
+    // 红人表
+    influencerTable: {
+        keyPath: 'id',
+        autoIncrement: false,
+        indexes: ['id']
+    },
     // 视频表
     videoTable: {
         keyPath: 'id',
@@ -101,7 +107,30 @@ document.getElementById('resetVideoForm').addEventListener('click', async functi
     // // 重新加载所有唯一ID，恢复为所有可选项
     // reloadAllUniqueIds();
 });
+/**
+ * 更新红人表格并缓存数据
+ */
+async function updateInfluencerTable() {
+    fetch('/influencer/get_influencer_data', {
+        method: 'GET'
+    })
+        .then(response => response.json())
+        .then(async data => {
+            try {
+                // 清除之前的缓存
+                await dbHelper.clearStore('influencerTable');
 
+                // 批量写入新的缓存数据
+                await dbHelper.addOrUpdateDataBatch('influencerTable', data);
+
+                // 用新数据填充表格
+                await populateVideoTable(data);
+            } catch (error) {
+                console.error('更新视频表格时出错：', error);
+            }
+        })
+        .catch(error => console.error('获取视频表数据时出错：', error));
+}
 /**
  * 更新视频表格并缓存数据
  */
@@ -304,10 +333,47 @@ document.getElementById('videoForm').addEventListener('submit', async function (
         }
     }
 
+    if (logisticsNumber){
+        // 定义一个正则表达式来匹配指定的URL格式
+        const pattern = /https:\/\/t\.17track\.net\/zh-cn#nums=/;
+        const isLogisticsNumber = pattern.test(logisticsNumber);
+        if (!isLogisticsNumber){
+            Swal.fire({
+                title: '提交的物流链接有问题',
+                html: `<h3 class="subtitle">重新修改, 参考<br>https://t.17track.net/zh-cn#nums=UJ712686735YP</h3>
+                <div class="swal-scrollable-content">
+                    <ul class="link-list">
+                        <li style="text-align: center">
+                            <span>你填写的链接为</span>
+                            : 
+                            <span class="error-message">${logisticsNumber}</span>
+                        </li>
+                    </ul>
+                </div>`,
+                icon: 'error',
+                confirmButtonText: '确定',
+                width: '700px',
+                background: '#f9f9f9',
+                confirmButtonColor: '#3085d6',
+            });
+            responseMessage.innerHTML = '提交的物流链接有问题, 格式参考https://t.17track.net/zh-cn#nums=UJ712686735YP';
+            responseMessage.style.color = 'red';
+            return;
+        }
+    }
+
 
     var submissions = links.length ? links : [''];
-
-    Promise.all(submissions.map(link => {
+    // 将红人名称还原回来 => 如果没有链接的话，会导致红人名称和红人全名一致
+    const influencerTable = (await dbHelper.getAllData('influencerTable'));
+    await influencerTable.forEach(
+        row =>{
+            if (row["红人全名"] === influencerName){
+                influencerName = row["红人名称"];
+            }
+        }
+    );
+    await Promise.all(submissions.map(link => {
         return fetch('/video/submit_link', {
             method: 'POST',
             headers: {
@@ -359,7 +425,7 @@ document.getElementById('videoForm').addEventListener('submit', async function (
     });
 
     // 定时任务 - 每隔5秒访问一次 localhost:5000/notice/spider/influencersVideo
-    if (links.length > 0){
+    if ((links.length > 0) || (logisticsNumber.length > 0)){
         const {intervalId, timeoutId} =startFetchSpiderNoticeWithTimeout('video', responseMessage, uid, 5000, updateVideoTable);
     }
 });
@@ -867,9 +933,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /**
  * 关联 - 监听对象
- * 品牌、项目、产品关联
- * 品牌、负责人、红人关联
- * 合作进度
+ * id -> 开启
+ * 品牌、项目、产品关联 -> 开启
+ * 品牌、负责人、红人关联 -> 关闭
+ * 合作进度 -> 关闭
+ * 视频类型 -> 开启
  * 防抖动
  * */
 function bindDropdownEventListeners() {
@@ -878,6 +946,7 @@ function bindDropdownEventListeners() {
      * 根据id进行搜索功能 --> 读取的是应用里面的缓存数据
      * */
     document.getElementById('videoUniqueId').addEventListener('input', debounce(async function (event) {
+        // event.stopImmediatePropagation(); // 阻止同一元素上其他 input 事件监听器执行
         const uniqueId = event.target.value.trim();
         if (uniqueId.length !== 0) {
             console.log('输入的唯一ID：', uniqueId);
@@ -967,46 +1036,46 @@ function bindDropdownEventListeners() {
             console.warn(`Element with id ${className} not found.`);
         }
     });
-    ['videoproduct', 'videoManager', 'videoInfluencerName'].forEach(function(className) {
-        const element = document.getElementById(className);
-
-        if (element) {
-            // 根据元素类型添加合适的事件监听器
-            events.forEach(eventType => {
-                // 为了方便移除监听器，定义处理函数
-                const handler = async function(event) {
-                    // 处理事件的代码
-                    const videoManager = document.getElementById('videoManager').value;
-                    const videoInfluencerNameList = document.getElementById('videoInfluencerNameList').value;
-                    const videoInfluencerName = document.getElementById('videoInfluencerName').value;
-                    const product = document.getElementById('videoproduct').value;
-
-                    // 调用更新唯一ID下拉列表的函数
-                    await updateItemDropdownByNameProductAndManager(videoManager, videoInfluencerNameList, product);
-
-                    //筛选表格的数据
-                    await filterTableByManagerInfluencerAndProduct(videoManager, videoInfluencerName);
-                };
-
-                // 将处理函数存储在元素的属性中，以便稍后移除
-                element.addEventListener(eventType, handler);
-                if (!element._eventHandlers) {
-                    element._eventHandlers = [];
-                }
-                element._eventHandlers.push({ eventType, handler });
-            });
-        } else {
-            console.warn(`Element with id ${className} not found.`);
-        }
-    });
-    document.getElementById('videoProgress').addEventListener('input', debounce(async function (event) {
-        const videoProgress = event.target.value.trim();
-        if (videoProgress.length !== 0){
-            //筛选表格的数据
-            await filterTableByProgress(videoProgress);
-        }
-
-    },300));
+    // ['videoproduct', 'videoManager', 'videoInfluencerName'].forEach(function(className) {
+    //     const element = document.getElementById(className);
+    //
+    //     if (element) {
+    //         // 根据元素类型添加合适的事件监听器
+    //         events.forEach(eventType => {
+    //             // 为了方便移除监听器，定义处理函数
+    //             const handler = async function(event) {
+    //                 // 处理事件的代码
+    //                 const videoManager = document.getElementById('videoManager').value;
+    //                 const videoInfluencerNameList = document.getElementById('videoInfluencerNameList').value;
+    //                 const videoInfluencerName = document.getElementById('videoInfluencerName').value;
+    //                 const product = document.getElementById('videoproduct').value;
+    //
+    //                 // 调用更新唯一ID下拉列表的函数
+    //                 await updateItemDropdownByNameProductAndManager(videoManager, videoInfluencerNameList, product);
+    //
+    //                 //筛选表格的数据
+    //                 await filterTableByManagerInfluencerAndProduct(videoManager, videoInfluencerName);
+    //             };
+    //
+    //             // 将处理函数存储在元素的属性中，以便稍后移除
+    //             element.addEventListener(eventType, handler);
+    //             if (!element._eventHandlers) {
+    //                 element._eventHandlers = [];
+    //             }
+    //             element._eventHandlers.push({ eventType, handler });
+    //         });
+    //     } else {
+    //         console.warn(`Element with id ${className} not found.`);
+    //     }
+    // });
+    // document.getElementById('videoProgress').addEventListener('input', debounce(async function (event) {
+    //     const videoProgress = event.target.value.trim();
+    //     if (videoProgress.length !== 0){
+    //         //筛选表格的数据
+    //         await filterTableByProgress(videoProgress);
+    //     }
+    //
+    // },300));
     document.getElementById('videoType').addEventListener('input', debounce(async function (event) {
         const videoType = event.target.value.trim();
         if (videoType.length !== 0){
@@ -1033,16 +1102,16 @@ function unbindDropdownEventListeners() {
             element._eventHandlers = null;
         }
     });
-    ['videoproduct', 'videoManager', 'videoInfluencerName'].forEach(function(className) {
-        const element = document.getElementById(className);
-
-        if (element && element._eventHandlers) {
-            element._eventHandlers.forEach(({ eventType, handler }) => {
-                element.removeEventListener(eventType, handler);
-            });
-            element._eventHandlers = null;
-        }
-    });
+    // ['videoproduct', 'videoManager', 'videoInfluencerName'].forEach(function(className) {
+    //     const element = document.getElementById(className);
+    //
+    //     if (element && element._eventHandlers) {
+    //         element._eventHandlers.forEach(({ eventType, handler }) => {
+    //             element.removeEventListener(eventType, handler);
+    //         });
+    //         element._eventHandlers = null;
+    //     }
+    // });
 }
 
 /*
@@ -1846,7 +1915,7 @@ function populateVideoTable(data) {
             <td>${row.负责人 || ''}</td>
             <td>${row.合作进度 || ''}</td>
             <td>${row.物流进度 || ''}</td>
-            <td>${row.物流单号 || ''}</td>
+            <td><a href="${row.物流单号 || ''}" target="_blank">${row.物流单号 || ''}</a></td>
             <td>${row.花费 || ''}</td>
             <td>${row.币种 || ''}</td>
             <td>${row.产品 || ''}</td>
@@ -2020,11 +2089,11 @@ function highlightRowById(uniqueId) {
 /**
  * 新增项目 -> 点击的时候, 加载各种选项
  * */
-document.getElementById('addVideoDataButton').addEventListener('click', debounce(async function () {
-
-    document.getElementById('addVideoDataForm').style.display = 'block';
+document.getElementById('addVideoDataButton').addEventListener('click', async function () {
     await initAddProject();
-}, 5));
+    document.getElementById('addVideoDataForm').style.display = 'block';
+
+});
 
 /**
  * 初始化新增项目板块
@@ -2033,12 +2102,14 @@ async function initAddProject(){
     // 点击新增板块的时候，自动更新一次指标数据和视频数据
     await updateVideoTable();
     await updateProjectMetrics();
+    await updateInfluencerTable();
 
     let brandSet = new Set();
     let projectSet = new Set();
     let productSet = new Set();
     let managerSet = new Set();
     let InfluencerNameSet = new Set();
+    const influencerTable = await dbHelper.getAllData('influencerTable');
     const videoTables =await dbHelper.getAllData('videoTable');
     const parametricIndicators =await dbHelper.getAllData('parametricIndicators');
     parametricIndicators.forEach(row => {
@@ -2061,6 +2132,15 @@ async function initAddProject(){
             InfluencerNameSet.add(row['红人名称']);
         }
     });
+
+    influencerTable.forEach(
+        row=>{
+            if (row['红人全名']) {
+                InfluencerNameSet.add(row['红人全名']);
+            }
+        }
+    )
+
     populateDatalist('addBrandOptions', brandSet);
     populateDatalist('addProjectOptions', projectSet);
     populateDatalist('addProductOptions', productSet);
@@ -2169,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 提交新增表单时处理数据
-document.getElementById('addVideoData').addEventListener('submit', function (event) {
+document.getElementById('addVideoData').addEventListener('submit', async function (event) {
     event.preventDefault();
     var responseMessage = document.getElementById('formErrorMessage');
     responseMessage.innerHTML = ''; // 清空之前的信息
@@ -2230,7 +2310,7 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
         return; // 阻止表单提交
     }
 
-    fetch('/video/check_url_existing', {
+    await fetch('/video/check_url_existing', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -2239,7 +2319,7 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
             "url": videoLinks
         })
     }).then(response => response.json()).then(data => {
-        if (data.isSame){
+        if (data.isSame) {
             Swal.fire({
                 title: '链接已存在，请检查',
                 html: `
@@ -2278,8 +2358,17 @@ document.getElementById('addVideoData').addEventListener('submit', function (eve
         "预估观看量": document.getElementById('addestimatedViews').value,
         "预估上线时间": document.getElementById('addestimatedLaunchDate').value
     };
-
-    fetch('/video/add_video_data', {
+    const influencerTable = await dbHelper.getAllData('influencerTable');
+    // 避免出现匹配不上的问题
+    await influencerTable.forEach(row=>{
+        if (row["红人全名"] === influencerNameInput){
+            console.log("匹配成功");
+            console.log(row);
+            formData["红人名称"] = row["红人名称"];
+            formData["红人全称"] = row["红人全名"];
+        }
+    })
+    await fetch('/video/add_video_data', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

@@ -545,7 +545,7 @@ def thread_work():
             for future in as_completed(future_to_url):
                 try:
                     # 超时3分钟
-                    future.result(timeout=60 * 3)  # 确保获取任务的结果并处理异常
+                    future.result(timeout=60 * 5)  # 确保获取任务的结果并处理异常
                 except concurrent.futures.TimeoutError:
                     global_log.error(f"{task}任务超时，加入重试队列中")
                     change_task_info(task, "retry")
@@ -585,4 +585,4 @@ def run(isRequest: bool = False, order_numbers: list = None):
 
 
 if __name__ == '__main__':
-    run()
+    run(True, ["UJ712686735YP"])

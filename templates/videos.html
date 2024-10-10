@@ -18,7 +18,7 @@
         <button id="addVideoDataButton" class="add-video-data-btn">新增数据</button>
         <div class="form-column">
             <h2>项目与视频板块</h2>
-            <form id="videoForm">
+            <form id="videoForm" autocomplete="off">
                 <div id="linkFieldsContainer">
                     <div class="linkFields">
                         <div class="form-row">
@@ -83,9 +83,9 @@
                                 </datalist>
                             </div>
                             <div>
-                                <label for="videoLogisticsNumber">物流单号:</label>
+                                <label for="videoLogisticsNumber">物流链接:</label>
                                 <input type="text" id="videoLogisticsNumber" class="videoLogisticsNumber"
-                                       placeholder="请输入物流单号">
+                                       placeholder="请输入物流链接">
                             </div>
                             <div>
                                 <label for="videoType">类型:</label>
@@ -156,7 +156,7 @@
                         <th class="group1">负责人</th>
                         <th class="group1">合作进度</th>
                         <th class="group1">物流进度</th>
-                        <th class="group1">物流单号</th>
+                        <th class="group1">物流链接</th>
                         <th class="group1">花费</th>
                         <th class="group1">币种</th>
                         <th class="group1">产品</th>
@@ -187,7 +187,7 @@
         <div id="addVideoDataForm" class="modal">
             <div class="modal-content">
                 <span class="close" id="closeAddVideoForm">&times;</span>
-                <form id="addVideoData">
+                <form id="addVideoData" autocomplete="off">
                     <div class="form-row">
                         <div>
                             <label for="addbrand">品牌:</label>
@@ -286,7 +286,7 @@
     <section id="metricsDefinitionSection" class="form-container">
         <div class="form-column">
             <h2>指标定义板块</h2>
-            <form id="metricsDefinitionForm">
+            <form id="metricsDefinitionForm" autocomplete="off">
                 <div class="form-row">
                     <div>
                         <label for="metricsBrand">品牌:</label>

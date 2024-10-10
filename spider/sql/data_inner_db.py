@@ -135,7 +135,9 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
         db.reconnect_session()
     record = db.session.query(logistics_information_sheet).filter_by(number=logistics_numbers).first()
     if record is not None:
-        existing_records = db.session.query(InfluencersVideoProjectData).filter_by(trackingNumber=record.number).all()
+        trackingNumber = f"https://t.17track.net/zh-cn#nums={record.number}"
+        global_log.info(f"sync_logistics_information_sheet_to_InfluencersVideoProjectData ->拼接的链接为 {trackingNumber}")
+        existing_records = db.session.query(InfluencersVideoProjectData).filter_by(trackingNumber=trackingNumber).all()
         if existing_records:
             # 更新所有找到的记录
             for existing in existing_records:

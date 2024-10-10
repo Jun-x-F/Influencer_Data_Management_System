@@ -4,15 +4,18 @@ from collections import deque
 
 import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
-from sqlalchemy import text
+from sqlalchemy import text, and_
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
-from spider.config import config
-from spider.config.config import order_links, submitted_video_links
+from spider.config.config import order_links, submitted_video_links, message_queue
+from spider.sql.data_inner_db import select_video_urls
+from spider.template.spider_db_template import InfluencersVideoProjectData
 from utils import determine_platform
 
 video_bp = Blueprint('video', __name__)
+
+
 #1
 
 class Video:
@@ -299,7 +302,6 @@ class Video:
             cost = data.get('cost')
             if cost == '':
                 cost = ''
-            print("submit_link cost", cost)
             currency = data.get('currency')  # 接收币种
             product = data.get('product')
             estimated_views = data.get('estimatedViews')
@@ -310,22 +312,22 @@ class Video:
             estimated_launch_date = data.get('estimatedLaunchDate')
             send_id = f"video_{data.get('uid')}"
             global_log.info(f"接受到的uid为{send_id}")
-            # 将物流信息加入队列中
-            if logistics_number is not None and logistics_number != "":
-                order_list = order_links.get(send_id, [])
-                order_list.append(logistics_number)
-                order_links[send_id] = order_list
-            else:
-                # 不需要执行物流信息
-                config.submitted_pass_track = True
 
+            # 查询是否视频链接是否相同
+            res = select_video_urls(InfluencersVideoProjectData.video_url,
+                                    and_(
+                                        InfluencersVideoProjectData.video_url == link,
+                                        InfluencersVideoProjectData.id == unique_id
+                                    ),
+                                    InfluencersVideoProjectData.id)
+            global_log.info(f"检查链接是否存在：{res}")
             # seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
             # isExecutedWithinSeven = check_InfluencersVideoProjectData_in_db(unique_id, seven_days_ago)
             # global_log.info(f"{link} 距离上次更新是否在7天内：{isExecutedWithinSeven}")
 
             # 链接可以为空，如果存在则进行验证
             # if link and isExecutedWithinSeven is False:
-            if link is not None and link != '':
+            if link is not None and link != '' and len(res) == 0:
                 url_pattern = re.compile(r'^(http|https)://')
                 if not url_pattern.match(link):
                     return jsonify({'message': '无效的URL格式。'}), 400
@@ -337,10 +339,22 @@ class Video:
 
                 # Add submitted_video_links link
                 send_id_links: deque = submitted_video_links.get(send_id, deque())
+                message_queue.add(send_id, f"接收到平台链接为 {link}")
                 if link in send_id_links:
                     return jsonify({'message': f'链接{link} 存在队列中, 请勿重复生成任务'}), 200
                 send_id_links.append(link)
                 submitted_video_links[send_id] = send_id_links
+
+            # 将物流订单添加到物流信息队列里面
+            if logistics_number != '' and logistics_number is not None:
+                send_order_links: deque = order_links.get(send_id, deque())
+                message_queue.add(send_id, f"接收到物流订单为 {logistics_number}")
+                if logistics_number in send_order_links:
+                    message_queue.add(send_id,
+                                      f"物流订单链接 {logistics_number} 已经在待执行中，请勿重复生成，本次将跳过执行获取物流信息的任务")
+                else:
+                    send_order_links.append(logistics_number)
+                    order_links[send_id] = send_order_links
 
             # Collect data to DataFrame
             video_data = {
@@ -363,7 +377,6 @@ class Video:
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
             df = pd.DataFrame(video_data)
-            global_log.info(df)
             # 删除空列
             # df.replace('', pd.NA, inplace=True)
             # df = df.dropna(axis=1, how='all')
@@ -419,8 +432,15 @@ class Video:
             #     return jsonify({
             #         'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}，执行序号为{unique_id}的视频更新任务失败\n失败原因为7天内更新过视频'}),200
             # else:
-            return jsonify({
-                'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
+            if len(res) == 0:
+                return jsonify({
+                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 开始执行序号为 {unique_id} 的更新任务'}), 200
+            elif logistics_number != '':
+                return jsonify({
+                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 序号为 {unique_id} 单独进行 获取物流信息'}), 200
+            else:
+                return jsonify({
+                    'message': f'由 {manager} 负责的品牌为 {brand} 的项目：{project_name}\n 序号为 {unique_id} 更新成功'}), 200
 
         except Exception as e:
             current_app.logger.error(f"内部服务器错误: {e}")
@@ -434,7 +454,7 @@ class Video:
         sql_t = 'influencers_video_project_data'
         try:
             data = request.json  # 假设你是通过 JSON 发送数据
-            uid = data.get('uid') # 唯一id
+            uid = data.get('uid')  # 唯一id
             brand = data.get('品牌')
             project_name = data.get('项目')
             manager = data.get('负责人')
@@ -446,6 +466,7 @@ class Video:
             ProgressCooperation = data.get('合作进度')
             estimatedViews = data.get('预估观看量')
             estimatedLaunchDate = data.get('预估上线时间')
+            full_name = data.get('红人全称')
 
             send_id = f"video_{uid}"
             global_log.info(f"接受到的uid为{send_id}")
@@ -480,7 +501,8 @@ class Video:
                 '产品': [product or None],
                 '合作进度': [ProgressCooperation or None],
                 '预估观看量': [estimatedViews or None],
-                '预估上线时间': [estimatedLaunchDate or None]
+                '预估上线时间': [estimatedLaunchDate or None],
+                '红人全称': [full_name or None]
             }
             update_date = datetime.date.today()
             video_data['更新日期'] = update_date
@@ -490,7 +512,7 @@ class Video:
             all_columns = ['id', '平台', '类型', '红人名称', '发布时间', '播放量', '点赞数', '评论数', '收藏数',
                            '转发数', '参与率', '视频链接',
                            '更新日期', '品牌', '项目', '负责人', '合作进度', '物流进度', '物流单号',
-                           '花费', '币种', '产品', '预估观看量', '预估上线时间']
+                           '花费', '币种', '产品', '预估观看量', '预估上线时间', '红人全称']
 
             # 将缺失的列添加到 DataFrame 中，并将其初始化为 None（或 np.nan）
             for col in all_columns:
@@ -537,7 +559,6 @@ class Video:
         except Exception as e:
             current_app.logger.error(f"删除过程中发生错误: {e}")
             return jsonify({'message': f'删除过程中发生错误: {e}'}), 500
-
 
     # 指标定义板块
     # 新增数据
@@ -614,7 +635,8 @@ class Video:
         DATABASE = 'marketing'
         sql_t = 'influencer_project_definitions'
         try:
-            data = ReadDatabase(DATABASE, f'SELECT * FROM {sql_t} order by id desc').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            data = ReadDatabase(DATABASE,
+                                f'SELECT * FROM {sql_t} order by id desc').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
             # 处理空值和特殊值
             # 处理 NaN 和 inf 值
             data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
@@ -692,7 +714,6 @@ class Video:
             current_app.logger.error(f"获取选项数据失败: {e}")
             return jsonify({'message': f'获取选项数据失败: {e}'}), 500
 
-
     # 数据表
     @staticmethod
     @video_bp.route('/get_metrics_data', methods=['GET'])
@@ -702,7 +723,8 @@ class Video:
 
         try:
             # 从 influencer_project_definitions 获取品牌、项目、产品
-            project_data = ReadDatabase(DATABASE, f'SELECT id,品牌, 项目, 产品 FROM {project_table} order by id desc').vm()
+            project_data = ReadDatabase(DATABASE,
+                                        f'SELECT id,品牌, 项目, 产品 FROM {project_table} order by id desc').vm()
 
             # 处理空值和特殊值
             project_data = project_data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
@@ -761,6 +783,3 @@ class Video:
         except Exception as e:
             current_app.logger.error(f"删除过程中发生错误: {e}")
             return jsonify({'message': f'删除过程中发生错误: {e}'}), 500
-
-
-

@@ -70,7 +70,7 @@ class RedisClient:
 
 # 示例使用
 if __name__ == "__main__":
-    redis_client = RedisClient(host='172.16.11.245', port=6379, db=4)
+    redis_client = RedisClient(host='localhost', port=6379, db=4)
     redis_client.set_value('test', '["测试"]')
     value = redis_client.get_value('test')
     print(json.loads(value))

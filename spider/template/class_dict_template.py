@@ -58,6 +58,14 @@ class FIFODict:
         """获取所有值的大小之和"""
         return sum(len(value) for value in self._data.values())
 
+    def pop(self, key, default=None):
+        """获取键的值，同时将其从字典和队列中移除，如果键不存在，则返回默认值"""
+        if key in self._data:
+            self._keys.remove(key)
+            return self._data.pop(key)
+        else:
+            return default
+
     def items(self):
         """返回队列中的所有键值对"""
         return ((key, self._data[key]) for key in self._keys)  # 返回生成器

@@ -5,14 +5,12 @@
 @Author：Libre
 @Time：2024/8/16 下午3:01
 """
-import os
 import random
 
 from log.logger import global_log
 from spider.sql.redisConn import RedisClient
 from spider.template.class_dict_template import FIFODict
 from spider.template.class_message_queue_template import Notice
-from tool.FileUtils import get_project_path
 
 # 是否打开页面
 headerLess = True
@@ -51,9 +49,6 @@ message_queue = Notice(message_timeout)
 
 global_log.info(f"初始化消息队列成功，设置消息队列超时时间为{message_timeout}")
 
-ins_cookies = os.path.join(get_project_path(), "spider", "ins", "ins_cookies.json")
-global_log.info(f"ins cookies 路径为{ins_cookies}")
-
 # 账号分流管理
 ins_account = [
     {
@@ -69,5 +64,13 @@ ins_account = [
         "code": r"IU4X NUVZ E5HJ ZMTL AYYD RWJC 7D63 TGW2",
         "fileDir": r"C:\browser\ins\chrome-danielkroesche94-data",
         "port": 9225
+    },
+    {
+        "user": r"wagwanalbs",
+        "password": r"DeOne123456",
+        "code": r"JGO3 DSJQ BBCO RQGH C2LB AY6Q QBTS 4KOR",
+        "fileDir": r"C:\chrome-user-data",
+        "port": 9222
     }
 ]
+global_log.info(f"ins 账号数量共有 {len(ins_account)}")

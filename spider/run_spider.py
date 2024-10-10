@@ -129,7 +129,7 @@ def run_spider(url: str, cur: dict, flag: int, _id: str) -> dict:
             code = work(url, cur, flag, _id, item)
             if code == 200:
                 message["code"] = 200
-                message["message"] = "抓取成功"
+                message["message"] = "平台数据 抓取成功"
             else:
                 message["code"] = code
                 message["message"] = f"链接 {url} \n格式错误，重新检查..."
