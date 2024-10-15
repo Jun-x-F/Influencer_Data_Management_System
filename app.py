@@ -10,6 +10,7 @@ from flask_cors import CORS
 from blueprints.get_file import image_bp
 from blueprints.influencer import influencer_bp
 from blueprints.project_information import project_information_bp
+from blueprints.scheduler_tasks import scheduler_task_bp
 from blueprints.spider_notice import spider_notice_bp
 from blueprints.update import update_bp
 from blueprints.video import video_bp
@@ -41,6 +42,8 @@ app.register_blueprint(project_information_bp, url_prefix='/project_information'
 app.register_blueprint(spider_notice_bp, url_prefix='/notice')
 app.register_blueprint(image_bp, url_prefix='/image')
 app.register_blueprint(log_bp, url_prefix='/log')
+
+app.register_blueprint(scheduler_task_bp, url_prefix='/scheduler')
 
 
 @app.after_request

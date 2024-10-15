@@ -7,15 +7,17 @@ from log.logger import global_log
 
 
 class RedisClient:
-    def __init__(self, host='localhost', port=6379, db=3):
+    def __init__(self, host='172.16.11.167', port=6379, db=3, username="default", password="My$trongP@ssw0rd123!"):
         self.host = host
         self.port = port
         self.db = db
+        self.username = username
+        self.password = password
         self.connection = self.connect()
 
     def connect(self):
         try:
-            connection = redis.Redis(host=self.host, port=self.port, db=self.db)
+            connection = redis.Redis(host=self.host, port=self.port, db=self.db, username=self.username, password=self.password)
             # 测试连接
             connection.ping()
             global_log.info(f"Connected to Redis at {self.host}:{self.port}, db: {self.db}")
@@ -70,7 +72,7 @@ class RedisClient:
 
 # 示例使用
 if __name__ == "__main__":
-    redis_client = RedisClient(host='localhost', port=6379, db=4)
+    redis_client = RedisClient(db=4)
     redis_client.set_value('test', '["测试"]')
     value = redis_client.get_value('test')
     print(json.loads(value))

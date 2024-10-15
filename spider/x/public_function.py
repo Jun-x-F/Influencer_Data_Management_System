@@ -26,7 +26,7 @@ def x_cookies(page: Page):
     return _request_cookie
 
 
-def find_existing_page(context: BrowserContext, domain: str) -> Optional[Page]:
+def find_existing_page(context: BrowserContext, domain: str) -> Optional[Page] and bool:
     """
     查找当前上下文中 URL 域名包含指定域名的页面。
 
@@ -40,9 +40,9 @@ def find_existing_page(context: BrowserContext, domain: str) -> Optional[Page]:
         parsed_url = urlparse(page.url)
         if parsed_url.netloc.endswith(domain.lower()):
             global_log.info(f"找到匹配的页面: {page.url}")
-            return page
+            return page, False
     global_log.info(f"未找到包含 '{domain}' 的页面。")
-    return context.new_page()
+    return context.new_page(), True
 
 
 def create_new_page(page: Page, url: str) -> Page:

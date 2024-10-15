@@ -7,11 +7,10 @@
 """
 import json
 import os.path
-from typing import Optional
 from urllib.parse import urlparse
 
 import requests
-from playwright.sync_api import Page, sync_playwright, Response, Browser, BrowserContext
+from playwright.sync_api import sync_playwright, Response, Browser, BrowserContext
 
 from log.logger import global_log
 from spider.config.config import redis_conn
@@ -26,8 +25,8 @@ class Task:
     def __init__(self, _browser: Browser, _context: BrowserContext):
         self.browser = _browser
         self.context = _context
-        self.page: Optional[Page] = find_existing_page(self.context, "x.com")
-        if self.page is None:
+        self.page, isNewPage = find_existing_page(self.context, "x.com")
+        if isNewPage:
             try:
                 self.page = context.new_page()
                 self.page.goto("https://x.com/home", wait_until="domcontentloaded")

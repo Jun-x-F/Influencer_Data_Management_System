@@ -41,7 +41,7 @@ submitted_pass_video = False
 global_log.info(f"初始化线程队列，检查redis连接")
 
 # redis连接
-redis_conn = RedisClient(host='172.16.11.245', port=6379, db=3)
+redis_conn = RedisClient(host='172.16.11.167', port=6379, db=3)
 
 # 消息队列超时时间/秒
 message_timeout = 5 * 60

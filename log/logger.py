@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict
 
 import pymysql
+from filelock import FileLock
 from loguru import logger
 
 from log.log_template import Log
@@ -74,13 +75,16 @@ class LoguruLogger:
         if isSave is True:
             # 日志路径
             config_path = os.path.join(get_project_path(), "app.log")
-            logger.add(
-                config_path,
-                level=log_level.upper(),
-                format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra[filename]}:{extra[lineno]} | {message}",
-                rotation="10 MB",  # 每个日志文件最大10MB
-                retention="10 days",  # 只保留最近10天的日志文件
-            )
+            # 添加文件锁，避免定时任务和flask冲突
+            lock = FileLock(config_path+'.lock')
+            with lock:
+                logger.add(
+                    config_path,
+                    level=log_level.upper(),
+                    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra[filename]}:{extra[lineno]} | {message}",
+                    rotation="10 MB",  # 每个日志文件最大10MB
+                    retention="10 days",  # 只保留最近10天的日志文件
+                )
         # 添加控制台输出记录器
         if console:
             logger.add(
