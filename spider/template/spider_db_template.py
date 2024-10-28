@@ -76,6 +76,7 @@ class InfluencersVideoProjectData(Base):
     brand = Column('品牌', VARCHAR(255), nullable=True, comment='品牌')
     estimatedViews = Column('预估观看量', Integer, nullable=True, comment='预估观看量')
     estimatedGoLiveTime = Column('预估上线时间', VARCHAR(255), nullable=True, comment='预估上线时间')
+    parentId = Column(BigInteger, nullable=True, comment='parentId')
 
 
 class InfluencersVideoProjectDataByDate(Base):

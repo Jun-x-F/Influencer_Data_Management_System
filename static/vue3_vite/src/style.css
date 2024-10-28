@@ -1,0 +1,665 @@
+/* 全局样式 */
+body {
+    /*font-family: 'Roboto', sans-serif;*/
+    background: rgb(233 228 228 / 20%); /* 半透明白色背景 */
+    backdrop-filter: blur(10px); /* 背景内容模糊 */
+    -webkit-backdrop-filter: blur(10px); /* 兼容 Safari 的前缀 */
+    margin: 0;
+    padding: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px; /* 调整与下方元素的间距 */
+    font-weight: bold;
+  }
+
+.container {
+    /* background: rgb(233 228 228 / 20%); 半透明白色背景 */
+    backdrop-filter: blur(10px); /* 背景内容模糊 */
+    -webkit-backdrop-filter: blur(10px); /* 兼容 Safari 的前缀 */
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    /* padding: 20px; */
+    /* border-radius: 10px; */
+}
+
+h1, h2 {
+    color: #333;
+    text-align: center;
+}
+
+/* 表单样式 */
+/* CSS */
+.form-container {
+    position: relative;
+    margin-bottom: 40px;
+    /* background: rgba(255, 255, 255, 0.3); 半透明白色背景 */
+    backdrop-filter: blur(10px); /* 背景内容模糊 */
+    -webkit-backdrop-filter: blur(10px); /* 兼容 Safari 的前缀 */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+
+.form-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/*.form-container {*/
+/*    margin-bottom: 40px;*/
+/*    background: #fff;*/
+/*    padding: 20px;*/
+/*    border-radius: 10px;*/
+/*    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);*/
+/*}*/
+.form-group {
+    margin-bottom: 40px;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    min-width: 300px;
+    padding: 15px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    /* 使容器可聚焦 */
+    outline: none;
+}
+
+/* 悬停时的特效 */
+.form-column:hover {
+    /*transform: scale(1.01); !* 轻微放大 *!;*/
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    background-color: #f9f9f9;
+}
+
+/* 聚焦时的特效，不改变背景颜色，只做边框发光效果 */
+.form-column:focus,
+.form-column:active,
+.form-column:focus-within {
+    box-shadow: 0 0 5px rgba(91, 155, 213, 0.7), 0 0 5px rgba(91, 155, 213, 0.5) inset;
+}
+
+
+#influencerLinks {
+    height: 100px; /* 可以调整这个值来延长文本框 */
+}
+
+
+.btn-secondary {
+    background-color: #36abf4;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.response-message {
+    max-height: 100px;  /* 固定高度为200px */
+    overflow-y: auto;  /* 超出内容时显示垂直滚动条 */
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    margin-left: 20px;
+}
+
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.form-row > div {
+    flex: 1;
+    min-width: 250px;
+    margin-top: 15px;
+}
+
+.form-row > div.currency-container {
+    flex: 0 0 auto; /* 不允许父容器伸展 */
+    width: 100px; /* 设置选择框的宽度 */
+}
+
+.currency-container select {
+    width: 100%; /* 使选择框充满父容器 */
+}
+
+/* 确保最后一个 `div` 没有右边距，避免布局不对齐 */
+.form-row > div:last-child {
+    margin-right: 0;
+}
+
+/*input[type="text"],*/
+/*input[type="email"],*/
+/*input[type="number"],*/
+/*input[type="date"],*/
+/*textarea,*/
+/*select {*/
+/*    width: 100%;*/
+/*    padding: 8px;*/
+/*    margin: 5px 0;*/
+/*    box-sizing: border-box;*/
+/*    border: 1px solid #ccc;*/
+/*    border-radius: 4px;*/
+/*}*/
+
+/* 确保 select, datalist input 和 input 元素的大小一致 */
+select,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="date"],
+textarea,
+input[list] {
+    width: 100%; /* 确保宽度一致 */
+    padding: 10px; /* 确保内边距一致 */
+    font-size: 14px; /* 确保字体大小一致 */
+    line-height: 1.5; /* 确保行高一致 */
+    border-radius: 5px; /* 如果需要圆角，确保一致 */
+    box-sizing: border-box; /* 确保padding不会影响元素大小 */
+    height: auto; /* 让高度自动调整 */
+    border: 1px solid #ccc;
+}
+
+/* 添加额外的样式来控制特定的元素 */
+select {
+    -webkit-appearance: none; /* 关闭浏览器默认样式，使其更加一致 */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+input[list] {
+    -webkit-appearance: none; /* 针对 datalist 关闭默认样式 */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#videoLinks {
+    height: 45px; /* 让高度自动调整 */
+}
+textarea {
+    resize: vertical;
+}
+
+.btn-primary {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #45a049;
+}
+
+.btn-secondary {
+    background-color: #36abf4;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: #e53935;
+}
+
+/* 表格样式 */
+#influencerTableContainer,
+#videoTableContainer {
+    overflow: hidden;
+    margin-top: 20px;
+    max-height: 500px; /* 控制表格的最大高度以显示15行左右 */
+    position: relative;
+    border-radius: 5px;
+}
+
+#influencerTableContainer:hover, #videoTableContainer:hover {
+    overflow-x: auto;
+    overflow-y: auto; /* 鼠标悬停时显示滚动条 */
+}
+
+/* 固定表头样式 */
+#influencerTable thead th,
+#videoTable thead th {
+    position: sticky;
+    top: -1px;
+    /*background-color: #f4f4f4;*/
+    background-color: rgba(207, 207, 207, 0.98); /* 添加透明度 */
+    z-index: 5; /* 调低 z-index，确保其他重要内容可以覆盖表头 */
+}
+
+#influencerTable,
+#videoTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+#influencerTable th, #influencerTable td,
+#videoTable th, #videoTable td {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    line-height: 1.2; /* 统一设置行高 */
+}
+
+#influencerTable th, #videoTable th {
+    background-color: #f4f4f4;
+    color: #333;
+    font-weight: bold;
+}
+
+#influencerTable tr:nth-child(even),
+#videoTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    #influencerTableContainer,
+    #videoTableContainer {
+        overflow-x: auto;
+        width: 100%;
+        margin-top: 20px;
+        max-height: 500px; /* 保持移动端也能限制高度 */
+    }
+
+    .form-container {
+        flex-direction: column;
+    }
+
+    .form-column {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+}
+
+button{
+    border-radius: 5px;
+    z-index: 999; /* 确保优先级最高，位于其他元素之上 */
+    transition: all 0.3s ease; /* 添加平滑过渡效果 */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 初始状态的阴影效果 */
+}
+button:hover{
+    transform: translateY(-1px); /* 悬浮时轻微向上移动 */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* 增强的阴影效果 */
+}
+button:active{
+    transform: translateY(1px); /* 点击时按钮略微下沉 */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15); /* 按下时的阴影效果 */
+    filter: brightness(1.1); /* 提升亮度 */
+}
+
+/* 新增数据按钮样式 */
+.add-video-data-btn {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.add-video-data-btn:hover {
+    background-color: #45a049;
+    background: linear-gradient(145deg, #43a047, #66bb6a); /* 渐变背景色 */
+
+}
+
+
+/* 弹窗样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000; /* 增加 z-index 确保弹窗优先显示 */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 5px;
+}
+
+.modal-content {
+    z-index: 1010; /* 确保模态框内容位于表头之上 */
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%;
+    border-radius: 10px;
+
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+        padding: 10px;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+}
+
+.highlighted {
+    background-color: #eab5ff; /* 高亮显示的颜色，例如浅橙色 */
+}
+/* 添加更多链接按钮颜色 */
+.btn-secondary.custom-btn {
+    background-color: #007BFF; /* 选择你喜欢的颜色 */
+    border-color: #007BFF;
+    color: white;
+}
+/* 视频数据表头分颜色 */
+.group1 {
+            background-color: #f0f8ff; /* 第一组表头的颜色，例如浅蓝色 */
+        }
+
+.group2 {
+    background-color: #f5f5f5; /* 第二组表头的颜色，例如浅灰色 */
+}
+
+.delete-btn-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.submit-reset-container {
+    display: inline-block;
+}
+.btn-secondary, .btn-danger {
+        padding: 10px 20px; /* 调整按钮的内边距 */
+        font-size: 14px; /* 调整字体大小 */
+        border: none; /* 移除边框 */
+        cursor: pointer; /* 鼠标悬停时显示为指针 */
+    }
+
+.btn-secondary {
+    background-color: #6c757d; /* 灰色背景 */
+    color: white; /* 白色文字 */
+}
+
+.btn-danger {
+    background-color: #dc3545; /* 红色背景 */
+    color: white; /* 白色文字 */
+}
+
+.btn-danger:hover {
+    /* 更深的红色用于悬停效果 */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* 增强的阴影效果 */
+    transform: translateY(-1px); /* 悬浮时轻微向上移动 */
+    /* 渐变背景色 */
+    background: #c82333 linear-gradient(145deg, #c82333, #dc3545);
+    filter: brightness(1.1); /* 提升亮度 */
+}
+
+
+
+/* 指标定义数据表样式 */
+/* 表格样式 */
+#metricsTableContainer {
+    overflow: hidden;
+    margin-top: 20px;
+    max-height: 500px; /* 控制表格的最大高度以显示15行左右 */
+    position: relative;
+}
+
+#metricsTableContainer:hover {
+    overflow-x: auto;
+    overflow-y: auto; /* 初始状态下不显示滚动条 */
+}
+
+/* 固定表头样式 */
+#metricsTable thead th {
+    position: sticky;
+    top: 0;
+    background-color: rgba(244, 244, 244, 0.9); /* 添加透明度 */
+    z-index: 5; /* 调低 z-index，确保其他重要内容可以覆盖表头 */
+}
+
+#metricsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#metricsTable th, #metricsTable td {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    line-height: 1.2; /* 统一设置行高 */
+}
+
+#metricsTable th {
+    background-color: #f4f4f4;
+    color: #333;
+    font-weight: bold;
+}
+
+#metricsTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#metricsTable {
+    font-size: 14px;
+}
+
+
+
+/* 表头分组颜色 */
+.group1 {
+    background-color: #f0f8ff; /* 与视频数据表第一组表头颜色一致 */
+}
+
+.group2 {
+    background-color: #f5f5f5; /* 与视频数据表第二组表头颜色一致 */
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    #metricsTableContainer {
+        overflow-x: auto;
+        width: 100%;
+        margin-top: 20px;
+        max-height: 500px; /* 保持移动端也能限制高度 */
+    }
+}
+
+
+/* 使用阴影和渐变的高亮效果 */
+@keyframes highlightAnimation {
+    0% {
+        border-color: #f8a020;
+        box-shadow: 0 0 0 rgba(248, 160, 32, 0.5);
+    }
+    25% {
+        border-color: #f8a42f;
+        box-shadow: 0 0 8px rgba(248, 164, 47, 0.6);
+    }
+    50% {
+        border-color: #faae45;
+        box-shadow: 0 0 12px rgba(250, 174, 69, 0.7);
+    }
+    75% {
+        border-color: #fbb85a;
+        box-shadow: 0 0 16px rgba(251, 184, 90, 0.8);
+    }
+    100% {
+        border-color: #fdc473;
+        box-shadow: 0 0 0 rgba(253, 196, 115, 0.5);
+    }
+}
+
+.highlight-animation {
+    animation: highlightAnimation 1.5s ease-in-out; /* 应用动画效果 */
+}
+
+/* 自定义 SweetAlert2 的样式 */
+/* 控制弹窗内容区域的高度和滚动条 */
+.swal-scrollable-content {
+    max-height: 200px; /* 设置最大高度为 200px，可根据需要调整 */
+    overflow-y: auto;  /* 当内容超过高度时，添加垂直滚动条 */
+    margin-bottom: 10px; /* 与下面的副标题保持间距 */
+}
+
+/* 控制链接列表的样式 */
+.link-list {
+    text-align: left;
+    list-style-type: none; /* 去掉默认的列表样式 */
+    padding: 0; /* 去掉内边距 */
+    margin: 0; /* 去掉外边距 */
+}
+
+/* 控制链接文本的字体大小 */
+.link-text {
+    font-size: 14px; /* 设置链接文本的字体大小 */
+    color: #007bff; /* 设置链接文本颜色，可根据需要调整 */
+    word-break: break-all; /* 当链接过长时换行 */
+}
+
+.swal2-popup {
+    font-size: 1.1rem;
+    border-radius: 8px;
+}
+.swal2-title {
+    color: #444;
+}
+.swal2-content {
+    color: #666;
+    font-size: 14px;
+}
+.swal2-confirm {
+    background-color: #3085d6;
+    border: none;
+    border-radius: 4px;
+}
+
+/* 定义错误消息的样式和动画 */
+.error-message {
+    color: red;
+    font-size: 14px;
+    animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+.subtitle {
+    margin-top: 1px;
+    font-style: italic;
+    color: #6c757d;
+    font-size: 16px;
+}
+
+/* 容器定位 */
+.textarea-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* 错误提示样式 */
+.error-tooltip {
+    display: none;
+    position: absolute;
+    /*top: 100%; !* 紧贴在 textarea 下方 *!*/
+    /*left: 0;*/
+    background-color: #818181;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 10;
+    white-space: pre-wrap;
+    /*max-width: 250px;*/
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* 显示错误提示 */
+.error-tooltip.show {
+    display: block;
+    opacity: 1;
+}
+
+/* 错误提示的小箭头 */
+.error-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent #f44336 transparent;
+}
+
+/* textarea 错误状态 */
+.addLinks-error {
+    border-color: #f44336;
+}
+
+/* 禁用按钮样式 */
+.btn:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.invalid-label {
+    color: red;
+}

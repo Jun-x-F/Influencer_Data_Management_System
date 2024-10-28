@@ -35,7 +35,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     优先缓存3秒，保证流程执行完毕之后才进行其他操作
     """
     # 忙等待
-    time.sleep(5)
+    time.sleep(2)
     send_id = None
     message = None
     error_links_list = []
@@ -74,33 +74,33 @@ def process_links(_queue: FIFODict, flag: int) -> None:
             else:
                 message_queue.add(send_id, f"获取视频信息结果 成功")
 
-        if send_id is not None:
-            order_links_deque: deque = order_links.pop(send_id)
-        else:
-            send_id, order_links_deque = order_links.dequeue()
+    if send_id is not None:
+        order_links_deque: deque = order_links.pop(send_id)
+    else:
+        send_id, order_links_deque = order_links.dequeue()
 
-        if order_links_deque is not None:
-            for order_link in order_links_deque:
-                order_ls = extract_tracking_numbers(order_link)
-                global_log.info(f"提取出来订单信息为{order_ls}, 开始执行")
-                message_queue.add(send_id, f"开始获取物流信息，订单列表为 {order_ls}")
-                res = False
-                res_message = None
-                for _ in range(3):
-                    res, res_message = track_spider(isRequest=True, order_numbers=order_ls)
-                    if res is True:
-                        break
-                    message_queue.add(send_id, f"重试获取物流信息，原因：网络问题...")
-                    time.sleep(3)
-                message_queue.add(send_id, f"获取物流信息结果为{'成功' if res is True else res_message}...")
-                if res is False:
-                    error_order_list.append(order_link)
-                    global_log.info("任务: 同步物流信息跳过, 原因获取物流信息报错...")
-                else:
-                    success_order_list.append(order_link)
-                    for order in order_ls:
-                        res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
-                        global_log.info(f"任务：同步物流信息 -> {res}")
+    if order_links_deque is not None:
+        for order_link in order_links_deque:
+            order_ls = extract_tracking_numbers(order_link)
+            global_log.info(f"提取出来订单信息为{order_ls}, 开始执行")
+            message_queue.add(send_id, f"开始获取物流信息，订单列表为 {order_ls}")
+            res = False
+            res_message = None
+            for _ in range(3):
+                res, res_message = track_spider(isRequest=True, order_numbers=order_ls)
+                if res is True:
+                    break
+                message_queue.add(send_id, f"重试获取物流信息，原因：网络问题...")
+                time.sleep(3)
+            message_queue.add(send_id, f"获取物流信息结果为{'成功' if res is True else res_message}...")
+            if res is False:
+                error_order_list.append(order_link)
+                global_log.info("任务: 同步物流信息跳过, 原因获取物流信息报错...")
+            else:
+                success_order_list.append(order_link)
+                for order in order_ls:
+                    res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
+                    global_log.info(f"任务：同步物流信息 -> {res}")
 
     if len(error_links_list) > 0:
         message_queue.add(send_id, f"以下链接都失败了\n{error_links_list}", status="error")
@@ -108,7 +108,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
         message_queue.add(send_id, f"以下物流链接都失败了\n{error_order_list}", status="error")
     else:
         message_queue.add(send_id, "成功", status="finish")
-    message_queue.to_end(send_id)
+    # message_queue.to_end(send_id)
     global_log.info(f"本次执行结果: \n成功链接共有\n{success_links_list}\n成功物流链接共有\n{success_order_list}\n失败链接共有\n{error_links_list}\n失败物流链接共有\n{error_order_list}")
 
 

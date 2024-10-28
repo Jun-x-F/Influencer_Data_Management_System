@@ -43,11 +43,10 @@ def has_chinese(s):
 
 def extract_number(text) -> Optional[float]:
     """提取并转换字符串中的数字"""
-    if has_chinese(text):
-        match_str = text[-1]
-        numbers = convert_words_to_numbers.get(match_str)  # 默认为 1 如果未找到
-        if numbers is None:
-            raise ValueError(f"字段替换数字报错 {text} {match_str}")
+    match_str = text[-1]
+    numbers = convert_words_to_numbers.get(match_str)  # 默认为 1 如果未找到
+    global_log.info(f"extract_number --> {text, numbers}")
+    if has_chinese(text) or numbers is not None:
         return clean_and_convert(text[:-1]) * numbers
     else:
         return clean_and_convert(text)
@@ -61,12 +60,13 @@ def get_like_count(page: Page, data_str):
     if "赞" in like_count_str:
         like_count_str = "0"
 
-    if "12345678901234567890123456789" in like_count_str:
+    if "12345678901234567890123456789" in like_count_str or "this" in like_count_str:
         aria_label = page.query_selector(
             '//like-button-view-model/toggle-button-view-model/button-view-model['
             '@class="yt-spec-button-view-model"]/button').get_attribute(
             "aria-label")
         like_count_str = aria_label.split(" ")[1]
+    global_log.info(f"点赞的str -> {like_count_str}")
     like_count = extract_number(like_count_str)
     return like_count
 

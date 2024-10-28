@@ -117,8 +117,7 @@ def get_ins_info(ws_id, url, code):
         cookies_str = redis_conn.get_value("ins_cookies")
         if cookies_str is not None:
             _cookies = json.loads(cookies_str)
-
-        get_ins_info_context.add_cookies(_cookies)
+            get_ins_info_context.add_cookies(_cookies)
         get_ins_info_context.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
         )

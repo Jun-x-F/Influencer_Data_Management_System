@@ -48,5 +48,10 @@ def grade_criteria(platform: str, data: int) -> str:
 # Convert words to numbers
 convert_words_to_numbers = {
     "万": 10000,
-    "k": 1000
+    "m": 10000,
+    "M": 10000,
+    "k": 1000,
+    "K": 1000,
+    "千": 1000,
+
 }

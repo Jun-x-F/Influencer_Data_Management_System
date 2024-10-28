@@ -4,12 +4,13 @@ from collections import deque
 
 import pandas as pd
 from flask import Blueprint, request, jsonify, current_app
-from sqlalchemy import text, and_
+from sqlalchemy import text, and_, inspect
 
 from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
 from spider.config.config import order_links, submitted_video_links, message_queue
-from spider.sql.data_inner_db import select_video_urls
+from spider.sql.data_inner_db import select_video_urls, add_InfluencersVideoProjectData_To_Lock, \
+    delete_InfluencersVideoProjectData, add_InfluencersVideoProjectData, update_InfluencersVideoProjectData
 from spider.template.spider_db_template import InfluencersVideoProjectData
 from utils import determine_platform
 
@@ -648,6 +649,24 @@ class Video:
             return jsonify({'error': str(e)}), 500
 
     @staticmethod
+    @video_bp.route('/get_logistics_all', methods=['GET'])
+    def get_logistics_all():
+        DATABASE = 'marketing'
+        sql_t = 'logistics_information'
+        try:
+            data = ReadDatabase(DATABASE,
+                                f'SELECT * FROM {sql_t} order by id desc').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            # 处理空值和特殊值
+            # 处理 NaN 和 inf 值
+            data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+
+            # 将 DataFrame 转换为字典列表
+            result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @staticmethod
     @video_bp.route('/get_manager_all', methods=['GET'])
     def get_manager_all():
         DATABASE = 'marketing'
@@ -783,3 +802,172 @@ class Video:
         except Exception as e:
             current_app.logger.error(f"删除过程中发生错误: {e}")
             return jsonify({'message': f'删除过程中发生错误: {e}'}), 500
+
+    @staticmethod
+    @video_bp.route('/api/add_data', methods=['POST'])
+    def api_add_data():
+        try:
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            # data is list
+            data = request_data.get("data")
+            logistics_number = ""
+            video_url = ""
+            for item in data:
+                logistics_number = item.get("logistics_number")
+                video_url = item.get("video_url")
+            res, code = add_InfluencersVideoProjectData_To_Lock(data)
+
+            if video_url is not None and video_url != '':
+                url_pattern = re.compile(r'^(http|https)://')
+                if not url_pattern.match(video_url):
+                    return jsonify({'success': False, 'message': '无效的URL格式。'}), 400
+
+                # Determine platform based on URL
+                platform_from_link = determine_platform(video_url)
+                if not platform_from_link:
+                    return jsonify({'success': False, 'message': '不支持的平台。'}), 400
+
+                # Add submitted_video_links link
+                send_id_links: deque = submitted_video_links.get(uid, deque())
+                message_queue.add(uid, f"接收到平台链接为 {video_url}")
+                if video_url in send_id_links:
+                    return jsonify({'success': True, 'message': f'链接{video_url} 存在队列中, 请等待'}), 200
+                send_id_links.append(video_url)
+                submitted_video_links[uid] = send_id_links
+
+            # 将物流订单添加到物流信息队列里面
+            if logistics_number != '' and logistics_number is not None:
+                send_order_links: deque = order_links.get(uid, deque())
+                message_queue.add(uid, f"接收到物流订单为 {logistics_number}")
+                if logistics_number in send_order_links:
+                    message_queue.add(uid,
+                                      f"物流订单链接 {logistics_number} 已经在待执行中")
+                else:
+                    send_order_links.append(logistics_number)
+                    order_links[uid] = send_order_links
+            return jsonify(res), code
+        except Exception as e:
+            global_log.error()
+            return {'success': False, 'message': str(e)}, 500
+
+    @staticmethod
+    @video_bp.route('/api/delete_data', methods=['POST'])
+    def api_delete_data():
+        try:
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            parentId = request_data.get("parentId")
+            global_log.info(parentId)
+            filter = and_(
+                InfluencersVideoProjectData.parentId == parentId
+            )
+            delete_InfluencersVideoProjectData({"parentId": parentId}, isFilters=False, filters=filter)
+            return jsonify({'success': True, 'message': '删除成功'}), 200
+        except  Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @staticmethod
+    @video_bp.route('/api/update_data', methods=['POST'])
+    def api_update_data():
+        try:
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            data = request_data.get("data")
+            parentId = request_data.get("parentId")
+            res = select_video_urls(select_=InfluencersVideoProjectData.id,
+                                    filter_=InfluencersVideoProjectData.parentId == parentId,
+                                    order_=InfluencersVideoProjectData.id)
+            sync_other_cols = select_video_urls(select_=InfluencersVideoProjectData,
+                                                filter_=InfluencersVideoProjectData.parentId == parentId,
+                                                order_=InfluencersVideoProjectData.id,
+                                                isAll=False)
+            old = []
+            video_url = ""
+            video_id = ""
+            logistics_number = ""
+            global_log.info(uid)
+            for item in data:
+                global_log.info(item)
+                item_id = item.get("id", None)
+                video_id = item_id
+                video_url = item.get("video_url")
+                logistics_number = item.get("trackingNumber")
+                old.append(item_id)
+                # if item_id not in res:
+                if item_id is None:
+
+                    global_log.info("insert to datas")
+                    # Convert existing record to dictionary, excluding SQLAlchemy internal attributes
+                    add_data = InfluencersVideoProjectData(**item)
+                    mapper = inspect(InfluencersVideoProjectData)
+                    # 获得映射关系
+                    mapped_columns = mapper.attrs.keys()
+                    # Merge existing data with item, keeping existing values for missing keys
+                    for col_name in mapped_columns:
+                        if not hasattr(add_data, col_name):
+                            global_log.info(f"错误: 'add_data' 对象没有属性 '{col_name}'")
+                            continue
+                            # 检查 sync_other_cols 是否具有该属性
+                        if not hasattr(sync_other_cols, col_name):
+                            global_log.info(f"错误: 'sync_other_cols' 对象没有属性 '{col_name}'")
+                            continue
+                        add_value = getattr(add_data, col_name, None)
+                        if add_value is None and col_name != "id":
+                            sync_value = getattr(sync_other_cols, col_name, None)
+                            # 设置到 add_data 中
+                            setattr(add_data, col_name, sync_value)
+                            global_log.info(f"同步列 '{col_name}': 设置为 {sync_value}")
+                    add_InfluencersVideoProjectData(add_data)
+                else:
+                    global_log.info("update to datas")
+                    update_InfluencersVideoProjectData(item)
+
+            for rm_item in res:
+                if rm_item in old:
+                    continue
+                global_log.info(rm_item)
+                delete_InfluencersVideoProjectData({"id": rm_item})
+
+            # 查询是否视频链接是否相同
+            select_video_res = select_video_urls(InfluencersVideoProjectData.video_url,
+                                                 and_(
+                                                     InfluencersVideoProjectData.video_url == video_url,
+                                                     InfluencersVideoProjectData.id == video_id
+                                                 ),
+                                                 InfluencersVideoProjectData.id)
+            global_log.info(f"检查链接是否存在：{select_video_res}")
+            select_video_res = []
+            if video_url is not None and video_url != '' and len(select_video_res) == 0:
+                url_pattern = re.compile(r'^(http|https)://')
+                if not url_pattern.match(video_url):
+                    return jsonify({'success': False, 'message': '无效的URL格式。'}), 400
+
+                # Determine platform based on URL
+                platform_from_link = determine_platform(video_url)
+                if not platform_from_link:
+                    return jsonify({'success': False, 'message': '不支持的平台。'}), 400
+
+                # Add submitted_video_links link
+                send_id_links: deque = submitted_video_links.get(uid, deque())
+                message_queue.add(uid, f"接收到平台链接为 {video_url}")
+                if video_url in send_id_links:
+                    return jsonify({'success': True, 'message': f'链接{video_url} 存在队列中, 请等待'}), 200
+                send_id_links.append(video_url)
+                submitted_video_links[uid] = send_id_links
+
+            # 将物流订单添加到物流信息队列里面
+            if logistics_number != '' and logistics_number is not None:
+                send_order_links: deque = order_links.get(uid, deque())
+                message_queue.add(uid, f"接收到物流订单为 {logistics_number}")
+                if logistics_number in send_order_links:
+                    message_queue.add(uid,
+                                      f"物流订单链接 {logistics_number} 已经在待执行中")
+                else:
+                    send_order_links.append(logistics_number)
+                    order_links[uid] = send_order_links
+            return jsonify({'success': True, 'message': 'success'}), 200
+        except Exception as e:
+            global_log.error()
+            return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500
+

@@ -554,7 +554,7 @@ def thread_work():
             put_order_number_in_queue()
     shutdown_event.set()
     global_log.info("任务执行完毕，等待队列同步数据中...")
-    recept_event.wait(timeout=60 * 3)
+    recept_event.wait(timeout=60 * 6)
 
 
 def run(isRequest: bool = False, order_numbers: list = None):
@@ -585,4 +585,4 @@ def run(isRequest: bool = False, order_numbers: list = None):
 
 
 if __name__ == '__main__':
-    run(True, ["UJ712686735YP"])
+    run(True, ["UJ697985063YP"])

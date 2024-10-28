@@ -53,6 +53,5 @@ class Message:
 if __name__ == '__main__':
     a = Message("1", "test")
     print(a)
-    print(a.get_status())
     print("1" == a)
     print(a.message)

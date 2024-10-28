@@ -8,7 +8,7 @@
 import threading
 import time
 from queue import Queue
-from typing import Optional
+from typing import Optional, Dict, Any, List, Union
 
 from spider.template.class_message_template import Message
 
@@ -68,11 +68,29 @@ class Notice:
                 cur_message: Message = message_queue.get()
                 cur.append({
                     "message": cur_message.message,
-                    "status": cur_message.status
+                    "status": cur_message.status,
+                    "timestamp": cur_message.timestamp,
                 })
             message_info["message_queue"] = message_queue
             self.__message_dict[uid] = message_info
         return cur
+
+    def getNew(self, uid: Any) -> list[Any]:
+        """获取同一个uid下面的所有消息（不移除队列中的消息）"""
+        ls = []
+        with self.lock:
+            info = self.__message_dict[uid]
+            # 深拷贝消息队列中的消息，以防外部修改
+            message_queue_list = list(info["message_queue"].queue)
+            ls = [
+                {
+                    "message": msg.message,
+                    "status": msg.status,
+                    "timestamp": msg.timestamp
+                }
+                for msg in message_queue_list
+            ]
+        return ls
 
     def delete(self, uid):
         """根据uid进行删除整个dict"""
@@ -89,6 +107,8 @@ class Notice:
             for uid, message_info in self.__message_dict.items():
                 update_time = message_info.get("update_time")
                 ex = cur_time - update_time
+                print(ex > self.__message_time_out)
+                print(self.__message_time_out)
                 if ex > self.__message_time_out:
                     cur.append(uid)
         return cur
@@ -99,6 +119,41 @@ class Notice:
         if _cur is None:
             return "wait"
         return _cur["status"]
+
+    def get_all(self) -> Dict[Any, Dict[str, Any]]:
+        """
+        获取所有不同uid下面的数据。
+        返回格式：
+        {
+            uid1: {
+                "message_queue": [Message1, Message2, ...],
+                "status": "doing",
+                "update_time": 1234567890
+            },
+            uid2: {
+                ...
+            },
+            ...
+        }
+        """
+        all_data = {}
+        with self.lock:
+            for uid, info in self.__message_dict.items():
+                # 深拷贝消息队列中的消息，以防外部修改
+                message_queue_list = list(info["message_queue"].queue)
+                all_data[uid] = {
+                    "message_queue": [
+                        {
+                            "message": msg.message,
+                            "status": msg.status,
+                            "timestamp": msg.timestamp
+                        }
+                        for msg in message_queue_list
+                    ],
+                    "status": info["status"],
+                    "update_time": info["update_time"]
+                }
+        return all_data
 
     def __repr__(self):
         # 构造包含队列内容的字典表示
@@ -114,12 +169,14 @@ class Notice:
 
 
 if __name__ == '__main__':
-    test_notice_queue = Notice(5 * 60)
+    test_notice_queue = Notice(6 * 60 * 60)
     test_notice_queue.add("test", "test")
     test_notice_queue.add("test2", "test")
     test_notice_queue.add("test2", "test")
     test_notice_queue.add("test3", "test")
     test_notice_queue.add("test3", "test", "finish")
-    print(test_notice_queue.get("test3"))
-    print(test_notice_queue)
-    print(test_notice_queue.is_finished("test3"))
+    # print(test_notice_queue.get("test3"))
+    # time.sleep(7)
+    print(test_notice_queue.info.get("test").get("message_queue"))
+    print(test_notice_queue.get_all())
+    print(test_notice_queue.info)

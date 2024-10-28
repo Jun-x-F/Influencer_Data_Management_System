@@ -135,7 +135,7 @@ class Task:
                 except Exception:
                     ...
 
-                while True:
+                for _ in range(5):
                     fold = page.query_selector('//div[@id="above-the-fold"]')
 
                     if fold is not None:
@@ -195,9 +195,9 @@ class Task:
         self.get_country_item()
         self.page.wait_for_timeout(self.human_wait_time)
         self.get_10_video_list()
-        # 增加并发速 5 -> 稳定
+        # 增加并发速 10 -> 稳定
         while self.urls_list.empty() is False:
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
 
                 future_to_url = {}
                 """映射 Future 对象到任务"""
@@ -212,9 +212,11 @@ class Task:
                     try:
                         # 超时5分钟
                         future.result(timeout=60 * 5)  # 确保获取任务的结果并处理异常
-                    except RetryableError:
-                        print(retry_url)
-                        self.urls_list.put(retry_url)
+                    except RetryableError as re:
+                        global_log.error(f"{retry_url} --> RetryableError {str(re)}")
+                        # 更换一个
+                        self.close_comment_flag = self.close_comment_flag + 1
+                        self.urls_list.put(self.all_urls_list[self.close_comment_flag])
                     except Exception as e:
                         raise
 
