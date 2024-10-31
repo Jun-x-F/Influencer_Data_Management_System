@@ -10,14 +10,19 @@ import threading
 import time
 from collections import deque
 
+from sqlalchemy import and_
+
 from log.logger import global_log
 from spider import run_spider
 from spider.config.config import order_links, submitted_influencer_links, submitted_video_links, message_queue
-from spider.sql.data_inner_db import sync_logistics_information_sheet_to_InfluencersVideoProjectData
+from spider.sql.data_inner_db import select_video_urls, \
+    sync_logistics_information
 from spider.template.class_dict_template import FIFODict
+from spider.template.spider_db_template import logistics_information_sheet, InfluencersVideoProjectData
 from spider.track.track_spider import run as track_spider
 
 threading_influencersVideo = threading.Event()
+threading_logistics = threading.Event()
 
 
 def extract_tracking_numbers(text):
@@ -81,7 +86,7 @@ def process_links(_queue: FIFODict, flag: int) -> None:
 
     if order_links_deque is not None:
         for order_link in order_links_deque:
-            order_ls = extract_tracking_numbers(order_link)
+            order_ls = extract_tracking_numbers(order_link.strip())
             global_log.info(f"提取出来订单信息为{order_ls}, 开始执行")
             message_queue.add(send_id, f"开始获取物流信息，订单列表为 {order_ls}")
             res = False
@@ -98,10 +103,10 @@ def process_links(_queue: FIFODict, flag: int) -> None:
                 global_log.info("任务: 同步物流信息跳过, 原因获取物流信息报错...")
             else:
                 success_order_list.append(order_link)
-                for order in order_ls:
-                    res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
-                    global_log.info(f"任务：同步物流信息 -> {res}")
-
+            #     for order in order_ls:
+            #         res = sync_logistics_information_sheet_to_InfluencersVideoProjectData(order)
+            #         global_log.info(f"任务：同步物流信息 -> {res}")
+        threading_logistics.set()
     if len(error_links_list) > 0:
         message_queue.add(send_id, f"以下链接都失败了\n{error_links_list}", status="error")
     elif len(error_order_list) > 0:
@@ -109,7 +114,8 @@ def process_links(_queue: FIFODict, flag: int) -> None:
     else:
         message_queue.add(send_id, "成功", status="finish")
     # message_queue.to_end(send_id)
-    global_log.info(f"本次执行结果: \n成功链接共有\n{success_links_list}\n成功物流链接共有\n{success_order_list}\n失败链接共有\n{error_links_list}\n失败物流链接共有\n{error_order_list}")
+    global_log.info(
+        f"本次执行结果: \n成功链接共有\n{success_links_list}\n成功物流链接共有\n{success_order_list}\n失败链接共有\n{error_links_list}\n失败物流链接共有\n{error_order_list}")
 
 
 def process_video_links():
@@ -139,3 +145,67 @@ def cleanNoneNotice():
         for expired_item in expired_list:
             message_queue.delete(expired_item)
         time.sleep(10)
+
+
+def syncLogisticsDataBase():
+    """同步物流信息的队列"""
+    sync_mapping = {}
+    xxx = set()
+    while True:
+        try:
+            if threading_logistics.is_set():
+                # 忙加载，等待1分钟后开始同步
+                time.sleep(60 * 1)
+                res = select_video_urls(logistics_information_sheet,
+                                        None,
+                                        logistics_information_sheet.number)
+                cur_obj = {}
+                for item in res:
+                    cur_obj[item.number] = item.prior_status_zh
+
+                trackList = select_video_urls(InfluencersVideoProjectData.trackingNumber,
+                                              and_(InfluencersVideoProjectData.trackingNumber != None,
+                                                   InfluencersVideoProjectData.trackingNumber != "",
+                                                   InfluencersVideoProjectData.trackingNumber != "test"
+                                                   ),
+                                              InfluencersVideoProjectData.id)
+                toData = []
+                for track in trackList:
+                    if "t.17track.net" not in track:
+                        continue
+                    if track in xxx or track in sync_mapping.keys():
+                        continue
+                    else:
+                        xxx.add(track)
+                    obj = {
+                        "trackingNumber": track,
+                    }
+                    # progressLogistics
+                    for key, value in cur_obj.items():
+                        if key in track:
+                            cur_value = obj.get("progressLogistics", None)
+                            if cur_value is None:
+                                obj["progressLogistics"] = value
+                                continue
+
+                            if cur_value != value and cur_value == "运输途中":
+                                continue
+                            else:
+                                if value in ["交付",
+                                             "到达待取",
+                                             "成功签收"]:
+                                    sync_mapping[track] = sync_mapping.get(track, 0) + 1
+                                obj["progressLogistics"] = value
+                    toData.append(obj)
+                for item in toData:
+                    global_log.info(sync_logistics_information(item))
+                threading_logistics.clear()
+        except Exception:
+            global_log.error()
+        finally:
+            # 每10s判断一次
+            time.sleep(10)
+
+
+if __name__ == '__main__':
+    syncLogisticsDataBase()

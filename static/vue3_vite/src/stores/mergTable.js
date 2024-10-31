@@ -1,6 +1,6 @@
 // src/stores/mergeTableData.js
-import { defineStore } from "pinia";
-import { ref } from "vue";
+import {defineStore} from "pinia";
+import {ref} from "vue";
 
 export const useMergeTableData = defineStore("mergeTableData", () => {
   const tableMapping = ref({});
@@ -19,7 +19,9 @@ export const useMergeTableData = defineStore("mergeTableData", () => {
 
   function findMinKey(keys, mapping) {
     return keys.reduce((minKey, currentKey) => {
-      return mapping[currentKey].rowIndex < mapping[minKey].rowIndex ? currentKey : minKey;
+      return mapping[currentKey].rowIndex < mapping[minKey].rowIndex
+        ? currentKey
+        : minKey;
     }, keys[0]);
   }
 
@@ -60,11 +62,14 @@ export const useMergeTableData = defineStore("mergeTableData", () => {
    * @param {String} mainKey - 主合并列名，例如 "parentId"
    * @returns {Object} - 合并后的列映射
    */
-  const processMerge = function processMergeColumns(mergeColumns, tableData, mainKey) {
+  const processMerge = function processMergeColumns(
+    mergeColumns,
+    tableData,
+    mainKey
+  ) {
     // 记录主Key合并时的 rowIndex 分组
-    console.log("tableData",tableData);
+    console.log("tableData length", tableData.length);
 
-    
     const parentIdMergedGroups = [];
     const mapping = {};
 

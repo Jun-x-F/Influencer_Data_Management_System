@@ -1,7 +1,7 @@
-import { defineStore } from "pinia";
-import { ref } from "vue";
-import { useDbStore } from "@/stores/init";
-import { initVideoData } from "@/stores/init.js";
+import {defineStore} from "pinia";
+import {ref} from "vue";
+import {useDbStore} from "@/stores/init";
+import {initVideoData} from "@/stores/init.js";
 
 export const updateVideoData = defineStore("updateVideoData", () => {
   const initVideo = initVideoData();
@@ -15,8 +15,8 @@ export const updateVideoData = defineStore("updateVideoData", () => {
   const videoType = ref([]);
   const productHierarchicalData = ref([]);
   const parentAndChildrenMapping = ref({});
-  // 初始化层级结构和品牌映射
-  const hierarchicalData = [];
+  const parametricIndicatorsId = ref();
+  const influencerTableName = ref();
 
   /**
    * 初始化下拉框的数据
@@ -28,6 +28,7 @@ export const updateVideoData = defineStore("updateVideoData", () => {
       const parametricIndicators = await dbHelper.getAllData(
         "parametricIndicators"
       );
+      const influencerTable = await dbHelper.getAllData("influencerTable");
       const videoTable = await dbHelper.getAllData("videoTable");
       // 提取唯一的品牌、项目和产品
       const uniqueBrands = new Set();
@@ -37,8 +38,15 @@ export const updateVideoData = defineStore("updateVideoData", () => {
       const uniqueInfluencerNames = new Set();
       const uniqueVideoManager = new Set();
       const uniqueType = new Set();
+      const uniqueParametricIndicatorsId = new Set();
+      const uniqueInfluencerTableName = new Set();
+      // 初始化层级结构和品牌映射
+      const hierarchicalData = [];
 
       parametricIndicators.forEach((row) => {
+        if (row["id"]) {
+          uniqueParametricIndicatorsId.add(row["id"]);
+        }
         if (row["品牌"]) {
           uniqueBrands.add(row["品牌"]);
         }
@@ -50,13 +58,9 @@ export const updateVideoData = defineStore("updateVideoData", () => {
         }
       });
 
-      // 初始化层级结构
-      const hierarchy = {};
-
       const brandMap = new Map();
       const parentAndChildrenMap = new Map();
 
-      // 遍历数据并构建层级
       parametricIndicators.forEach((row) => {
         const brand = row["品牌"];
         const project = row["项目"];
@@ -64,41 +68,56 @@ export const updateVideoData = defineStore("updateVideoData", () => {
 
         if (!brand) return; // 如果没有品牌信息，则跳过
 
-        // 检查品牌是否已存在
-        let brandObj;
-        if (brandMap.has(brand)) {
-          brandObj = brandMap.get(brand);
-        } else {
-          brandObj = { value: brand, label: brand, children: [] };
-          hierarchicalData.push(brandObj);
+        // 如果list里面存在有某个指定的值，说明重复
+        const xx = hierarchicalData.some(
+          (curBrand) => curBrand.value === brand
+        );
+        // 处理品牌
+        if (!brandMap.has(brand) && !xx) {
+          const brandObj = { value: brand, label: brand, children: [] };
           brandMap.set(brand, brandObj);
-          brandObj.projectMap = new Map(); // 临时用于快速查找项目
+          hierarchicalData.push(brandObj);
         }
 
+        const brandObj = brandMap.get(brand);
+
         if (project) {
-          // 检查项目是否已存在
-          let projectObj;
-          if (brandObj.projectMap.has(project)) {
-            projectObj = brandObj.projectMap.get(project);
-          } else {
-            projectObj = { value: project, label: project, children: [] };
+          // 使用一个内部的 Map 来存储项目，避免品牌下重复项目
+          if (!brandObj.projectMap) {
+            brandObj.projectMap = new Map();
+          }
+
+          if (!brandObj.projectMap.has(project)) {
+            const projectObj = { value: project, label: project, children: [] };
             brandObj.children.push(projectObj);
             brandObj.projectMap.set(project, projectObj);
           }
 
+          const projectObj = brandObj.projectMap.get(project);
+
           if (product) {
-            // 检查产品是否已存在
-            if (!projectObj.children.some((p) => p.value === product)) {
+            // 检查产品是否已存在于项目下
+            const productExists = projectObj.children.some(
+              (p) => p.value === product
+            );
+            if (!productExists) {
               projectObj.children.push({ value: product, label: product });
             }
           }
         }
       });
 
-      // 清理临时映射
+      // 移除临时的 projectMap 属性
       hierarchicalData.forEach((brand) => {
         delete brand.projectMap;
       });
+      influencerTable.sort((a, b) => b.id - a.id);
+      influencerTable.forEach((row) => {
+        if (row["红人全名"]) {
+          uniqueInfluencerTableName.add(row["红人全名"]);
+        }
+      });
+
       videoTable.forEach((row) => {
         if (row["parentId"]) {
           const parentId = row["parentId"];
@@ -117,6 +136,7 @@ export const updateVideoData = defineStore("updateVideoData", () => {
         }
         if (row["红人名称"]) {
           uniqueInfluencerNames.add(row["红人名称"]);
+          // uniqueInfluencerTableName.add(row["红人名称"]);
         }
         if (row["负责人"]) {
           uniqueVideoManager.add(row["负责人"]);
@@ -130,6 +150,10 @@ export const updateVideoData = defineStore("updateVideoData", () => {
         (a, b) => b - a
       );
 
+      let uniqueParametricIndicatorsIdSort = Array.from(
+        uniqueParametricIndicatorsId
+      ).sort((a, b) => b - a);
+
       videobrand.value = Array.from(uniqueBrands);
       videoProjectName.value = Array.from(uniqueProjects);
       productOptions.value = Array.from(uniqueProducts);
@@ -137,6 +161,8 @@ export const updateVideoData = defineStore("updateVideoData", () => {
       videoInfluencerNameList.value = Array.from(uniqueInfluencerNames);
       videoManager.value = Array.from(uniqueVideoManager);
       videoType.value = Array.from(uniqueType);
+      influencerTableName.value = Array.from(uniqueInfluencerTableName);
+      parametricIndicatorsId.value = uniqueParametricIndicatorsIdSort;
       productHierarchicalData.value = hierarchicalData;
       parentAndChildrenMapping.value = parentAndChildrenMap;
     } catch (error) {
@@ -179,8 +205,10 @@ export const updateVideoData = defineStore("updateVideoData", () => {
   };
 
   function extractTrackingNumbersByParam(url) {
+    // 去除 URL 中的所有空格
+    const cleanedUrl = url.replace(/\s+/g, "");
     const regex = /nums=([A-Z0-9,]+)/;
-    const match = url.match(regex);
+    const match = cleanedUrl.match(regex);
     if (match && match[1]) {
       return match[1].split(",");
     }
@@ -192,24 +220,46 @@ export const updateVideoData = defineStore("updateVideoData", () => {
     await initVideo.initialize();
     const videoTable = await dbHelper.getAllData("videoTable");
     const logistics = await dbHelper.getAllData("logistics");
+    const influencerTable = await dbHelper.getAllData("influencerTable");
+    const logisticsMap = new Map(
+      logistics.map((info) => [info.订单号, info.物流状态_中文])
+    );
+    const influencerMap = new Map(
+      influencerTable.map((info) => [info.红人名称, info])
+    );
+
     videoTable.forEach((row) => {
       if (row.物流单号) {
         const trackingNumbersByParam = extractTrackingNumbersByParam(
           row.物流单号
         );
         let stat = "";
-        logistics.forEach((info) => {
-          const res = trackingNumbersByParam.some(
-            (number) => number === info.订单号
-          );
-          if (res) {
-            stat = stat + info.订单号 + ": " + info.物流状态_中文 + "\n";
+        trackingNumbersByParam.forEach((number) => {
+          const logisticsStatus = logisticsMap.get(number);
+          if (logisticsStatus) {
+            stat += `${number}: ${logisticsStatus}\n`;
           }
         });
         row.物流进度 = stat;
       }
+      if (row.红人全称) {
+        const influencerInfo = influencerMap.get(row.红人全称);
+        if (influencerInfo) {
+          row.平台 = influencerInfo.平台;
+          row["主页视频"] = influencerInfo.红人主页地址;
+        }
+      }
     });
+
     return videoTable;
+  };
+
+  const gotMeirtcsData = async function gotMeirtcsDataFunction() {
+    await dbHelper.openDatabase();
+    const parametricIndicators = await dbHelper.getAllData(
+      "parametricIndicators"
+    );
+    return parametricIndicators;
   };
 
   // 需要的子字符串列表
@@ -255,11 +305,14 @@ export const updateVideoData = defineStore("updateVideoData", () => {
     videoType,
     productHierarchicalData,
     parentAndChildrenMapping,
+    parametricIndicatorsId,
+    influencerTableName,
 
     initializeDropdownsData,
     selectDataById,
     gotTableData,
     checkLink,
     checkLogisticsNumber,
+    gotMeirtcsData,
   };
 });

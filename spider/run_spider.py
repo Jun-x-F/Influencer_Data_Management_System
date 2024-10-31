@@ -53,6 +53,8 @@ def run_task(spider_class, url, ws_id=None):
     with sync_playwright() as playwright:
         browser, context = setup_browser(playwright, ws_id)
         spider_class.Task(browser, context).run(url)
+        context.close()
+        browser.close()
 
 
 def get_platform(url):

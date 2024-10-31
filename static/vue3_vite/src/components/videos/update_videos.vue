@@ -7,12 +7,12 @@
           <div class="form-row">
             <AutocompleteInput v-model="selectedValue" :placeholder="'请输入视频唯一ID'"
               :dataList="updateVideo.videoUniqueIdList" label="唯一Id" required @select="handleItemSelect"
-              :wrapperClass="validationStatus.selectedValue" />
+              :wrapperClass="validationStatus.selectedValue" ref="tips1" />
             <!-- <Multiselect /> -->
             <CascaderSelector v-model="selectedProduct" :placeholder="'请输入产品'"
               :options="updateVideo.productHierarchicalData" :cascaderProps="cascaderProps" label="品牌-项目-产品"
               :wrapperClass="validationStatus.selectedProduct" @select="handleItemSelect"
-              :dynamicMarginTop="dynamicMarginTop" tagsWith="415px" required />
+              :dynamicMarginTop="dynamicMarginTop" tagsWith="415px" required ref="tips2" />
             <AutocompleteInput v-model="selectManager" :placeholder="'请选择一个负责人'" :dataList="updateVideo.videoManager"
               label="负责人:" required @select="handleItemSelect" :wrapperClass="validationStatus.selectManager" />
             <AutocompleteInput v-model="selectInfluencer" :placeholder="'选择或输入红人名称'"
@@ -22,11 +22,11 @@
 
           <div class="form-row">
             <CustomInput v-model="videoLinks" label="视频链接:" :placeholder="'请输入视频链接'"
-              :wrapperClass="validationStatus.videoLinks" />
+              :wrapperClass="validationStatus.videoLinks" ref="tips3" />
             <AutocompleteInput v-model="videoProgress" :placeholder="'请输入合作进度'" :dataList="videoProgressList"
               label="合作进度:" required @select="handleItemSelect" :wrapperClass="validationStatus.videoProgress" />
             <CustomInput v-model="videoLogisticsNumber" label="物流链接:" :placeholder="'请输入物流链接'"
-              :wrapperClass="validationStatus.videoLogisticsNumber" />
+              :wrapperClass="validationStatus.videoLogisticsNumber" ref="tips4" />
             <AutocompleteInput v-model="videoType" :placeholder="'请选择一个类型'" :dataList="updateVideo.videoType"
               label="类型:" @select="handleItemSelect" :wrapperClass="validationStatus.videoType" />
           </div>
@@ -58,22 +58,45 @@
       <div style="position: relative; width: 100%">
         <div style="display: flex; justify-content: flex-start; margin-bottom: 10px;margin-top: 10px;">
           <!-- <button type="submit" class="btn-primary">提交视频</button> -->
-          <CascaderSubmit @update="updateData" />
+          <CascaderSubmit @update="updateData" ref="tips5" />
           <AlterMessage :loading="loading" v-model:modelValue="isDialogVisible" title="Tips"
             :errorMessage="errorMessage" width="500px" />
 
-          <CascaderReset @reset="handleReset" />
-          <cascaderTimestamp />
-          <CascaderDelete @click="deleteData" />
+          <CascaderReset @reset="handleReset" ref="tips6" />
+          <cascaderTimestamp ref="tips7" />
+          <el-button type="info" @click="openTips = true" style="margin-left: 15px;">提示</el-button>
+          <CascaderDelete @click="deleteData" ref="tips8" />
 
         </div>
-        <!-- <div style="display: flex; justify-content: flex-end;"> -->
-
-        <!-- <button type="button" id="deleteVideoData" class="btn-danger">
-            删除
-          </button> -->
-        <!-- </div> -->
       </div>
+      <el-tour v-model="openTips">
+        <el-tour-step :target="tips1?.$el" title="唯一Id">
+          <span>
+            1. 更新或者是删除数据的时候，必须要有它！！！
+          </span><br />
+          <span>
+            2. 新增数据需要到新增板块！！！
+          </span>
+        </el-tour-step>
+        <el-tour-step :target="tips2?.$el" title="品牌-项目-产品">
+          <span>
+            1. 支持多选
+          </span><br />
+          <span>
+            2. 新增的时候可以直接添加
+          </span><br />
+          <span>
+            3. 取消多余的产品的时候，直接在这里操作即可
+          </span>
+        </el-tour-step>
+        <el-tour-step :target="tips3?.$el" title="视频链接" description="这里的视频链接有格式要求！相同的视频链接不会重复爬取，默认每2天自动更新数据" />
+        <el-tour-step :target="tips4?.$el" title="物流链接" description="仅支持17track网站，每半天更新一次" />
+        <el-tour-step :target="tips5?.$el" title="提交更新" description="更新数据" />
+        <el-tour-step :target="tips6?.$el" title="重置" description="这里会重新加载所有数据，可以选择刷新页面，或者是点击这里" />
+        <el-tour-step :target="tips7?.$el" title="查看任务情况"
+          description="每个用户都会有默认的识别码，会绑定近6个小时的物流爬取情况和视频爬取情况，默认根据时间倒序排序" />
+        <el-tour-step :target="tips8?.$el" title="删除" description="根据id进行删除" />
+      </el-tour>
 
       <!-- 用于显示提交结果的元素 -->
       <!-- <div id="responseMessageVideo" class="response-message"> -->
@@ -84,9 +107,9 @@
 </template>
 <script setup>
 
-import { ref, onMounted, watch, reactive, defineEmits, defineProps } from 'vue';
-import { updateVideoData } from '@/stores/videos/update_video.js';
-import { useUserStore } from '@/stores/userInfo.js';
+import {defineEmits, onMounted, reactive, ref, watch} from 'vue';
+import {updateVideoData} from '@/stores/videos/update_video.js';
+import {useUserStore} from '@/stores/userInfo.js';
 import AutocompleteInput from '@/components/tables_element/AutocompleteInput.vue';
 import CascaderSelector from '@/components/tables_element/CascaderSelector.vue';
 import CustomInput from '@/components/tables_element/CustomInput.vue';
@@ -95,8 +118,8 @@ import CascaderSubmit from '@/components/tables_element/CascaderSubmit.vue';
 import CascaderDelete from '@/components/tables_element/CascaderDelete.vue';
 import AlterMessage from '@/components/tables_element/AlterMessage.vue';
 import cascaderTimestamp from '@/components/tables_element/cascaderTimestamp.vue';
-import { initVideoData } from '@/stores/init.js';
-import { useNotice } from '@/stores/notice.js';
+import {initVideoData} from '@/stores/init.js';
+import {useNotice} from '@/stores/notice.js';
 
 const updateVideo = updateVideoData();
 // 自动化装载用户id
@@ -121,6 +144,16 @@ const isDialogVisible = ref(false);
 const isClickId = ref(false);
 const errorMessage = ref('');
 const loading = ref(false);
+const openTips = ref(false);
+const tips1 = ref()
+const tips2 = ref()
+const tips3 = ref()
+const tips4 = ref()
+const tips5 = ref()
+const tips6 = ref()
+const tips7 = ref()
+const tips8 = ref()
+const closeInit = ref(false);
 const dynamicMarginTop = ref('-10%');
 // 定义验证状态对象
 const validationStatus = reactive({
@@ -155,6 +188,7 @@ const handleItemSelect = (item) => {
 
     updateVideo.selectDataById(item.value).then((result) => {
       // 当 Promise 被解析时执行
+      notice.setParentIdData(result.parentId);
       selectedValue.value = result.parentId;
       videoProgress.value = result.合作进度;
       videoType.value = result.类型;
@@ -168,6 +202,7 @@ const handleItemSelect = (item) => {
       videoestimatedViews.value = result.预估观看量;
       videoestimatedLaunchDate.value = result.预估上线时间;
       checkItemData();
+
       isClickId.value = true;
     })
       .catch((error) => {
@@ -184,15 +219,16 @@ const handleItemSelect = (item) => {
 // 定义 emit 方法
 const emit = defineEmits(['change_Id', 'change_product', 'reset']);
 
-watch(selectedValue, async (newValue, oldValue) => {
+watch(selectedValue, async (newValue) => {
   console.log('用户输入selectedValue id的值发生了变化：', newValue);
   // const selectRes = updateVideo.selectDataById(newValue);
   // console.log('用户的值为', selectRes);
   // 在这里执行您需要的逻辑，例如验证输入、发送请求等
   if (newValue === '' && notice.choseParentId !== null) {
+    closeInit.value = true;
     await reset();
   } else {
-    notice.setParentIdData(newValue);
+    await notice.setParentIdData(newValue);
   }
 });
 
@@ -203,6 +239,12 @@ watch(() => notice.isUpdateData, async (newValue, oldValue) => {
     await notice.setIsUpdateData(false);
   }
 })
+
+watch(selectManager, (newValue, oldValue) => {
+  console.log('selectManager', newValue);
+  // 在这里执行您需要的逻辑，例如验证输入、发送请求等
+  notice.setManagerData(newValue);
+});
 
 watch(selectedProduct, (newValue, oldValue) => {
   console.log('selectedProduct', newValue);
@@ -241,9 +283,13 @@ const reset = async () => {
     videoestimatedViews: false,
     videoestimatedLaunchDate: false,
   });
-  await initVideo.initialize();
+  if (closeInit.value === false) {
+    await initVideo.initialize();
+  }
   await updateVideo.initializeDropdownsData();
   notice.setIsResetData(true);
+  closeInit.value = false;
+
   console.log('已重置');
 }
 
@@ -285,8 +331,8 @@ async function updateData() {
     loading.value = false;
     return;
   }
-
-  if (videoLinks.value !== "") {
+  console.log("Update videoLinks.value", videoLinks.value);
+  if (videoLinks.value !== "" && videoLinks.value !== null) {
     const res = updateVideo.checkLink(videoLinks.value);
 
     if (res === false) {

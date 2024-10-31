@@ -68,7 +68,7 @@ class Task:
                 shipment = self.response_data[0].get("shipment")
                 if state != 'Failure' and shipment is not None:
                     global_log.info(f"response数据获取成功，进行解析...")
-                    # log.info(self.response_data)
+                    global_log.info(self.response_data)
                     self.get_flag = True
 
     def get_proxy_info(self):
@@ -126,9 +126,9 @@ class Task:
                 if_login = True
                 break
             except Exception as e:
-                ...
+                raise e
             finally:
-                self.page.wait_for_timeout(self.human_wait_time)
+                self.page.wait_for_timeout(self.human_wait_time * 2)
         if if_login is False:
             global_log.error(f"{_url}跳转失败，累计等待{(self.human_wait_time * 5) / 1000}秒，重新回归队列中")
             change_task_info(self.str_number, "retry")
@@ -175,6 +175,7 @@ class Task:
                     self.page.wait_for_timeout(self.human_wait_time)
                 except Exception as e:
                     global_log.info("出现网络波动情况，需要检查网络")
+                    raise e
 
             time.sleep(1)
 
@@ -303,17 +304,15 @@ class Task:
                     "description": translation_text,
                     "days_after_order": days_after_order,
                 }
-
+                global_log.info(order_cur_data)
                 if isSavePath is True:
                     cache_queue.put(order_cur_data)
                 else:
                     cache_queue.put(logistics_information_sheet(**order_cur_data))
             except Exception as e:
                 global_log.error(f"{number}解析数据出现异常，退出解析")
-                global_log.error(e)
                 global_log.error(info)
                 _cur_error_list.append(number)
-
                 continue
         if len(_cur_error_list) > 0:
             return False, _cur_error_list
@@ -508,7 +507,7 @@ def commit_to_db():
     session = db.session
     while not shutdown_event.is_set():
         commit_to_db_process(session)
-        time.sleep(5)  # 每5秒检查一次队列是否有新的数据
+        time.sleep(1)  # 每5秒检查一次队列是否有新的数据
     commit_to_db_process(session)
     recept_event.set()
 
@@ -545,7 +544,7 @@ def thread_work():
             for future in as_completed(future_to_url):
                 try:
                     # 超时3分钟
-                    future.result(timeout=60 * 5)  # 确保获取任务的结果并处理异常
+                    future.result(timeout=60 * 10)  # 确保获取任务的结果并处理异常
                 except concurrent.futures.TimeoutError:
                     global_log.error(f"{task}任务超时，加入重试队列中")
                     change_task_info(task, "retry")
@@ -580,9 +579,10 @@ def run(isRequest: bool = False, order_numbers: list = None):
             if error_queue.qsize() > 0:
                 raise ValueError(f"error_queue存在数据: {error_queue}")
         return True, "成功"
-    except Exception:
+    except Exception as e:
+        global_log.error()
         return False, "网络异常"
 
 
 if __name__ == '__main__':
-    run(True, ["UJ697985063YP"])
+    run(True, ["UJ734797804YP", "UJ730727516YP", "UJ728598353YP", "UJ728598340YP"])

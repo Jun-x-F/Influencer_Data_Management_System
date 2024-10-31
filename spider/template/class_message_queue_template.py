@@ -8,7 +8,7 @@
 import threading
 import time
 from queue import Queue
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any
 
 from spider.template.class_message_template import Message
 
@@ -107,8 +107,8 @@ class Notice:
             for uid, message_info in self.__message_dict.items():
                 update_time = message_info.get("update_time")
                 ex = cur_time - update_time
-                print(ex > self.__message_time_out)
-                print(self.__message_time_out)
+                # print(ex > self.__message_time_out)
+                # print(self.__message_time_out)
                 if ex > self.__message_time_out:
                     cur.append(uid)
         return cur

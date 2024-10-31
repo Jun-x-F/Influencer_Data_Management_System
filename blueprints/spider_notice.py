@@ -27,13 +27,17 @@ def get_notice_queue(task_name: str):
         "message": message_list
     }), 200
 
+
 @spider_notice_bp.route('/api/video_message', methods=['POST'])
 def get_video_message():
     response_data = request.json
     uid = response_data.get("uid")
     try:
         message_status = message_queue.is_finished(uid)
-        message_list = message_queue.getNew(uid)
+        try:
+            message_list = message_queue.getNew(uid)
+        except Exception as e:
+            message_list = []
         if message_list:
             global_log.info(f"接收到{uid}请求消息队列，返回{message_list}")
         return jsonify({

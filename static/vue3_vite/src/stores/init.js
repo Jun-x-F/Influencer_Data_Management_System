@@ -1,8 +1,8 @@
-import { defineStore } from "pinia";
-import { ref } from "vue";
+import {defineStore} from "pinia";
+import {ref} from "vue";
 import IndexedDBHelper from "@/stores/innodb_tools"; // 导入路径根据您的项目结构调整
 
-const index_url = "http://localhost:5000";
+const index_url = "http://172.16.11.245:5000";
 // 初始化数据表要求
 const dbName = "videoDatabase";
 const dbVersion = 5;
@@ -40,14 +40,13 @@ const storeSchemas = {
 };
 const dbHelper = new IndexedDBHelper(dbName, dbVersion, storeSchemas);
 
-export const useDbStore = defineStore('db', () => {
+export const useDbStore = defineStore("db", () => {
   return {
-    dbHelper
+    dbHelper,
   };
 });
 
 export const initVideoData = defineStore("initVideoData", () => {
-
   // 状态变量
   const videos = ref([]);
   const parametricIndicators = ref([]);
@@ -119,11 +118,7 @@ export const initVideoData = defineStore("initVideoData", () => {
     }
   };
 
-  const fetchData = async (
-    endpoint,
-    method = "GET",
-    body = null
-  ) => {
+  const fetchData = async (endpoint, method = "GET", body = null) => {
     try {
       // 构建请求选项
       const options = {
@@ -141,7 +136,7 @@ export const initVideoData = defineStore("initVideoData", () => {
       }
 
       // 发起请求
-      const send_url = index_url + endpoint
+      const send_url = index_url + endpoint;
       const response = await fetch(send_url, options);
 
       // 检查响应状态
@@ -188,6 +183,11 @@ export const initVideoData = defineStore("initVideoData", () => {
           endpoint: index_url + "/video/get_logistics_all",
           storeName: "logistics",
           stateVar: logistics,
+        },
+        {
+          endpoint: index_url + "/video/api/user/get_data",
+          storeName: "influencerTable",
+          stateVar: influencers,
         },
       ];
 
@@ -260,22 +260,39 @@ export const initVideoData = defineStore("initVideoData", () => {
     }
   };
 
-    // 更新物流信息失败
-    const updatelogistics = async () => {
-      loading.value = true;
-      error.value = null;
-      try {
-        const data = await fetchAndCache(
-          index_url + "/video/get_logistics_all",
-          "logistics"
-        );
-        logistics.value = data;
-      } catch (err) {
-        error.value = "更新物流信息失败";
-      } finally {
-        loading.value = false;
-      }
-    };
+  // 更新物流信息失败
+  const updatelogistics = async () => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const data = await fetchAndCache(
+        index_url + "/video/get_logistics_all",
+        "logistics"
+      );
+      logistics.value = data;
+    } catch (err) {
+      error.value = "更新物流信息失败";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 更新物流信息失败
+  const updateInfluencerTable = async () => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const data = await fetchAndCache(
+        index_url + "/video/api/user/get_data",
+        "influencerTable"
+      );
+      logistics.value = data;
+    } catch (err) {
+      error.value = "更新红人信息失败";
+    } finally {
+      loading.value = false;
+    }
+  };
 
   return {
     // 状态
@@ -294,6 +311,7 @@ export const initVideoData = defineStore("initVideoData", () => {
     updateProjectManager,
     updatelogistics,
     fetchAndCache,
-    fetchData
+    fetchData,
+    updateInfluencerTable,
   };
 });

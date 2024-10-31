@@ -113,3 +113,14 @@ class logistics_information_sheet(Base):
     days_after_order = Column('物流运送时长（天）', BigInteger, nullable=True, comment='物流运送时长')
     alias = Column('物流公司', VARCHAR(255), nullable=True, comment='物流公司')
     updated_at = Column('更新日期', Date, default=date.today, onupdate=date.today)
+
+
+class influencer_project_definitions(Base):
+    __tablename__ = 'influencer_project_definitions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    brand = Column('品牌', VARCHAR(255), nullable=True, comment='订单号')
+    project = Column('项目', VARCHAR(255), nullable=True, comment='物流状态')
+    product = Column('产品', VARCHAR(255), nullable=True, comment='物流状态_中文')
+    updated_at = Column('更新日期', Date, default=date.today, onupdate=date.today)
+

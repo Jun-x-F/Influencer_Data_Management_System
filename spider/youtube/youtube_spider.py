@@ -171,16 +171,16 @@ class Task:
                         comment_count = get_comment_count(page, commend_info.text_content())
                         break
 
-                if like_count is not None \
-                        and view_count is not None \
-                        and comment_count is not None:
-                    self.like += like_count
-                    self.view += view_count
-                    self.comment += comment_count
-                else:
-                    raise RetryableError(f"like_count:{like_count}, "
-                                         f"view_count:{view_count}, "
-                                         f"comment_count:{comment_count}")
+                if like_count is None \
+                        or view_count is None \
+                        or comment_count is None:
+                    global_log.warning(f"{page_url} --> like_count:{like_count}, "
+                                       f"view_count:{view_count}, "
+                                       f"comment_count:{comment_count}")
+
+                self.like += like_count if like_count is not None else 0
+                self.view += view_count if view_count is not None else 0
+                self.comment += comment_count if comment_count is not None else 0
             except Exception:
                 raise
 
@@ -189,7 +189,7 @@ class Task:
             _url = _url.removesuffix('/') + "/videos"
         global_log.info(_url)
         self.page.goto(_url, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(self.human_wait_time)
+        self.page.wait_for_timeout(self.human_wait_time *2)
         get_profile_pic_item = self.page.query_selector('//yt-avatar-shape//img').get_attribute("src")
         self.finish_data["profile_picture_url"] = get_profile_pic_item
         self.get_country_item()

@@ -10,7 +10,8 @@ from base import ReadDatabase, DF_ToSql, DatabaseUpdater
 from log.logger import global_log
 from spider.config.config import order_links, submitted_video_links, message_queue
 from spider.sql.data_inner_db import select_video_urls, add_InfluencersVideoProjectData_To_Lock, \
-    delete_InfluencersVideoProjectData, add_InfluencersVideoProjectData, update_InfluencersVideoProjectData
+    delete_InfluencersVideoProjectData, update_InfluencersVideoProjectData, \
+    add_MerticsData, update_MerticsData, add_InfluencersVideoProjectData
 from spider.template.spider_db_template import InfluencersVideoProjectData
 from utils import determine_platform
 
@@ -813,9 +814,26 @@ class Video:
             data = request_data.get("data")
             logistics_number = ""
             video_url = ""
+
             for item in data:
-                logistics_number = item.get("logistics_number")
-                video_url = item.get("video_url")
+                if item["video_url"]:
+                    video_url = item.get("video_url").strip()
+                    item["video_url"] = video_url
+                    if item["progressCooperation"] is None:
+                        item["progressCooperation"] = "合作完成"
+                else:
+                    if item["progressCooperation"] is None:
+                        item["progressCooperation"] = "进行中"
+
+                if item["trackingNumber"]:
+                    logistics_number = item.get("trackingNumber").strip()
+                    item["trackingNumber"] = logistics_number
+                else:
+                    if item["progressCooperation"] == "进行中":
+                        item["progressLogistics"] = "未发货"
+                    else:
+                        item["progressLogistics"] = "成功签收"
+
             res, code = add_InfluencersVideoProjectData_To_Lock(data)
 
             if video_url is not None and video_url != '':
@@ -892,7 +910,11 @@ class Video:
                 item_id = item.get("id", None)
                 video_id = item_id
                 video_url = item.get("video_url")
+                if video_url is not None:
+                    video_url = video_url.strip()
                 logistics_number = item.get("trackingNumber")
+                if logistics_number is not None:
+                    logistics_number = logistics_number.strip()
                 old.append(item_id)
                 # if item_id not in res:
                 if item_id is None:
@@ -971,3 +993,74 @@ class Video:
             global_log.error()
             return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500
 
+    @staticmethod
+    @video_bp.route('/api/metrics/add_manger', methods=['POST'])
+    def api_metrics_add_manger():
+        try:
+            DATABASE = 'marketing'
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            manager = request_data.get("manager")
+            global_log.info(f"uid {uid} 正在新增manager -> {manager}")
+            update_date = datetime.date.today()
+            manager_data = {
+                '负责人': manager,
+                '更新日期': update_date
+            }
+            manager_df = pd.DataFrame([manager_data])
+
+            manager_columns = ['负责人', '更新日期']
+            manager_df = manager_df[manager_columns]
+
+            DF_ToSql(manager_df, DATABASE, 'influencer_name_definitions', 'append').mapping_df_types()
+            return jsonify({'success': True, 'message': 'success'}), 200
+        except Exception as e:
+            global_log.error()
+            return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500
+
+    @staticmethod
+    @video_bp.route('/api/metrics/add_data', methods=['POST'])
+    def api_metrics_add_data():
+        try:
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            data = request_data.get("data")
+            global_log.info(f"uid {uid} 正在新增指标数据 -> {data}")
+            add_MerticsData(data)
+            return jsonify({'success': True, 'message': 'success'}), 200
+        except Exception as e:
+            global_log.error()
+            return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500
+
+    @staticmethod
+    @video_bp.route('/api/metrics/update_data', methods=['POST'])
+    def api_metrics_update_data():
+        try:
+            request_data = request.get_json()
+            uid = request_data.get("uid")
+            data = request_data.get("data")
+            global_log.info(f"uid {uid} 正在新增指标数据 -> {data}")
+            update_MerticsData(data)
+            return jsonify({'success': True, 'message': 'success'}), 200
+        except Exception as e:
+            global_log.error()
+            return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500
+
+    @staticmethod
+    @video_bp.route('/api/user/get_data', methods=['GET'])
+    def api_user_get_data():
+        DATABASE = 'marketing'
+        sql_t = 'celebrity_profile'
+        try:
+            data = ReadDatabase(DATABASE,
+                                f'SELECT * FROM {sql_t}').vm()  # 假设 ReadDatabase 函数返回的是 DataFrame
+            # 处理空值和特殊值
+            # 处理 NaN 和 inf 值
+            data = data.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
+
+            # 将 DataFrame 转换为字典列表
+            result = data.to_dict(orient='records')  # 将 DataFrame 转换为字典列表
+            return jsonify(result)
+        except Exception as e:
+            global_log.error()
+            return jsonify({'success': False, 'message': f'报错信息 - {str(e)}'}), 500

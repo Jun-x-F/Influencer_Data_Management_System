@@ -5,21 +5,24 @@
         <el-button type="warning" @click="drawer = true">新增视频</el-button>
       </el-affix>
     </div>
-    <el-drawer v-model="drawer" title="新增任务" :with-header="false" size="60%" @close="handleClose">
+    <el-drawer v-model="drawer" title="新增任务" :with-header="false" size="60%" @close="handleClose" :append-to-body="true"
+      :destroy-on-close="true">
+      <AlterMessage :loading="loading" v-model:modelValue="isDialogVisible" title="提交视频" :errorMessage="errorMessage"
+        width="500px" />
       <el-form ref="ruleFormRef" :model="form" label-width="auto" size="large" label-position="left" :inline="true"
         :rules="rules">
         <el-form-item label="品牌-项目-产品" prop="selectedProduct">
           <CascaderSelector v-loading="loading" v-model="form.selectedProduct" :placeholder="'请输入产品'"
             :options="updateVideo.productHierarchicalData" :cascaderProps="cascaderProps"
-            :dynamicMarginTop="dynamicMarginTop" tagsWith="440px" />
+            :dynamicMarginTop="dynamicMarginTop" tagsWith="440px" required />
         </el-form-item>
         <el-form-item label="红人名称:" prop="selectInfluencer">
-          <CustomInput v-model="form.selectInfluencer" label="" :placeholder="'请输入红人名称'" type="text"
-            :wrapperClass="validationStatus.videocost" />
+          <AutocompleteInput v-model="form.selectInfluencer" :placeholder="'选择或输入红人名称'"
+            :dataList="updateVideo.influencerTableName" />
         </el-form-item>
         <el-form-item label="负责人:" prop="selectManager">
           <AutocompleteInput v-model="form.selectManager" :placeholder="'请选择一个负责人'" :dataList="updateVideo.videoManager"
-            @select="handleItemSelect" :wrapperClass="validationStatus.selectManager" />
+            @select="handleItemSelect" />
         </el-form-item>
         <el-form-item label="币种:" prop="videocurrency">
           <!-- <label for="videocurrency" :class="{ 'invalid-label': validationStatus.videocurrency }">币种:</label> -->
@@ -36,37 +39,38 @@
           </select>
         </el-form-item>
         <el-form-item label="花费:" prop="videocost">
-          <CustomInput v-model="form.videocost" :placeholder="'请输入花费'" type="number"
-            :wrapperClass="validationStatus.videocost" />
+          <CustomInput v-model="form.videocost" :placeholder="'请输入花费'" type="number" />
         </el-form-item>
 
-        <el-form-item label="合作进度:" prop="videoProgress">
+        <!-- <el-form-item label="合作进度:" prop="videoProgress">
           <AutocompleteInput v-model="form.videoProgress" :placeholder="'请输入合作进度'" :dataList="videoProgressList"
-            @select="handleItemSelect" :wrapperClass="validationStatus.videoProgress" />
-        </el-form-item>
+            @select="handleItemSelect" />
+        </el-form-item> -->
         <el-form-item label="视频链接:" prop="videoLinks">
-          <CustomInput v-model="form.videoLinks" :placeholder="'请输入视频链接'" :wrapperClass="validationStatus.videoLinks" />
+          <CustomInput v-model="form.videoLinks" :placeholder="'请输入视频链接'" />
         </el-form-item>
         <el-form-item label="物流链接:" prop="videoLogisticsNumber">
-          <CustomInput v-model="form.videoLogisticsNumber" :placeholder="'请输入物流链接'"
-            :wrapperClass="validationStatus.videoLogisticsNumber" />
+          <CustomInput v-model="form.videoLogisticsNumber" :placeholder="'请输入物流链接'" />
         </el-form-item>
         <el-form-item label="预估上线时间:" prop="videoestimatedLaunchDate">
-          <CustomInput v-model="form.videoestimatedLaunchDate" :placeholder="'预估上线时间'" type="date"
-            :wrapperClass="validationStatus.videoestimatedLaunchDate" />
+          <CustomInput v-model="form.videoestimatedLaunchDate" :placeholder="'预估上线时间'" type="date" />
         </el-form-item>
         <el-form-item label="预估观看量:" prop="videoestimatedViews">
-          <CustomInput v-model="form.videoestimatedViews" :placeholder="'预估观看量'" type="number"
-            :wrapperClass="validationStatus.videoestimatedViews" />
+          <CustomInput v-model="form.videoestimatedViews" :placeholder="'预估观看量'" type="number" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="submitForm(ruleFormRef)">创建</el-button>
-          <el-button type="danger" @click="resetForm(ruleFormRef)">重置</el-button>
+          <div style="position: relative; width: 100%">
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 10px;margin-top: 10px;">
+              <el-button type="primary" @click="submitForm(ruleFormRef)">创建</el-button>
+              <el-button type="danger" @click="resetForm(ruleFormRef)" style="margin-right: 15px;">重置</el-button>
+              <addMertics />
+
+            </div>
+          </div>
         </el-form-item>
       </el-form>
     </el-drawer>
-    <AlterMessage :loading="loading" v-model:modelValue="isDialogVisible" title="提交视频" :errorMessage="errorMessage"
-      width="500px" />
+
   </div>
 </template>
 <script setup>
@@ -79,25 +83,13 @@ import AutocompleteInput from '@/components/tables_element/AutocompleteInput.vue
 import CustomInput from '@/components/tables_element/CustomInput.vue';
 import AlterMessage from '@/components/tables_element/AlterMessage.vue';
 import {useNotice} from '@/stores/notice.js';
+import addMertics from '@/components/videos/addMertics.vue';
 
 const notice = useNotice();
 const updateVideo = updateVideoData();
 const useUser = useUserStore();
 const initVideo = initVideoData();
 
-const videoProgress = ref('');
-const videoType = ref('');
-const videocurrency = ref('');
-const selectedItem = ref('');
-const selectedValue = ref('');
-const selectedProduct = ref([]);
-const selectManager = ref('');
-const selectInfluencer = ref('');
-const videoLinks = ref('');
-const videoLogisticsNumber = ref('');
-const videocost = ref('');
-const videoestimatedViews = ref('');
-const videoestimatedLaunchDate = ref('');
 const ruleFormRef = ref();
 const isDialogVisible = ref(false);
 const isClick = ref(false);
@@ -105,6 +97,7 @@ const errorMessage = ref('');
 const loading = ref(false);
 const dynamicMarginTop = ref('-6%');
 const title = ref();
+const drawer = ref(false);
 const cascaderProps = {
   multiple: true,
   emitPath: true,
@@ -118,31 +111,14 @@ const form = reactive({
   selectManager: '',
   videocurrency: '',
   videocost: '',
-  videoProgress: '',
+  // videoProgress: '',
   videoLinks: '',
   videoLogisticsNumber: '',
   videoestimatedLaunchDate: '',
   videoestimatedViews: '',
 });
 
-const validationStatus = reactive({
-  videoProgress: false,
-  videoType: false,
-  videocurrency: false,
-  selectedItem: false,
-  selectedValue: false,
-  selectedProduct: false,
-  selectManager: false,
-  selectInfluencer: false,
-  videoLinks: false,
-  videoLogisticsNumber: false,
-  videocost: false,
-  videoestimatedViews: false,
-  videoestimatedLaunchDate: false,
-});
-// import { addVideoData } from '@/stores/videos/add_video';
-// import { initVideoData } from '@/stores/init';
-const drawer = ref(false);
+
 
 const rules = reactive({
   selectedProduct: [
@@ -151,9 +127,9 @@ const rules = reactive({
   selectManager: [
     { required: true, message: '请选择一个负责人', trigger: 'change' },
   ],
-  videoProgress: [
-    { required: true, message: '请选择合作进度', trigger: 'change' },
-  ],
+  // videoProgress: [
+  //   { required: true, message: '请选择合作进度', trigger: 'change' },
+  // ],
   videoLogisticsNumber: [
     { validator: validateLogisticsLink, trigger: 'blur' },
   ],
@@ -239,15 +215,15 @@ const submitForm = async (formEl) => {
         obj["brand"] = row[0]
         obj["project"] = row[1]
         obj["product"] = row[2]
-        obj["head"] = selectManager.value;
-        obj["full_name"] = selectInfluencer.value;
-        obj["video_url"] = videoLinks.value;
-        obj["currency"] = videocurrency.value;
-        obj["trackingNumber"] = videoLogisticsNumber.value;
-        obj["cost"] = videocost.value;
-        obj["estimatedGoLiveTime"] = videoestimatedLaunchDate.value;
-        obj["estimatedViews"] = videoestimatedViews.value;
-        obj["progressCooperation"] = videoProgress.value;
+        obj["head"] = form.selectManager;
+        obj["full_name"] = form.selectInfluencer;
+        obj["video_url"] = form.videoLinks;
+        obj["currency"] = form.videocurrency;
+        obj["trackingNumber"] = form.videoLogisticsNumber;
+        obj["cost"] = form.videocost;
+        obj["estimatedGoLiveTime"] = form.videoestimatedLaunchDate;
+        obj["estimatedViews"] = form.videoestimatedViews;
+        // obj["progressCooperation"] = form.videoProgress;
         data.push(obj);
       });
       console.log('submit!', data);
@@ -261,13 +237,12 @@ const submitForm = async (formEl) => {
       } else {
         errorMessage.value = "成功"
       }
-      loading.value = false;
       isClick.value = true;
-      notice.setIsUpdateData(true);
     } else {
       console.log('error submit!', fields)
       errorMessage.value = "提交失败, 请检查相关数据是否填写成功 -> " + fields
     }
+    loading.value = false;
   })
 }
 
@@ -278,6 +253,7 @@ const resetForm = (formEl) => {
 
 const handleClose = (val) => {
   console.log("正在关闭")
+
   if (isClick.value === true) {
     notice.setIsUpdateData(true);
   }
@@ -285,49 +261,20 @@ const handleClose = (val) => {
 
 }
 
-// 重置表单
-const onReset = async () => {
-  videoProgress.value = '';
-  videoType.value = '';
-  videocurrency.value = '';
-  selectedItem.value = '';
-  selectedValue.value = '';
-  selectedProduct.value = [];
-  selectManager.value = '';
-  selectInfluencer.value = '';
-  videoLinks.value = '';
-  videoLogisticsNumber.value = '';
-  videocost.value = '';
-  videoestimatedViews.value = '';
-  videoestimatedLaunchDate.value = '';
-  // 重置表单字段
-  Object.assign(form, {
-    selectedProduct: [],
-    selectInfluencer: '',
-    selectManager: '',
-    videocurrency: '',
-    videocost: '',
-    videoProgress: '',
-    videoLinks: '',
-    videoLogisticsNumber: '',
-    videoestimatedLaunchDate: '',
-    videoestimatedViews: '',
-  });
-  await updateVideo.initializeDropdownsData();
-};
 // 处理选择的项
 const handleItemSelect = (item) => {
   console.log('用户选择了：', item);
 };
+
 // 初始化数据
 onMounted(async () => {
   await updateVideo.initializeDropdownsData();
+  console.log("add_videos的onMounted", updateVideo.productHierarchicalData)
   console.log(useUser.userUUID);
 });
 </script>
 <style scoped>
 .addVideoDiv {
-  text-align: right;
   border-radius: 6px;
   /* background: var(--el-color-primary-light-9); */
 }

@@ -107,6 +107,7 @@ class Task:
             url_request: Request = response.request
             url_request_json = url_request.post_data_json
             fb_api_req_friendly_name = url_request_json.get("fb_api_req_friendly_name")
+
             # "PolarisProfilePageContentDirectQuery" --> 红人数据
             # "PolarisProfileReelsTabContentQuery_connection" --> 滚动生成10条视频
             # "PolarisProfileReelsTabContentQuery" --> 前10条视频
@@ -115,6 +116,7 @@ class Task:
                                             "PolarisProfilePageContentQuery",
                                             "PolarisProfileReelsTabContentQuery",
                                             "PolarisProfileReelsTabContentQuery_connection"]:
+                print("test", fb_api_req_friendly_name)
                 body = response.json()
                 cur_data = self.response_data.get(fb_api_req_friendly_name, [])
                 # global_log.info(f"ins 红人 -->{fb_api_req_friendly_name} --> {body}")
@@ -130,7 +132,7 @@ class Task:
         if "reels" not in _url:
             _url = _url.strip().removesuffix('/') + "/reels"
         self.page.goto(_url, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(self.human_wait_time)
+        self.page.wait_for_timeout(self.human_wait_time * 2)
         # 获取国家信息
         self.page.wait_for_selector(f'//h2/*[text()="{user_name}"]').click()
         self.page.wait_for_timeout(self.human_wait_time / 2)
@@ -142,7 +144,7 @@ class Task:
         isFinish = False
         self.page.mouse.wheel(0, 1000)
         for _ in range(30):
-            if len(self.response_data) == 2:
+            if len(self.response_data) >= 2:
                 isFinish = True
                 break
             time.sleep(random.randint(1, 3))
@@ -269,8 +271,10 @@ def ins_start_spider(url):
         Task(cdp, contexts, ins_videos_page, user, password, code, isCheckLogin).run(url)
 
         time.sleep(5)
+        contexts.close()
+        cdp.close()
 
 
 if __name__ == '__main__':
-    ins_start_spider("https://www.instagram.com/mel_junerose/#")
+    ins_start_spider("https://www.instagram.com/developeradam/reels/")
     # ins_start_spider("https://www.instagram.com/life_inthemadhouse/reels/#")

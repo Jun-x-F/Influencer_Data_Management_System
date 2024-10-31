@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from log.logger import global_log
 from spider.sql.mysql import Connect
 from spider.template.spider_db_template import Base, InfluencersVideoProjectDataByDate, CelebrityProfile, \
-    InfluencersVideoProjectData, logistics_information_sheet
+    InfluencersVideoProjectData, logistics_information_sheet, influencer_project_definitions
 
 db = Connect(2, "marketing")
 db.create_session()
@@ -99,7 +99,7 @@ def add_InfluencersVideoProjectData_To_Lock(finish_data):
             for item in finish_data:
                 item["parentId"] = new_parentId
                 add_data = InfluencersVideoProjectData(**item)
-                add_InfluencersVideoProjectData(add_data)
+                db.session.add(add_data)
 
         # 提交事务
         db.session.commit()
@@ -125,6 +125,48 @@ def add_InfluencersVideoProjectData(finish_data):
         #     **finish_data
         # )
         db.session.add(finish_data)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        global_log.error(f"Failed to log to database: {e}")
+        db.session.rollback()
+        raise
+
+
+def add_MerticsData(finish_data):
+    try:
+        if not db.check_connection():
+            db.reconnect_session()
+
+        addData = influencer_project_definitions(
+            **finish_data
+        )
+        db.session.add(addData)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        global_log.error(f"Failed to log to database: {e}")
+        db.session.rollback()
+        raise
+
+def update_MerticsData(finish_data):
+    try:
+        if not db.check_connection():
+            db.reconnect_session()
+
+        # 提取查询条件
+        filters = and_(
+            influencer_project_definitions.id == finish_data.get("id")
+        )
+
+        db_history_data = (db.session.query(influencer_project_definitions).filter(filters).first())
+
+        if db_history_data:
+            db.session.execute(
+                update(influencer_project_definitions)
+                .where(filters)
+                .values(finish_data)
+            )
+        else:
+            raise ValueError(f"查找不到这个id {finish_data.get('id')} 的数据")
         db.session.commit()
     except SQLAlchemyError as e:
         global_log.error(f"Failed to log to database: {e}")
@@ -239,23 +281,48 @@ def check_InfluencersVideoProjectData_in_db(uniqueId, day_ago) -> bool:
 
 
 def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_numbers):
-    if db.check_connection() is not True:
-        db.reconnect_session()
-    record = db.session.query(logistics_information_sheet).filter_by(number=logistics_numbers).first()
-    global_log.info(f"sync_logistics_information_sheet_to_InfluencersVideoProjectData -> {logistics_numbers},"
-                    f" record ->{record}")
-    if record is not None:
-        existing_records = (db.session.query(InfluencersVideoProjectData).
-                            filter(InfluencersVideoProjectData.trackingNumber.like(f"%{record.number}%")).all())
+    try:
+        if db.check_connection() is not True:
+            db.reconnect_session()
+        record = db.session.query(logistics_information_sheet).filter_by(number=logistics_numbers).first()
+        global_log.info(f"sync_logistics_information_sheet_to_InfluencersVideoProjectData -> {logistics_numbers},"
+                        f" record ->{record}")
+        if record is not None:
+            existing_records = (db.session.query(InfluencersVideoProjectData).
+                                filter(InfluencersVideoProjectData.trackingNumber.like(f"%{record.number}%")).all())
+            if existing_records:
+                # 更新所有找到的记录
+                for existing in existing_records:
+                    existing.progressLogistics = record.prior_status_zh
+
+        db.session.commit()
+        return True
+    except SQLAlchemyError as e:
+        global_log.error(f"Failed to log to database: {e}")
+        db.session.rollback()
+        raise
+
+
+def sync_logistics_information(finishData):
+    try:
+        if db.check_connection() is not True:
+            db.reconnect_session()
+        # 使用括号来包围整个查询，这样可以在多行中书写
+        existing_records = db.session.query(InfluencersVideoProjectData) \
+            .filter(InfluencersVideoProjectData.trackingNumber == finishData["trackingNumber"]) \
+            .all()
+        global_log.info(f"sync {finishData['trackingNumber']}, record ->{existing_records}")
         if existing_records:
             # 更新所有找到的记录
             for existing in existing_records:
-                existing.progressLogistics = record.prior_status_zh
+                existing.progressLogistics = finishData['progressLogistics']
 
-            db.session.commit()
-            return True
-        global_log.error(f"物流信息{logistics_numbers}同步失败...")
-    return False
+        db.session.commit()
+        return True
+    except SQLAlchemyError as e:
+        global_log.error(f"Failed to log to database: {e}")
+        db.session.rollback()
+        raise
 
 
 def select_video_urls(select_, filter_, order_, isAll=True):

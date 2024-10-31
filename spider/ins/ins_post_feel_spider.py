@@ -194,6 +194,8 @@ def ins_videos_start_spider(url):
         _page = contexts.new_page()
         get_ins_media_code, get_ins_media_url, get_ins_media_info = \
             Task(cdp, contexts, _page, user, password, code, isCheckLogin).run(url)
+        contexts.close()
+        cdp.close()
     key = Task.extract_post_id(url)
     value_str = redis_conn.get_value(key)
     if value_str is None:
