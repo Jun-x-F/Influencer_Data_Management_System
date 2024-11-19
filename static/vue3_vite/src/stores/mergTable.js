@@ -56,109 +56,105 @@ export const useMergeTableData = defineStore("mergeTableData", () => {
   }
 
   /**
+   * 按多个列对 tableData 进行排序
+   * @param {Array} tableData - 表格数据数组
+   * @param {Array} columns - 要排序的列名数组，按优先级从高到低排序
+   */
+  const sortTableDataByColumns = (tableData, columns) => {
+    tableData.sort((a, b) => {
+      for (const column of columns) {
+        if (a[column] < b[column]) return 1;
+        if (a[column] > b[column]) return -1;
+      }
+      return 0; // 所有列都相等
+    });
+  };
+
+  /**
    * 处理需要合并的列
    * @param {Array} mergeColumns - 需要合并的列名数组
    * @param {Array} tableData - 表格数据数组
    * @param {String} mainKey - 主合并列名，例如 "parentId"
    * @returns {Object} - 合并后的列映射
    */
-  const processMerge = function processMergeColumns(
-    mergeColumns,
-    tableData,
-    mainKey
-  ) {
-    // 记录主Key合并时的 rowIndex 分组
+  const processMerge = function processMergeColumns(mergeColumns, tableData, mainKey) {
     console.log("tableData length", tableData.length);
 
-    const parentIdMergedGroups = [];
     const mapping = {};
+    const parentIdMergedGroups = [];
+    const curLs = [];
+    const positioning = {};
 
-    mergeColumns.forEach((key) => {
-      const obj = {};
+    // 初始化 -> 排序
+    sortTableDataByColumns(tableData, mergeColumns)
+    let sameMapping = [];
+    let i = 0;
 
-      if (!obj[key]) {
-        obj[key] = {};
+    while (i < tableData.length) {
+      let minRowIndex = i;
+      let maxRowIndex = i;
+      const currentMainKey = tableData[i][mainKey];
+
+      // 找到具有相同 mainKey 的最大行索引
+      while (maxRowIndex + 1 < tableData.length && tableData[maxRowIndex + 1][mainKey] === currentMainKey) {
+        maxRowIndex++;
       }
 
-      const rowData = tableData;
-      // 初始化 -> 根据 rowIndex 进行赋值
-      rowData.forEach((row, rowIndex) => {
-        const value = row[key];
-
-        // 使用字符串形式的 rowIndex 作为键
-        obj[key][rowIndex] = {
-          rowspan: 1,
-          rowIndex: rowIndex,
-          value: value,
-        };
+      // 保存当前分组的最小和最大行索引
+      sameMapping.push({
+        minRowIndex: minRowIndex,
+        maxRowIndex: maxRowIndex
       });
 
-      // 将相同 value 进行合并
-      if (key === mainKey) {
-        const parentIdMapping = obj[key];
-        const valueToKeys = groupByValue(parentIdMapping);
-        const mergedGroups = mergeGroups(parentIdMapping, valueToKeys);
-        parentIdMergedGroups.push(...mergedGroups);
-        mapping[key] = parentIdMapping;
+      // 跳过已处理的行
+      i = maxRowIndex + 1;
+    }
+
+    sameMapping.forEach((row) => {
+      if (row.maxRowIndex === row.minRowIndex) {
+        // 当只有一个行时，直接设置 rowspan 和 colspan 为 1
+        mergeColumns.forEach((key) => {
+          if (!mapping[key]) mapping[key] = {}; // 初始化 mapping[key]
+          mapping[key][row.minRowIndex] = {
+            rowspan: 1,
+            colspan: 1
+          };
+        });
       } else {
-        // 对于其他列，仅在主Key合并的 rowIndexes 中进行合并
-        if (parentIdMergedGroups.length > 0) {
-          const currentKeyMapping = obj[key];
-          parentIdMergedGroups.forEach((group) => {
-            const { baseRowIndex, mergedRowIndexes } = group;
+        // 遍历每个需要合并的列
+        mergeColumns.forEach((key) => {
+          if (!mapping[key]) mapping[key] = {}; // 初始化 mapping[key]
 
-            // 获取所有涉及的 rowIndexes
-            const allRowIndexes = [baseRowIndex, ...mergedRowIndexes];
+          let i = row.minRowIndex;
+          while (i < row.maxRowIndex) {
+            const firstValue = tableData[i][key];
+            let rowspan = 1;
 
-            // 收集这些 rowIndexes 的值
-            const valueToKeys = {};
-            allRowIndexes.forEach((rowIdx) => {
-              const keyStr = rowIdx.toString();
-              if (currentKeyMapping[keyStr]) {
-                // 确保 key 存在
-                const value = currentKeyMapping[keyStr].value;
-                if (!valueToKeys[value]) {
-                  valueToKeys[value] = [];
-                }
-                valueToKeys[value].push(keyStr);
-              }
-            });
-
-            // 对每个 value 进行合并
-            for (const [value, keys] of Object.entries(valueToKeys)) {
-              if (keys.length > 1) {
-                // 找到 rowIndex 最小的键
-                let minKey = keys[0];
-                for (let i = 1; i < keys.length; i++) {
-                  if (
-                    currentKeyMapping[keys[i]].rowIndex <
-                    currentKeyMapping[minKey].rowIndex
-                  ) {
-                    minKey = keys[i];
-                  }
-                }
-
-                // 增加 rowspan
-                currentKeyMapping[minKey].rowspan += keys.length - 1;
-
-                // 删除其他键
-                for (const delKey of keys) {
-                  if (delKey !== minKey) {
-                    delete currentKeyMapping[delKey];
-                  }
-                }
-              }
+            // 向下检查相同的值
+            let j = i + 1;
+            while (j < row.maxRowIndex && tableData[j][key] === firstValue) {
+              rowspan++;
+              j++;
             }
-          });
 
-          mapping[key] = currentKeyMapping;
-        }
+            // 设置 rowspan 和 colspan
+            mapping[key][i] = {
+              rowspan: rowspan,
+              colspan: 1,
+              value: firstValue
+            };
+
+            // 跳过已处理的行
+            i = j;
+          }
+        });
       }
-
-      // 可以选择是否将 obj[key] 赋值给 mapping[key]，根据需求决定
     });
 
-    tableMapping.value = mapping;
+    console.log("sameMapping", sameMapping);
+    // 如果需要将结果赋值给外部的响应式对象，可以取消下面的注释
+    // tableMapping.value = mapping;
+
     console.log("Final Mapping:", mapping);
     return mapping;
   };

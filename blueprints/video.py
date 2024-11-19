@@ -816,13 +816,13 @@ class Video:
             video_url = ""
 
             for item in data:
-                if item["video_url"]:
+                if item.get("video_url"):
                     video_url = item.get("video_url").strip()
                     item["video_url"] = video_url
-                    if item["progressCooperation"] is None:
+                    if item.get("progressCooperation") is None:
                         item["progressCooperation"] = "合作完成"
                 else:
-                    if item["progressCooperation"] is None:
+                    if item.get("progressCooperation") is None:
                         item["progressCooperation"] = "进行中"
 
                 if item["trackingNumber"]:
@@ -986,6 +986,8 @@ class Video:
                     message_queue.add(uid,
                                       f"物流订单链接 {logistics_number} 已经在待执行中")
                 else:
+                    message_queue.add(uid,
+                                      f"物流订单链接 {logistics_number} 添加到队列中")
                     send_order_links.append(logistics_number)
                     order_links[uid] = send_order_links
             return jsonify({'success': True, 'message': 'success'}), 200

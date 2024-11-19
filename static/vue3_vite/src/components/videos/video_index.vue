@@ -6,10 +6,6 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>视频数据管理</title>
-        <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <!-- SweetAlert2 CSS -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     </head>
 
     <body>
@@ -61,7 +57,7 @@
         <div class="container">
             <!-- <h1>视频数据管理</h1> -->
 
-            <section id="videoSection" class="form-container">
+            <section id="videoSection" class="videoSection_form-container">
                 <!-- <div class="affix-container">
                     <el-affix target=".affix-container" :offset="80">
                         <el-button type="primary" class="el_btn">视频数据管理</el-button>
@@ -154,6 +150,10 @@ const onBack = () => {
 
 </script>
 <style scoped>
+body{
+  overflow:auto;
+}
+
 .affix-container {
     text-align: center;
     border-radius: 4px;

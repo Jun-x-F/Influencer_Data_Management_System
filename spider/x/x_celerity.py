@@ -7,6 +7,7 @@
 """
 import json
 import os.path
+from typing import Optional
 from urllib.parse import urlparse
 
 import requests
@@ -22,8 +23,8 @@ from tool.download_file import download_image_file
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext):
-        self.browser = _browser
+    def __init__(self, _browser:Optional[Browser], _context: BrowserContext):
+        self.browser: Optional[Browser] = _browser
         self.context = _context
         self.page, isNewPage = find_existing_page(self.context, "x.com")
         if isNewPage:
@@ -231,7 +232,7 @@ class Task:
         if self.cookies == {}:
             self.cookies = x_cookies(self.page)
             # 有效期30天
-            redis_conn.set_value("x_cookies", json.dumps(self.cookies), 30 * 24 * 3600)
+            redis_conn.set_value("x_cookies", json.dumps(self.cookies), 10 * 24 * 3600)
         self.work(url)
         global_log.info(self.response_data)
 

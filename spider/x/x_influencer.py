@@ -8,14 +8,16 @@
 import json
 import os
 import re
+from typing import Optional
 from urllib.parse import urlparse
 
 import requests
 from playwright.sync_api import Response, sync_playwright, Browser, BrowserContext
 
 from log.logger import global_log
-from spider.config.config import redis_conn
+from spider.config.config import redis_conn, executable_path, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
+from spider.template.notFoundData import NotUserData
 from spider.x.public_function import x_cookies, find_existing_page
 from tool.FileUtils import get_project_path
 from tool.JsonUtils import dfs_get_all_values_by_path_extended
@@ -23,13 +25,13 @@ from tool.TimeUtils import TimeUtils
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext):
-        self.browser = _browser
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext):
+        self.browser: Optional[Browser] = _browser
         self.context = _context
         self.page, isNewPage = find_existing_page(self.context, "x.com")
         if isNewPage:
             try:
-                self.page = context.new_page()
+                self.page = self.context.new_page()
                 self.page.goto("https://x.com/home", wait_until="domcontentloaded")
             except Exception as e:
                 self.page.wait_for_timeout(12000)
@@ -72,9 +74,22 @@ class Task:
             cookies=self.cookies,
             headers=self.headers,
         )
+        if response.status_code != 200:
+            print(response.text)
+        else:
+            print(response)
+        # raise NotUserData(f"{url} 出现 -> 出错了。请尝试重新加载。")
         raw_json = response.json()
+        if raw_json.get("errors") is not None:
+            errors = raw_json.get("errors")[0]
+            errors_message = errors.get("message")
+            if errors_message is not None:
+                raise NotUserData(f"{self.response_data['video_url']} 帖子失效")
+            else:
+                raise ValueError(errors_message)
         data = raw_json.get("data")
         threaded_conversation_with_injections_v2 = data.get("threaded_conversation_with_injections_v2")
+
         instructions = threaded_conversation_with_injections_v2.get("instructions")
         for instruction in instructions:
             _type = instruction.get("type")
@@ -214,31 +229,54 @@ class Task:
 
     def run(self, url):
         """启动器"""
+        self.page.goto(url, wait_until="domcontentloaded")
+        self.page.wait_for_timeout(3000)
         if self.headers == {}:
             self.page.on('response', self.handle_request)
-            if self.page.url != "x.com":
-                self.page.goto("https://x.com/home", wait_until="domcontentloaded")
-            else:
-                self.page.reload(wait_until="domcontentloaded")
-            self.page.wait_for_timeout(1200)
         if self.cookies == {}:
             self.cookies = x_cookies(self.page)
-            # 有效期30天
-            redis_conn.set_value("x_cookies", json.dumps(self.cookies), 30 * 24 * 3600)
+            # 有效期10天
+            redis_conn.set_value("x_cookies", json.dumps(self.cookies), 10 * 24 * 3600)
+
         self.work(url)
         global_log.info(self.response_data)
 
 
 if __name__ == '__main__':
     with sync_playwright() as playwright:
-        browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0]
-        page = None
-        for _page in context.pages:
-            if "x.com" in _page.url:
-                page = _page
-                break
-        if page is None:
-            page = context.new_page()
+        browser = None
+        browser_context = playwright.chromium.launch_persistent_context(
+            env={
+                "LANG": "zh_CN.UTF-8",
+                "LC_ALL": "zh_CN.UTF-8",
+            },
+            extra_http_headers={
+                "Accept-Language": "zh-CN,zh;q=0.9",
+            },
+            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
+            user_data_dir=rf"C:\chrome-user-data",  # 指定用户数据目录
+            headless=False,  # 确保浏览器不是无头模式
+            viewport=return_viewPort(),
+            user_agent=user_agent,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--enable-automation=false",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+            ]
+        )
+        browser_context.add_init_script(
+            """
+                const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
+                 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                 Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh'] });
+                 Object.defineProperty(navigator, 'language', { get: () => 'zh-CN' });
+                 Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                 Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+           """
+        )
 
-        Task(browser, context).run("https://x.com/TheRabbitHole84/status/1837900702527770697")
+        Task(None, browser_context).run("https://x.com/catalinmpit/status/1840704647822180371")

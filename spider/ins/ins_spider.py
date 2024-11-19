@@ -14,19 +14,20 @@ from typing import Optional
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
 
 from log.logger import global_log
-from spider.config.config import redis_conn
+from spider.config.config import redis_conn, headerLess, executable_path
 from spider.ins.ins_new import to_int, save_cookies, random_account_
 from spider.sql.data_inner_db import inner_CelebrityProfile
+from spider.template.notFoundData import NotUserData
 from tool.JsonUtils import dfs_get_all_values_by_path_extended
 from tool.download_file import download_image_file
-from tool.get_ws import get_ws_id
 from tool.grading_criteria import grade_criteria
 from tool.ins_code import get_deOne_code
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page, account, password, code, isCheckLogin):
-        self.browser = _browser
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext, page: Page, account, password, code,
+                 isCheckLogin):
+        self.browser: Optional[Browser] = _browser
         self.context = _context
         self.page: Page = page
         self.account = account
@@ -94,9 +95,9 @@ class Task:
 
     def extract_username(self, url: str) -> Optional[str]:
         # 使用正则表达式匹配用户名部分
-        match = re.search(r'https://www\.instagram\.com/([^/]+)/?', url)
+        match = re.search(r'https?://(www\.)?instagram\.com/([^/]+)/?', url)
         if match:
-            return match.group(1)
+            return match.group(2)
         return None
 
     @global_log.log_exceptions
@@ -134,12 +135,20 @@ class Task:
         self.page.goto(_url, wait_until="domcontentloaded")
         self.page.wait_for_timeout(self.human_wait_time * 2)
         # 获取国家信息
+        errorInfo = self.page.query_selector("//*[text()='你点击的链接可能已损坏，或页面已被移除。']")
+        if errorInfo is not None:
+            raise NotUserData(f"{_url} 出现可能已损坏，或页面已被移除")
+
         self.page.wait_for_selector(f'//h2/*[text()="{user_name}"]').click()
         self.page.wait_for_timeout(self.human_wait_time / 2)
-        region = self.page.wait_for_selector('//span[text()="帐户所在地"]/following-sibling::span[1]').text_content()
-        self.page.wait_for_selector('//button[text()="关闭"]').click()
-        self.page.wait_for_timeout(self.human_wait_time / 2)
-        self.finish_data["region"] = region
+        try:
+            region = self.page.wait_for_selector('//span[text()="帐户所在地"]/following-sibling::span[1]').text_content()
+            global_log.info(f"ins region -> {region}")
+            self.page.wait_for_selector('//button[text()="关闭"]').click()
+            self.page.wait_for_timeout(self.human_wait_time / 2)
+            self.finish_data["region"] = region
+        except Exception:
+            self.finish_data["region"] = None
 
         isFinish = False
         self.page.mouse.wheel(0, 1000)
@@ -239,42 +248,53 @@ class Task:
 def ins_start_spider(url):
     """新的启动器"""
     account_info = random_account_()
-    # {'user': 'danielkroesche94', 'password': 'Provia312CH@@123', 'code': 'IU4X NUVZ E5HJ ZMTL AYYD RWJC 7D63 TGW2', 'fileDir': 'C:\\browser\\ins\\chrome-danielkroesche94-data', 'port': 9225}
-
     user = account_info.get("user")
     password = account_info.get("password")
     code = account_info.get("code")
     port = account_info.get("port")
     fileDir = account_info.get("fileDir")
-    ws_id = get_ws_id(port, fileDir)
-    global_log.info(f"ins 红人->获取到对应的账号为 {account_info}, 浏览器id为{ws_id}")
+    # ws_id = get_ws_id(port, fileDir)
+    global_log.info(f"ins 红人->获取到对应的账号为 {account_info}")
     with sync_playwright() as playwright:
-        cdp = playwright.chromium.connect_over_cdp(ws_id)
-        contexts = cdp.contexts[0]
+        browser = playwright.chromium.launch_persistent_context(
+            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
+            user_data_dir=fileDir,  # 指定用户数据目录
+            headless=headerLess,  # 确保浏览器不是无头模式
+            args=["--disable-blink-features=AutomationControlled"]  # 避免自动化检测
+        )
+        # cdp = playwright.chromium.connect_over_cdp(ws_id)
+        # contexts = cdp.contexts[0]
 
         cookies_str = redis_conn.get_value(f"ins_{user}_cookies")
         isCheckLogin = True
         if cookies_str is not None:
             cookies = json.loads(cookies_str)
             # 重新update
-            contexts.add_cookies(cookies)
+            browser.add_cookies(cookies)
             isCheckLogin = False
-        contexts.add_init_script(
+        browser.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
         )
-        for cur_page in contexts.pages:
+        for cur_page in browser.pages:
             # 页面清除
             if "instagram" in cur_page.url:
                 cur_page.close()
 
-        ins_videos_page = contexts.new_page()
-        Task(cdp, contexts, ins_videos_page, user, password, code, isCheckLogin).run(url)
+        ins_videos_page = browser.new_page()
+        Task(None, browser, ins_videos_page, user, password, code, isCheckLogin).run(url)
 
         time.sleep(5)
-        contexts.close()
-        cdp.close()
+        browser.close()
 
 
 if __name__ == '__main__':
-    ins_start_spider("https://www.instagram.com/developeradam/reels/")
+    ins_start_spider("https://www.instagram.com/raybeau_moves/")
+
+    # def extract_username(self, url: str) -> Optional[str]:
+    #     # 使用正则表达式匹配用户名部分
+    #     match = re.search(r'https?://(www\.)?instagram\.com/([^/]+)/?', url)
+    #     if match:
+    #         return match.group(2)
+    #     return None
+    # print(extract_username(None, 'https://instagram.com/jonimperial/'))
     # ins_start_spider("https://www.instagram.com/life_inthemadhouse/reels/#")

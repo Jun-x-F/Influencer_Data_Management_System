@@ -13,14 +13,14 @@ from typing import Optional
 from playwright.sync_api import Page, sync_playwright, BrowserContext, Browser, Request, Response
 
 from log.logger import global_log
-from spider.config.config import redis_conn, ins_account
+from spider.config.config import redis_conn, ins_account, headerLess
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page):
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext, page: Page):
         self.code = None
         self.url = None
-        self.browser = _browser
+        self.browser: Optional[Browser] = _browser
         self.context = _context
         self.page: Optional[Page] = page
         self.human_wait_time = 6000
@@ -109,20 +109,25 @@ class Task:
         return self.response_data
 
 
-def get_ins_info(ws_id, url, code):
+def get_ins_info(fileDir, url, code, cur_cookies):
     with sync_playwright() as playwright:
-        get_ins_info_browser = playwright.chromium.connect_over_cdp(ws_id)
-        get_ins_info_context = get_ins_info_browser.contexts[0]
+        browser = playwright.chromium.launch_persistent_context(
+            user_data_dir=fileDir,  # 指定用户数据目录
+            headless=headerLess,  # 确保浏览器不是无头模式
+            args=["--disable-blink-features=AutomationControlled"]  # 避免自动化检测
+        )
+        # get_ins_info_browser = playwright.chromium.connect_over_cdp(ws_id)
+        # get_ins_info_context = get_ins_info_browser.contexts[0]
 
-        cookies_str = redis_conn.get_value("ins_cookies")
+        cookies_str = redis_conn.get_value(cur_cookies)
         if cookies_str is not None:
             _cookies = json.loads(cookies_str)
-            get_ins_info_context.add_cookies(_cookies)
-        get_ins_info_context.add_init_script(
+            browser.add_cookies(_cookies)
+        browser.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
         )
-        get_ins_info_page = get_ins_info_context.new_page()
-        return Task(get_ins_info_browser, get_ins_info_context, get_ins_info_page).run(url=url, code=code)
+        get_ins_info_page = browser.new_page()
+        return Task(None, browser, get_ins_info_page).run(url=url, code=code)
 
 
 def to_int(ls: list) -> list:

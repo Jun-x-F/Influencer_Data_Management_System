@@ -5,27 +5,23 @@
 @Author：Libre
 @Time：2024/7/29 上午10:10
 """
+import time
 from typing import Optional
 
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, Response
 
 from log.logger import global_log
+from spider.config.config import return_viewPort, user_agent, headerLess
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from tool.download_file import download_image_file
 from tool.grading_criteria import grade_criteria
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext):
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext):
         self.browser = _browser
         self.context = _context
-        self.page: Optional[Page] = None
-        for page in self.context.pages:
-            if "tiktok" in page.url:
-                self.page = page
-                break
-        if self.page is None:
-            self.page = self.context.new_page()
+        self.page: Optional[Page] = self.context.new_page()
         self.human_wait_time = 6000
         self.response_data = {}
         self.response_sort_data = []
@@ -59,7 +55,7 @@ class Task:
 
     # Get page elements
     def _get_page_elements(self) -> int:
-        str_fans_count = self.page.wait_for_selector('//*[@title="粉丝"]').text_content().upper()
+        str_fans_count = self.page.wait_for_selector('//*[@title="粉丝" or @data-e2e="followers-count"]').text_content().upper()
         if str_fans_count.endswith('K'):
             return int(float(str_fans_count[:-1]) * 1_000)  # K 代表千（1000）
         elif str_fans_count.endswith('M'):
@@ -102,28 +98,35 @@ class Task:
         self.finish_data["level"] = grade_criteria(self.finish_data["platform"], self.finish_data["average_views"])
 
     def work(self, _url) -> None:
-        """代码执行层"""
-        self.page.on("response", self._get_user_info)
-        self.page.goto(_url, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(self.human_wait_time * 2)
-        # 不需要登录
-        pass_login = self.page.query_selector('//*[text()="以游客身份继续"]')
-        if pass_login:
-            pass_login.click()
-        self.page.wait_for_timeout(self.human_wait_time)
-        self.verify_bar_close()
+        try:
+            """代码执行层"""
+            self.page.on("response", self._get_user_info)
+            self.page.goto(_url, wait_until="domcontentloaded")
+            global_log.info(f"tiktok start -> {_url}")
+            self.page.wait_for_timeout(self.human_wait_time * 2)
+            # 不需要登录
+            pass_login = self.page.query_selector('//*[text()="以游客身份继续"]')
+            if pass_login:
+                pass_login.click()
+            self.page.wait_for_timeout(self.human_wait_time)
+            self.verify_bar_close()
 
-        self.finish_data["index_url"] = _url
-        self.finish_data["platform"] = "tiktok"
-        self.finish_data["follower_count"] = self._get_page_elements()
+            self.finish_data["index_url"] = _url
+            self.finish_data["platform"] = "tiktok"
+            self.finish_data["follower_count"] = self._get_page_elements()
 
-        while True:
-            if len(self.response_data) == 1:
-                break
-
-        self._get_page_response_elements()
-        inner_CelebrityProfile(self.finish_data, isById=True)
-        self._close_data()
+            for item in range(30):
+                if len(self.response_data) >= 1:
+                    break
+                time.sleep(1)
+            if len(self.response_data) == 0:
+                raise ValueError("tiktok获取数据异常")
+            self._get_page_response_elements()
+            inner_CelebrityProfile(self.finish_data, isById=True)
+            self._close_data()
+        except Exception:
+            global_log.error()
+            raise
 
     def run(self, url):
         self.work(url)
@@ -132,6 +135,20 @@ class Task:
 if __name__ == '__main__':
     with sync_playwright() as playwright:
         # Connect to the running browser instance
-        browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0]
-        Task(browser, context).run()
+        browser = playwright.chromium.launch(
+            headless=headerLess,
+            channel="chrome",
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-software-rasterizer"
+            ]
+        )
+        browser_context = browser.new_context(
+            viewport=return_viewPort(),
+            user_agent=user_agent
+        )
+        Task(browser, browser_context).run('https://www.tiktok.com/@nvzion')

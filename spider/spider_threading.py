@@ -5,7 +5,6 @@
 @Author：Libre
 @Time：2024/8/16 下午5:44
 """
-import re
 import threading
 import time
 from collections import deque
@@ -25,12 +24,16 @@ threading_influencersVideo = threading.Event()
 threading_logistics = threading.Event()
 
 
-def extract_tracking_numbers(text):
+def extract_tracking_numbers(text: str):
     # Regular expression pattern to match tracking numbers like UJ712686735YP
-    pattern = r'[A-Z]{2}\d{9}[A-Z]{2}'
-    # Find all occurrences of the pattern in the text
-    tracking_numbers = re.findall(pattern, text)
-    return tracking_numbers
+    # https://t.17track.net/zh-cn#nums=QL0500152802211YQ
+    text = text.strip()
+    parentText: str = text.replace('https://t.17track.net/zh-cn#nums=', '')
+
+    # pattern = r'[A-Z]{2}\d{9}[A-Z]{2}'
+    # # Find all occurrences of the pattern in the text
+    # tracking_numbers = re.findall(pattern, text)
+    return parentText.split(",")
 
 
 def process_links(_queue: FIFODict, flag: int) -> None:
@@ -81,14 +84,16 @@ def process_links(_queue: FIFODict, flag: int) -> None:
 
     if send_id is not None:
         order_links_deque: deque = order_links.pop(send_id)
+        global_log.info(f"order_links_deque-> {order_links_deque}")
     else:
         send_id, order_links_deque = order_links.dequeue()
+        global_log.info(f"order_links_deque-> {order_links_deque}")
 
     if order_links_deque is not None:
         for order_link in order_links_deque:
             order_ls = extract_tracking_numbers(order_link.strip())
-            global_log.info(f"提取出来订单信息为{order_ls}, 开始执行")
-            message_queue.add(send_id, f"开始获取物流信息，订单列表为 {order_ls}")
+            global_log.info(f"提取出来物流信息为{order_ls}, 开始执行")
+            message_queue.add(send_id, f"开始获取物流信息，物流单号为 {order_ls}")
             res = False
             res_message = None
             for _ in range(3):
@@ -196,9 +201,13 @@ def syncLogisticsDataBase():
                                              "成功签收"]:
                                     sync_mapping[track] = sync_mapping.get(track, 0) + 1
                                 obj["progressLogistics"] = value
+                    res = sync_logistics_information(obj)
+                    global_log.info(f"{track}，{res}")
                     toData.append(obj)
-                for item in toData:
-                    global_log.info(sync_logistics_information(item))
+                # for item in toData:
+                #     res = sync_logistics_information(item)
+                #     global_log.info(f"{item}，{res}")
+                # global_log.info(sync_logistics_information(item))
                 threading_logistics.clear()
         except Exception:
             global_log.error()

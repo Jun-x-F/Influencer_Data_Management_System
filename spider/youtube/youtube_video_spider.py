@@ -8,20 +8,21 @@
 import json
 import random
 import re
-from datetime import datetime
 from typing import Optional
 
+from dateutil.parser import parse
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Route
 
 from log.logger import global_log
+from spider.config.config import executable_path, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from spider.youtube.youtube_public_func import get_like_count, get_view_count, get_comment_count
 from tool.JsonUtils import dfs_get_all_values_by_path_extended
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext):
-        self.browser = _browser
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext):
+        self.browser: Optional[Browser] = _browser
         self.context = _context
         self.page: Optional[Page] = None
         for page in self.context.pages:
@@ -29,7 +30,7 @@ class Task:
                 self.page = page
                 break
         if self.page is None:
-            self.page = _context.new_page()
+            self.page = self.context.new_page()
         self.human_wait_time = 6000
         self.response_data = {}
         self.response_sort_data = []
@@ -122,30 +123,46 @@ class Task:
                 self.finish_data["comments"] = comment_count
                 break
 
-    def convert_date(self, date_str: str) -> str:
-        # 定义日期格式列表
-        date_formats = [
-            '%Y年%m月%d日',  # 格式: 2024年05月28日
-            '%b %d, %Y',  # 格式: May 28, 2024
-        ]
-
-        # 移除前缀（如果有）
-        if date_str.startswith("首播开始于 "):
-            date_str = date_str.replace("首播开始于 ", "")
-
-        for date_format in date_formats:
-            try:
-                # 尝试解析日期字符串
-                dt = datetime.strptime(date_str, date_format)
-                # 将 datetime 对象格式化为 %Y-%m-%d 格式的字符串
-                formatted_date = dt.strftime('%Y-%m-%d')
-                return formatted_date
-            except ValueError:
-                # 如果解析失败，则尝试下一个格式
-                continue
-
-        # 如果所有格式都不匹配，则返回原始字符串
-        return date_str
+    def convert_date(self, date_str: str) -> Optional[str]:
+        try:
+            # 使用 dateutil.parser 尝试解析整个日期字符串
+            parsed_date = parse(date_str, fuzzy=True, dayfirst=True)
+            # 返回标准格式的日期字符串 'YYYY-MM-DD'
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            # 如果解析失败，返回 None
+            return None
+        # # 定义日期格式列表
+        # date_formats = [
+        #     '%Y年%m月%d日',  # 格式: 2024年05月28日
+        #     '%b %d, %Y',  # 格式: May 28, 2024
+        #     '%Y/%m/%d',
+        # ]
+        #
+        # # 使用正则表达式提取可能的日期部分，例如：2024/09/19、2024-09-19 等
+        # date_match = re.search(r"\d{4}[-/]\d{2}[-/]\d{2}", date_str)
+        #
+        # if date_match:
+        #     # 提取出匹配的日期字符串部分
+        #     date_str = date_match.group()
+        #
+        # # 移除前缀（如果有）
+        # if date_str.startswith("首播开始于 "):
+        #     date_str = date_str.replace("首播开始于 ", "")
+        #
+        # for date_format in date_formats:
+        #     try:
+        #         # 尝试解析日期字符串
+        #         dt = datetime.strptime(date_str, date_format)
+        #         # 将 datetime 对象格式化为 %Y-%m-%d 格式的字符串
+        #         formatted_date = dt.strftime('%Y-%m-%d')
+        #         return formatted_date
+        #     except ValueError:
+        #         # 如果解析失败，则尝试下一个格式
+        #         continue
+        #
+        # # 如果所有格式都不匹配，则返回原始字符串
+        # return date_str
 
     def fetch_page_info(self, _url):
         h5 = self.page.request.get(_url).text()
@@ -174,21 +191,34 @@ class Task:
         likeButtonRenderer = likeButton.get("likeButtonRenderer")
         likeCount = likeButtonRenderer.get("likeCount") if likeButtonRenderer.get("likeCount") is not None else 0
         self.finish_data["likes"] = likeCount
-
+        # print(reelPlayerOverlayRenderer)
         reelPlayerHeaderSupportedRenderers = reelPlayerOverlayRenderer.get("reelPlayerHeaderSupportedRenderers")
         reelPlayerHeaderRenderer = reelPlayerHeaderSupportedRenderers.get("reelPlayerHeaderRenderer")
         channelTitleText = reelPlayerHeaderRenderer.get("channelTitleText")
-        runs = channelTitleText.get("runs")
-        if len(runs) != 1:
-            raise ValueError("reelPlayerHeaderRenderer -> runs 获取失败")
-        user_name = runs[0].get("text")
-        self.finish_data["user_name"] = user_name
-
-        viewCommentsButton = reelPlayerOverlayRenderer.get("viewCommentsButton")
-        buttonRenderer = viewCommentsButton.get("buttonRenderer")
-        text = buttonRenderer.get("text")
-        simpleText = text.get("simpleText")
-        comments = self.clean_and_convert(simpleText)
+        # print("channelTitleText", channelTitleText)
+        if channelTitleText is not None:
+            runs = channelTitleText.get("runs")
+            if len(runs) != 1:
+                raise ValueError("reelPlayerHeaderRenderer -> runs 获取失败")
+            user_name = runs[0].get("text")
+            self.finish_data["user_name"] = user_name
+        else:
+            metapanel = reelPlayerOverlayRenderer.get("metapanel")
+            reelMetapanelViewModel = metapanel.get("reelMetapanelViewModel")
+            metadataItems = reelMetapanelViewModel.get("metadataItems")
+            for item in metadataItems:
+                if "reelChannelBarViewModel" in item:
+                    reelChannelBarViewModel = item.get("reelChannelBarViewModel")
+                    channelName = reelChannelBarViewModel.get("channelName")
+                    self.finish_data["user_name"] = channelName.get("content")
+        try:
+            viewCommentsButton = reelPlayerOverlayRenderer.get("viewCommentsButton")
+            buttonRenderer = viewCommentsButton.get("buttonRenderer")
+            text = buttonRenderer.get("text")
+            simpleText = text.get("simpleText")
+            comments = self.clean_and_convert(simpleText)
+        except Exception:
+            comments = 0
         self.finish_data["comments"] = comments
         engagementPanels = h5_json.get("engagementPanels")
         for engagementPanel in engagementPanels:
@@ -258,9 +288,44 @@ class Task:
 
 
 if __name__ == '__main__':
+    # ws = get_ws_id()
+    # print(ws)
     with sync_playwright() as playwright:
-        # Connect to the running browser instance
-        browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0]
+        browser = None
+        browser_context = playwright.chromium.launch_persistent_context(
+            env={
+                "LANG": "zh_CN.UTF-8",
+                "LC_ALL": "zh_CN.UTF-8",
+            },
+            extra_http_headers={
+                "Accept-Language": "zh-CN,zh;q=0.9",
+            },
+            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
+            user_data_dir=rf"C:\chrome-user-data",  # 指定用户数据目录
+            headless=False,  # 确保浏览器不是无头模式
+            viewport=return_viewPort(),
+            user_agent=user_agent,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--enable-automation=false",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+            ]
+        )
+        browser_context.add_init_script(
+            """
+                const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
+                 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                 Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh'] });
+                 Object.defineProperty(navigator, 'language', { get: () => 'zh-CN' });
+                 Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                 Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+           """
+        )
         # https://www.youtube.com/watch?v=YEoihc-EI3o
-        Task(browser, context).run("https://www.youtube.com/shorts/WR0TsR6QuqQ")
+        Task(None, browser_context).run("https://www.youtube.com/shorts/lwCsuPR5aC0")
+        browser_context.close()
+        # playwright.stop()

@@ -65,12 +65,15 @@ ins_account = [
         "fileDir": r"C:\browser\ins\chrome-danielkroesche94-data",
         "port": 9225
     },
-    {
-        "user": r"wagwanalbs",
-        "password": r"DeOne123456",
-        "code": r"JGO3 DSJQ BBCO RQGH C2LB AY6Q QBTS 4KOR",
-        "fileDir": r"C:\chrome-user-data",
-        "port": 9222
-    }
+    # {
+    #     "user": r"wagwanalbs",
+    #     "password": r"DeOne123456",
+    #     "code": r"JGO3 DSJQ BBCO RQGH C2LB AY6Q QBTS 4KOR",
+    #     "fileDir": r"C:\chrome-user-data",
+    #     "port": 9222
+    # }
 ]
 global_log.info(f"ins 账号数量共有 {len(ins_account)}")
+
+executable_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+global_log.info(f"Chrome地址为 ->  {executable_path}")

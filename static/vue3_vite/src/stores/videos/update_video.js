@@ -172,15 +172,12 @@ export const updateVideoData = defineStore("updateVideoData", () => {
 
   const selectDataById = async function selectDataByIdFunction(queryId) {
     let returnRes = {};
-    let res = [];
-
+    const key = queryId.value === undefined ? queryId : queryId.value;
     await dbHelper.openDatabase();
     const videoTable = await dbHelper.getAllData("videoTable");
-    // 遍历 videoTable 中的每一行
-    videoTable.forEach((row) => {
-      // 检查当前行的 parentId 是否与 queryId.value 匹配
-      if (row["parentId"] === queryId.value) {
-        // 将其他字段添加到 returnRes 对象中
+
+    for (let row of videoTable) {
+      if (row["parentId"] === Number.parseInt(key)) {
         returnRes["parentId"] = row["parentId"];
         returnRes["合作进度"] = row["合作进度"];
         returnRes["类型"] = row["类型"];
@@ -191,16 +188,13 @@ export const updateVideoData = defineStore("updateVideoData", () => {
         returnRes["物流单号"] = row["物流单号"];
         returnRes["花费"] = row["花费"];
         returnRes["预估观看量"] = row["预估观看量"];
-
-        // 将 "品牌"、"项目" 和 "产品" 的值拼接成一个数组，并添加到 res 数组中
-        res.push([row["品牌"], row["项目"], row["产品"]]);
+        returnRes["产品"] = [row["品牌"], row["项目"], row["产品"]];
+        // 找到第一个匹配的结果后立即返回
+        return returnRes;
       }
-    });
+    }
 
-    // 将 res 数组赋值给 returnRes 的 "产品" 字段
-    returnRes["产品"] = res;
-
-    // 返回最终结果对象
+    // 如果没有找到匹配结果，返回空对象或其他默认值
     return returnRes;
   };
 
@@ -218,41 +212,123 @@ export const updateVideoData = defineStore("updateVideoData", () => {
   const gotTableData = async function tableDatas() {
     await dbHelper.openDatabase();
     await initVideo.initialize();
-    const videoTable = await dbHelper.getAllData("videoTable");
-    const logistics = await dbHelper.getAllData("logistics");
-    const influencerTable = await dbHelper.getAllData("influencerTable");
+
+    // 并行获取数据，提高效率
+    const [videoTable, logistics, influencerTable] = await Promise.all([
+      dbHelper.getAllData("videoTable"),
+      dbHelper.getAllData("logistics"),
+      dbHelper.getAllData("influencerTable"),
+    ]);
+
+    // 创建物流状态映射表：订单号 -> 物流状态
     const logisticsMap = new Map(
       logistics.map((info) => [info.订单号, info.物流状态_中文])
     );
-    const influencerMap = new Map(
-      influencerTable.map((info) => [info.红人名称, info])
-    );
 
+    // 创建红人信息映射表和平台-红人主页映射表
+    const influencerMap = new Map(); // 红人名称/全名 -> 红人信息
+    const platformNameToHomepageMap = new Map(); // 平台:红人名称/全名 -> 红人主页地址
+
+    influencerTable.forEach((info) => {
+      const platform = info["平台"].toLowerCase();
+      const names = [info.红人全名, info.红人名称]
+        .filter(Boolean)
+        .map((name) => name.toLowerCase());
+
+      names.forEach((nameKey) => {
+        // 将红人名称和全名映射到红人信息
+        influencerMap.set(nameKey, info);
+
+        // 构建平台和红人名称的组合键，映射到红人主页地址
+        const platformMapKey = `${platform}:${nameKey}`;
+        platformNameToHomepageMap.set(platformMapKey, info.红人主页地址);
+      });
+    });
+
+    // 处理视频表数据
     videoTable.forEach((row) => {
+      // 处理物流进度
       if (row.物流单号) {
-        const trackingNumbersByParam = extractTrackingNumbersByParam(
-          row.物流单号
-        );
-        let stat = "";
-        trackingNumbersByParam.forEach((number) => {
-          const logisticsStatus = logisticsMap.get(number);
-          if (logisticsStatus) {
-            stat += `${number}: ${logisticsStatus}\n`;
-          }
-        });
-        row.物流进度 = stat;
+        const trackingNumbers = extractTrackingNumbersByParam(row.物流单号);
+        const statuses = trackingNumbers
+          .map((number) => {
+            const status = logisticsMap.get(number);
+            return status ? `${number}: ${status}` : null;
+          })
+          .filter(Boolean)
+          .join("\n");
+        row.物流进度 = statuses;
       }
-      if (row.红人全称) {
-        const influencerInfo = influencerMap.get(row.红人全称);
+      if (row.参与率){
+        row.参与率 = row.参与率.toLocaleString('zh-CN', {
+          style: 'percent',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+      // 处理红人信息
+      if (row.红人名称 || row.红人全称) {
+        const nameKeys = [
+          row.红人名称 ? row.红人名称.toLowerCase() : null,
+          row.红人全称 ? row.红人全称.toLowerCase() : null,
+        ].filter(Boolean);
+
+        // 查找红人信息，优先使用红人名称
+        let influencerInfo = null;
+        for (const nameKey of nameKeys) {
+          influencerInfo = influencerMap.get(nameKey);
+          if (influencerInfo) {
+            break;
+          }
+        }
+
         if (influencerInfo) {
-          row.平台 = influencerInfo.平台;
-          row["主页视频"] = influencerInfo.红人主页地址;
+          // 确定平台
+          let platform = row["平台"]
+            ? row["平台"].toLowerCase()
+            : influencerInfo["平台"].toLowerCase();
+
+          if (!platform && influencerInfo.红人主页地址) {
+            platform = findPlatform(influencerInfo.红人主页地址);
+            row["平台"] = platform;
+          }
+
+          // 获取红人主页视频链接
+          let homepage = null;
+          for (const nameKey of nameKeys) {
+            const platformMapKey = `${platform}:${nameKey}`;
+            homepage = platformNameToHomepageMap.get(platformMapKey);
+            if (homepage) {
+              break;
+            }
+          }
+
+          // 设置主页视频链接
+          row["主页视频"] = homepage || influencerInfo.红人主页地址;
+          // 如果平台信息缺失，尝试从主页地址中提取
+          if (!row["平台"] && influencerInfo.红人主页地址) {
+            row["平台"] = findPlatform(influencerInfo.红人主页地址);
+          }
         }
       }
     });
 
     return videoTable;
   };
+
+  function findPlatform(link) {
+    if (link.includes("instagram")) {
+      return "instagram";
+    } else if (link.includes("youtube")) {
+      return "youtube";
+    } else if (link.includes("tiktok")) {
+      return "tiktok";
+    } else if (link.includes("x.com")) {
+      return "x";
+    } else {
+      return "未定义判断";
+    }
+  }
 
   const gotMeirtcsData = async function gotMeirtcsDataFunction() {
     await dbHelper.openDatabase();

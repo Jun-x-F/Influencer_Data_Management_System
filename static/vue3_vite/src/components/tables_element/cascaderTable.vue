@@ -122,7 +122,29 @@ const mergeColumns = fixedColumns
 // Reactive object to store merge data
 const mergeData = ref<Record<string, any>>({});
 
+// // 过滤和合并数据
+// const filterAndMergeData = async () => {
+//   try {
+//     loading.value = true;
+//     tableFilterData.value = tableData.value.filter(data => {
+//       const matchParentId = !notice.choseParentId || data.parentId.=== (notice.choseParentId);
+//       const matchManager = !notice.choseManager || data.负责人 === notice.choseManager;
+//       const matchProduct = !notice.choseProduct || !notice.choseProduct.length || notice.choseProduct.some(product => data.产品 === product[2]);
+//       return matchParentId && matchManager && matchProduct;
+//     });
+//     mergeData.value = await mergeTable.processMerge(mergeColumns.value, tableFilterData.value, "parentId");
+//   } catch (error) {
+//     console.error("Error processing data:", error);
+//   } finally {
+//     loading.value = false;
+//   }
+// }; // 去抖时间设为 300ms
 
+// // 监听变化
+// watch(
+//     [() => notice.choseParentId, () => notice.choseManager, () => notice.choseProduct],
+//     filterAndMergeData
+// );
 
 // 监听 props.updateData 的变化
 watch(
@@ -236,6 +258,7 @@ const fetchData = async () => {
     tableFilterData.value = tableData.value;
     // Process merge data if necessary
     mergeData.value = await mergeTable.processMerge(mergeColumns, tableFilterData.value, "parentId");
+    console.log(mergeData);
     loading.value = false;
   } catch (error) {
     console.error("Error fetching table data:", error);
@@ -259,19 +282,13 @@ const spanMethod = ({ row, column, rowIndex, columnIndex }: any) => {
       colspan: 1,
     }
   }
-  const colData = mergeData.value[colName][rowIndex]
+
   try {
-    if (rowIndex === colData['rowIndex']) {
-      return {
-        // 跨度
-        rowspan: colData['rowspan'],
-        colspan: 1,
-      }
-    } else {
-      return {
-        rowspan: 1,
-        colspan: 1,
-      }
+    const colData = mergeData.value[colName][rowIndex]
+    return {
+      // 跨度
+      rowspan: colData['rowspan'],
+      colspan: 1,
     }
   } catch (Error) {
     // 不存在的代表相同已经被过滤掉了
@@ -295,6 +312,9 @@ body {
   margin: 0;
 }
 
+::v-deep( .el-table__body-wrapper){
+  z-index: 2
+}
 .example-showcase .el-loading-mask {
   z-index: 9;
 }

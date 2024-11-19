@@ -127,6 +127,7 @@ const useUser = useUserStore();
 const initVideo = initVideoData();
 const notice = useNotice();
 
+let debounceTimeout = null;
 const videoProgress = ref('');
 const videoType = ref('');
 const videocurrency = ref('');
@@ -179,15 +180,14 @@ const cascaderProps = {
 let videoProgressList = ['进行中', '合作完成', '合作失败'];
 
 // 处理选择的项
-const handleItemSelect = (item) => {
+const handleItemSelect = async (item) => {
   console.log('用户选择了：', item);
   if (item.name === "唯一Id") {
     loading.value = true;
-    console.log("updateVideo.selectDataById(item.value)", updateVideo.selectDataById(item.value));
+    // console.log("updateVideo.selectDataById(item.value)", item.value);
     // 判断状态是否改变
-
-    updateVideo.selectDataById(item.value).then((result) => {
-      // 当 Promise 被解析时执行
+    const result = await updateVideo.selectDataById(item.value)
+    if (result.parentId !== ""){
       notice.setParentIdData(result.parentId);
       selectedValue.value = result.parentId;
       videoProgress.value = result.合作进度;
@@ -201,17 +201,11 @@ const handleItemSelect = (item) => {
       videocost.value = result.花费;
       videoestimatedViews.value = result.预估观看量;
       videoestimatedLaunchDate.value = result.预估上线时间;
-      checkItemData();
+      await checkItemData();
 
       isClickId.value = true;
-    })
-      .catch((error) => {
-        // 当 Promise 被拒绝时执行
-        console.error('Promise rejected with error:', error);
-      });
+    }
     loading.value = false;
-
-
   }
 };
 
@@ -220,20 +214,27 @@ const handleItemSelect = (item) => {
 const emit = defineEmits(['change_Id', 'change_product', 'reset']);
 
 watch(selectedValue, async (newValue) => {
-  console.log('用户输入selectedValue id的值发生了变化：', newValue);
+  // console.log('用户输入selectedValue id的值发生了变化：', newValue);
   // const selectRes = updateVideo.selectDataById(newValue);
   // console.log('用户的值为', selectRes);
+  // 清除之前的定时器
+  if (debounceTimeout) {
+    clearTimeout(debounceTimeout);
+  }
   // 在这里执行您需要的逻辑，例如验证输入、发送请求等
   if (newValue === '' && notice.choseParentId !== null) {
     closeInit.value = true;
     await reset();
   } else {
-    await notice.setParentIdData(newValue);
+    // 启动一个新的定时器，2 秒后执行
+    debounceTimeout = setTimeout( async () => {
+      await handleItemSelect({name:"唯一Id", value:newValue});
+    }, 1000); // 2000 毫秒，即 2 秒
   }
 });
 
 watch(() => notice.isUpdateData, async (newValue, oldValue) => {
-  console.log("notice.isUpdateData", notice.isUpdateData);
+  // console.log("notice.isUpdateData", notice.isUpdateData);
   if (newValue === true) {
     await reset();
     await notice.setIsUpdateData(false);
@@ -241,13 +242,13 @@ watch(() => notice.isUpdateData, async (newValue, oldValue) => {
 })
 
 watch(selectManager, (newValue, oldValue) => {
-  console.log('selectManager', newValue);
+  // console.log('selectManager', newValue);
   // 在这里执行您需要的逻辑，例如验证输入、发送请求等
   notice.setManagerData(newValue);
 });
 
 watch(selectedProduct, (newValue, oldValue) => {
-  console.log('selectedProduct', newValue);
+  // console.log('selectedProduct', newValue);
   // 在这里执行您需要的逻辑，例如验证输入、发送请求等
   notice.setProductData(newValue);
 });
@@ -301,7 +302,7 @@ async function handleReset() {
 async function deleteData() {
   isDialogVisible.value = true;
   loading.value = true;
-  console.log("isClickId", isClickId);
+  // console.log("isClickId", isClickId);
   if (selectedValue.value === "" || isClickId.value === false) {
     errorMessage.value = "请选择已有的ID, 目前输入的唯一ID为 " + selectedValue.value;
     loading.value = false;
@@ -325,13 +326,13 @@ async function deleteData() {
 async function updateData() {
   isDialogVisible.value = true;
   loading.value = true;
-  console.log("isClickId", isClickId);
+  // console.log("isClickId", isClickId);
   if (selectedValue.value === "" || isClickId.value === false) {
     errorMessage.value = "请选择已有的ID, 目前输入的唯一ID为 " + selectedValue.value;
     loading.value = false;
     return;
   }
-  console.log("Update videoLinks.value", videoLinks.value);
+  // console.log("Update videoLinks.value", videoLinks.value);
   if (videoLinks.value !== "" && videoLinks.value !== null) {
     const res = updateVideo.checkLink(videoLinks.value);
 
@@ -392,10 +393,10 @@ async function updateData() {
     "parentId": selectedValue.value
   }
 
-  console.log("toRequestData", toRequestData);
+  // console.log("toRequestData", toRequestData);
 
   const fetchInfo = await initVideo.fetchData("/video/api/update_data", "POST", toRequestData);
-  console.log(fetchInfo);
+  // console.log(fetchInfo);
   if (fetchInfo.success !== true) {
     errorMessage.value = fetchInfo.message
   } else {
@@ -406,7 +407,7 @@ async function updateData() {
 
 };
 
-const checkItemData = () => {
+const checkItemData = async () => {
   validationStatus.videoProgress = !videoProgress.value;
   validationStatus.videoType = !videoType.value;
   validationStatus.videocurrency = !videocurrency.value;

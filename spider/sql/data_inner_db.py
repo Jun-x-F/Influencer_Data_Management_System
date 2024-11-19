@@ -5,6 +5,8 @@
 @Author：Libre
 @Time：2024/8/12 下午5:22
 """
+import datetime
+
 from sqlalchemy import and_, update, select, delete, func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -28,12 +30,12 @@ def inner_InfluencersVideoProjectDataByDate(finish_data):
         # 提取查询条件
         filters = and_(
             InfluencersVideoProjectDataByDate.video_url == finish_data.get("video_url"),
-            InfluencersVideoProjectDataByDate.updated_at == finish_data.get("updated_at")
+            InfluencersVideoProjectDataByDate.updated_at == datetime.date.today().strftime("%Y-%m-%d")
         )
 
         # 检查是否已有记录
         db_history_data = db.session.query(InfluencersVideoProjectDataByDate).filter(filters).first()
-
+        print(datetime.date.today().strftime("%Y-%m-%d"), db_history_data)
         if db_history_data:
             # 如果记录存在，则更新
             db.session.execute(
@@ -146,6 +148,7 @@ def add_MerticsData(finish_data):
         global_log.error(f"Failed to log to database: {e}")
         db.session.rollback()
         raise
+
 
 def update_MerticsData(finish_data):
     try:
@@ -305,6 +308,8 @@ def sync_logistics_information_sheet_to_InfluencersVideoProjectData(logistics_nu
 
 def sync_logistics_information(finishData):
     try:
+        if finishData.get("progressLogistics") is None:
+            global_log.warning(f"sync_logistics_information error -> {finishData}")
         if db.check_connection() is not True:
             db.reconnect_session()
         # 使用括号来包围整个查询，这样可以在多行中书写
@@ -319,30 +324,51 @@ def sync_logistics_information(finishData):
 
         db.session.commit()
         return True
-    except SQLAlchemyError as e:
+    except Exception as e:
         global_log.error(f"Failed to log to database: {e}")
         db.session.rollback()
         raise
 
 
 def select_video_urls(select_, filter_, order_, isAll=True):
-    if db.check_connection() is not True:
-        db.reconnect_session()
-    # 使用 SQLAlchemy 的 select 语句进行查询，只获取 URL 字段
-    if filter_ is None:
-        stmt = select(select_).order_by(order_.desc())
-    else:
-        stmt = select(select_).filter(filter_).order_by(order_.desc())
+    try:
+        if db.check_connection() is not True:
+            db.reconnect_session()
+        # 使用 SQLAlchemy 的 select 语句进行查询，只获取 URL 字段
+        if filter_ is None:
+            stmt = select(select_).order_by(order_.desc())
+        else:
+            stmt = select(select_).filter(filter_).order_by(order_.desc())
 
-    # 执行查询
-    if isAll:
-        results = db.session.execute(stmt).scalars().all()
-    else:
-        results = db.session.execute(stmt).scalars().first()
-    return results
+        # 执行查询
+        if isAll:
+            results = db.session.execute(stmt).scalars().all()
+        else:
+            results = db.session.execute(stmt).scalars().first()
+        return results
+    except Exception as e:
+        global_log.error()
+        return []
 
 
 if __name__ == '__main__':
-    print(select_video_urls(select_=func.max(InfluencersVideoProjectData.parentId),
-                            filter_=None,
-                            order_=InfluencersVideoProjectData.parentId))
+    result: InfluencersVideoProjectData = select_video_urls(select_=InfluencersVideoProjectData,
+                                                            filter_=InfluencersVideoProjectData.video_url == "https://x.com/catalinmpit/status/1839647531296518593",
+                                                            order_=InfluencersVideoProjectData.parentId)[0]
+    # InfluencersVideoProjectDataByDate(**result)
+    from sqlalchemy import inspect
+
+
+    def object_as_dict(obj):
+        return {c.key: getattr(obj, c.key)
+                for c in inspect(obj).mapper.column_attrs}
+    result_toDict = object_as_dict(result)
+    # 获取 InfluencersVideoProjectDataByDate 的键集合
+    data_by_date_keys = set(object_as_dict(InfluencersVideoProjectDataByDate()).keys())
+
+    # 过滤 result_toDict，只保留 data_by_date_keys 中的键
+    filtered_result = {key: result_toDict[key] for key in data_by_date_keys if key in result_toDict}
+    filtered_result["updated_at"] = datetime.date.today()
+    print(result_toDict)
+    print(filtered_result)
+

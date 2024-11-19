@@ -2,7 +2,7 @@
   <div :class="{ 'invalid-label': wrapperClass }">
     <label v-if="label" :for="inputId">{{ label }}</label>
     <el-autocomplete :id="inputId" v-model="internalValue" :fetch-suggestions="querySearch" :placeholder="placeholder"
-      clearable @select="handleSelect" @blur="hadnleBlur" :required="required" />
+      clearable @select="handleSelect" :required="required" />
   </div>
 </template>
 <script setup>
@@ -86,12 +86,8 @@ const querySearch = (queryString, callback) => {
   callback(results);
 };
 
-const hadnleBlur = (item) => {
-  console.log(item)
-};
-
 // 处理选择建议项的函数
-const handleSelect = (item) => {
+const handleSelect =async (item) => {
   emits('select', { "name": props.label, "value": item });
 };
 </script>

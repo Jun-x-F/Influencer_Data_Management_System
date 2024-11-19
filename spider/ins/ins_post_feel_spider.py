@@ -15,17 +15,16 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Response
 
 from log.logger import global_log
-from spider.config.config import redis_conn
+from spider.config.config import redis_conn, executable_path
 from spider.ins.ins_new import get_ins_info, save_cookies, random_account_
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from tool.JsonUtils import dfs_get_value
 from tool.TimeUtils import TimeUtils
-from tool.get_ws import get_ws_id
 
 
 class Task:
-    def __init__(self, _browser: Browser, _context: BrowserContext, page: Page, account, password, code, isCheckLogin):
-        self.browser = _browser
+    def __init__(self, _browser: Optional[Browser], _context: BrowserContext, page: Page, account, password, code, isCheckLogin):
+        self.browser:Optional[Browser] = _browser
         self.context = _context
         self.page = page
         self.account = account
@@ -151,7 +150,7 @@ class Task:
             raise ValueError(f"获取不到{self.cur_url}的html信息")
         cur_url = self.fetch_data()
         cur_code = self.extract_post_id(self.cur_url)
-        save_cookies(self.page, "ins_cookies.json")
+        save_cookies(self.page, f"ins_{self.account}_cookies")
         return cur_code, cur_url, self.finish_data
 
     def run(self, url):
@@ -170,45 +169,52 @@ def ins_videos_start_spider(url):
     code = account_info.get("code")
     port = account_info.get("port")
     fileDir = account_info.get("fileDir")
-    ws_id = get_ws_id(port, fileDir)
+    # ws_id = get_ws_id(port, fileDir)
 
-    global_log.info(f"ins 视频 -> 获取到对应的账号为 {account_info}, 浏览器id为{ws_id}")
+    global_log.info(f"ins 视频 -> 获取到对应的账号为 {account_info}...")
     with sync_playwright() as playwright:
-        cdp = playwright.chromium.connect_over_cdp(ws_id)
-        contexts = cdp.contexts[0]
-
-        cookies_str = redis_conn.get_value(f"ins_{user}_cookies")
+        browser = playwright.chromium.launch_persistent_context(
+            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
+            user_data_dir=fileDir,  # 指定用户数据目录
+            headless=False,  # 确保浏览器不是无头模式
+            args=["--disable-blink-features=AutomationControlled"]  # 避免自动化检测
+        )
+        # cdp = playwright.chromium.connect_over_cdp(ws_id)
+        # contexts = cdp.contexts[0]
+        cur_cookies = f"ins_{user}_cookies"
+        cookies_str = redis_conn.get_value(cur_cookies)
         isCheckLogin = True
         if cookies_str is not None:
             cookies = json.loads(cookies_str)
             # 重新update
-            contexts.add_cookies(cookies)
+            browser.add_cookies(cookies)
             isCheckLogin = False
-        contexts.add_init_script(
+        browser.add_init_script(
             "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
         )
-        for cur_page in contexts.pages:
+        for cur_page in browser.pages:
             # 页面清除
             if "instagram" in cur_page.url:
                 cur_page.close()
-        _page = contexts.new_page()
+        _page = browser.new_page()
         get_ins_media_code, get_ins_media_url, get_ins_media_info = \
-            Task(cdp, contexts, _page, user, password, code, isCheckLogin).run(url)
-        contexts.close()
-        cdp.close()
+            Task(None, browser, _page, user, password, code, isCheckLogin).run(url)
+        browser.close()
     key = Task.extract_post_id(url)
     value_str = redis_conn.get_value(key)
     if value_str is None:
         # 修改对应的数据 => 将他修改为读取当前的cookies和browser、page
-        item_json = get_ins_info(code=get_ins_media_code, url=get_ins_media_url, ws_id=ws_id)
+        item_json = get_ins_info(code=get_ins_media_code, url=get_ins_media_url, fileDir=fileDir, cur_cookies=cur_cookies)
         item_data = item_json.get(key)
     else:
         item_data = json.loads(value_str)
-    engagement_rate = 0
+
     try:
         engagement_rate = ((item_data.get("comment_count", 0) + item_data.get("like_count", 0))
                            / item_data.get("play_count", 0))
     except Exception:
+        if item_data is None:
+            item_data = {}
         engagement_rate = 0
     res_data = {
         "platform": "instagram",
@@ -228,5 +234,5 @@ def ins_videos_start_spider(url):
 
 
 if __name__ == '__main__':
-    ins_videos_start_spider("https://www.instagram.com/p/C-wC4vrRw4y/")
+    ins_videos_start_spider("https://www.instagram.com/reel/C6yMBY0yb0S/")
     # print(Task.extract_post_id("https://www.instagram.com/p/C-uAo_4uvWe/?img_index=1"))
