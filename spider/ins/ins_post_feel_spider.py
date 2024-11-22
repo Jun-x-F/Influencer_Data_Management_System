@@ -8,6 +8,7 @@
 import json
 import re
 import time
+from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -15,7 +16,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, Response
 
 from log.logger import global_log
-from spider.config.config import redis_conn, executable_path
+from spider.config.config import redis_conn, executable_path, headerLess
 from spider.ins.ins_new import get_ins_info, save_cookies, random_account_
 from spider.sql.data_inner_db import inner_InfluencersVideoProjectData, inner_InfluencersVideoProjectDataByDate
 from tool.JsonUtils import dfs_get_value
@@ -176,7 +177,7 @@ def ins_videos_start_spider(url):
         browser = playwright.chromium.launch_persistent_context(
             executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
             user_data_dir=fileDir,  # 指定用户数据目录
-            headless=False,  # 确保浏览器不是无头模式
+            headless=headerLess,  # 确保浏览器不是无头模式
             args=["--disable-blink-features=AutomationControlled"]  # 避免自动化检测
         )
         # cdp = playwright.chromium.connect_over_cdp(ws_id)
@@ -230,6 +231,7 @@ def ins_videos_start_spider(url):
     }
     global_log.info(f"ins 视频 ==> {res_data}")
     inner_InfluencersVideoProjectData(res_data)
+    res_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     inner_InfluencersVideoProjectDataByDate(res_data)
 
 

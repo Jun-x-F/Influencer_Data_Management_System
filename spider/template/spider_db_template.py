@@ -6,9 +6,9 @@
 @Author：Libre
 @Time：2024/7/25 下午5:33
 """
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Column, Integer, Text, BigInteger, Float, VARCHAR, Date, DateTime
+from sqlalchemy import Column, Integer, Text, BigInteger, Float, VARCHAR, Date, DateTime, DATETIME
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -95,7 +95,7 @@ class InfluencersVideoProjectDataByDate(Base):
     collections = Column('收藏数', Integer, nullable=True, comment='收藏数')
     forward = Column('转发数', Integer, nullable=True, comment='转发数')
     engagement_rate = Column('参与率', Float, nullable=True, comment='参与率')
-    updated_at = Column('更新日期', Date, default=date.today)
+    updated_at = Column('更新日期', DATETIME, default=datetime.now)
 
 
 class logistics_information_sheet(Base):

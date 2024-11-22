@@ -187,6 +187,7 @@ const handleItemSelect = async (item) => {
     // console.log("updateVideo.selectDataById(item.value)", item.value);
     // 判断状态是否改变
     const result = await updateVideo.selectDataById(item.value)
+    console.log("检查result", result)
     if (result.parentId !== ""){
       notice.setParentIdData(result.parentId);
       selectedValue.value = result.parentId;
@@ -356,6 +357,13 @@ async function updateData() {
   const keys = ['brand', 'project', 'product'];
 
   const arrayOfObjects = [];
+
+
+  const test = selectedProduct.value
+  if (!Array.isArray(test[0])) {
+    selectedProduct.value = [test];
+  }
+
   selectedProduct.value.forEach(subArray => {
     const obj = {};
     const childrenList = updateVideo.parentAndChildrenMapping[selectedValue.value];

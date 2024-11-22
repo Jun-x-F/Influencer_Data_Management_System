@@ -47,10 +47,10 @@ def to_update_video_data():
         if errorList:
             strMessage += f"## 视频表定期任务\n\n### 重试阶段\n\n**以下链接存在问题**:\n\n" + "\n".join(
                 [f"- {url}" for url in errorList])
-        if warnList:
-            strMessage += f"\n\n***\n\n"
-            strMessage += f"## 视频表定期任务\n\n### 提醒\n\n**以下链接存在问题**:\n\n" + "\n".join(
-                [f"- {url}" for url in warnList])
+        # if warnList:
+        #     strMessage += f"\n\n***\n\n"
+        #     strMessage += f"## 视频表定期任务\n\n### 提醒\n\n**以下链接存在问题**:\n\n" + "\n".join(
+        #         [f"- {url}" for url in warnList])
         if strMessage != "":
             sendMessage("视频表定期任务",
                         strMessage)

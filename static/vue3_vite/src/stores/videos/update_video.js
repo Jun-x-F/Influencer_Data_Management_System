@@ -188,9 +188,10 @@ export const updateVideoData = defineStore("updateVideoData", () => {
         returnRes["物流单号"] = row["物流单号"];
         returnRes["花费"] = row["花费"];
         returnRes["预估观看量"] = row["预估观看量"];
-        returnRes["产品"] = [row["品牌"], row["项目"], row["产品"]];
-        // 找到第一个匹配的结果后立即返回
-        return returnRes;
+        let ls = returnRes["产品"]?returnRes["产品"]:[];
+        // 填充所有产品数据，做el的联级筛选
+        ls.push([row["品牌"], row["项目"], row["产品"]]);
+        returnRes["产品"] = ls;
       }
     }
 
@@ -250,14 +251,13 @@ export const updateVideoData = defineStore("updateVideoData", () => {
       // 处理物流进度
       if (row.物流单号) {
         const trackingNumbers = extractTrackingNumbersByParam(row.物流单号);
-        const statuses = trackingNumbers
-          .map((number) => {
-            const status = logisticsMap.get(number);
-            return status ? `${number}: ${status}` : null;
-          })
-          .filter(Boolean)
-          .join("\n");
-        row.物流进度 = statuses;
+        row.物流进度 = trackingNumbers
+            .map((number) => {
+              const status = logisticsMap.get(number);
+              return status ? `${number}: ${status}` : null;
+            })
+            .filter(Boolean)
+            .join("\n");
       }
       if (row.参与率){
         row.参与率 = row.参与率.toLocaleString('zh-CN', {

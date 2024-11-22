@@ -122,30 +122,6 @@ const mergeColumns = fixedColumns
 // Reactive object to store merge data
 const mergeData = ref<Record<string, any>>({});
 
-// // 过滤和合并数据
-// const filterAndMergeData = async () => {
-//   try {
-//     loading.value = true;
-//     tableFilterData.value = tableData.value.filter(data => {
-//       const matchParentId = !notice.choseParentId || data.parentId.=== (notice.choseParentId);
-//       const matchManager = !notice.choseManager || data.负责人 === notice.choseManager;
-//       const matchProduct = !notice.choseProduct || !notice.choseProduct.length || notice.choseProduct.some(product => data.产品 === product[2]);
-//       return matchParentId && matchManager && matchProduct;
-//     });
-//     mergeData.value = await mergeTable.processMerge(mergeColumns.value, tableFilterData.value, "parentId");
-//   } catch (error) {
-//     console.error("Error processing data:", error);
-//   } finally {
-//     loading.value = false;
-//   }
-// }; // 去抖时间设为 300ms
-
-// // 监听变化
-// watch(
-//     [() => notice.choseParentId, () => notice.choseManager, () => notice.choseProduct],
-//     filterAndMergeData
-// );
-
 // 监听 props.updateData 的变化
 watch(
   () => notice.isResetData, async (newData) => {
@@ -252,13 +228,13 @@ const fetchData = async () => {
     loading.value = true
     // Fetch table data
     const data = await updateVideo.gotTableData();
+    console.log("检查table的data",data)
 
     // Sort data by parentId descending
     tableData.value = data.sort((a, b) => b.parentId - a.parentId);
     tableFilterData.value = tableData.value;
     // Process merge data if necessary
     mergeData.value = await mergeTable.processMerge(mergeColumns, tableFilterData.value, "parentId");
-    console.log(mergeData);
     loading.value = false;
   } catch (error) {
     console.error("Error fetching table data:", error);
