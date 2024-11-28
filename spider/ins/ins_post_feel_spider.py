@@ -8,7 +8,6 @@
 import json
 import re
 import time
-from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -231,7 +230,6 @@ def ins_videos_start_spider(url):
     }
     global_log.info(f"ins 视频 ==> {res_data}")
     inner_InfluencersVideoProjectData(res_data)
-    res_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     inner_InfluencersVideoProjectDataByDate(res_data)
 
 

@@ -8,7 +8,6 @@
 import json
 import os
 import re
-from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -226,7 +225,6 @@ class Task:
             raise ValueError(f"x --> extract_status_id -->extract_status_id {focalTweetId}")
         self.get_post_info(focalTweetId)
         inner_InfluencersVideoProjectData(self.response_data)
-        self.response_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         inner_InfluencersVideoProjectDataByDate(self.response_data)
 
     def run(self, url):

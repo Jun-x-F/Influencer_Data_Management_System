@@ -30,7 +30,7 @@ def inner_InfluencersVideoProjectDataByDate(finish_data):
         # 提取查询条件
         filters = and_(
             InfluencersVideoProjectDataByDate.video_url == finish_data.get("video_url"),
-            InfluencersVideoProjectDataByDate.updated_at == datetime.date.today().strftime("%Y-%m-%d %H:%M:%S")
+            InfluencersVideoProjectDataByDate.updated_at == datetime.date.today().strftime("%Y-%m-%d")
         )
 
         # 检查是否已有记录

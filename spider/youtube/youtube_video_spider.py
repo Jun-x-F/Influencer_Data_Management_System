@@ -8,7 +8,6 @@
 import json
 import random
 import re
-from datetime import datetime
 from typing import Optional
 
 from dateutil.parser import parse
@@ -274,7 +273,6 @@ class Task:
             self.finish_data["engagement_rate"] = 0
 
         inner_InfluencersVideoProjectData(self.finish_data)
-        self.finish_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         inner_InfluencersVideoProjectDataByDate(self.finish_data)
         self._close()
 

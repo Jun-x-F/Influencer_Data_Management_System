@@ -163,14 +163,14 @@ def to_save(url):
 def to_update_video_data_to_retry():
     try:
         res = [
-            "https://www.instagram.com/reel/C-7hPa6NESp/?igsh=bWloYTFwOXBydWZw",
-            "https://www.instagram.com/p/DAG8ezESf4u/",
-            "https://www.instagram.com/reel/C909nZBO7AW/?igsh=MTNscml2am80amo2cQ==",
+            "https://www.instagram.com/p/C-wC4vrRw4y/",
+            "https://www.youtube.com/watch?v=P5bq1jLrg6Q",
+            "https://www.tiktok.com/@jjadavitt/video/7381460381979495726?_r=1&_t=8nI4sHD6pgd",
+            "https://www.instagram.com/reel/C7goYbHM91t/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
+            "https://www.instagram.com/reel/C7fMSZeMkY9/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
             "https://www.instagram.com/reel/C7escZdMeuk/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-            "https://www.instagram.com/reel/C7Wj4fhMGgU/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-            "https://www.instagram.com/p/C7eAAICtXyP/",
-            "https://www.instagram.com/reel/C6yMBY0yb0S/",
-            "https://www.instagram.com/reel/C55fzb6xLxo/?igsh=eWh0c3Y1Z2ZwdGJ2"
+            "https://www.youtube.com/watch?v=JeFNr-24pQg&t=15s",
+            "https://www.youtube.com/watch?v=z6_kXWYlAOo"
         ]
         global_log.info(f"定时任务 视频信息 -> {res}")
         errorList = []

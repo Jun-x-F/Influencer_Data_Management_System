@@ -6,7 +6,6 @@
 @Time：2024/8/1 下午4:11
 """
 import json
-from datetime import datetime
 from typing import Optional
 
 import requests
@@ -91,7 +90,6 @@ class Task:
                                                / self.finish_data["views"])
         global_log.info(f"tiktok -> {self.finish_data}")
         inner_InfluencersVideoProjectData(self.finish_data)
-        self.finish_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         inner_InfluencersVideoProjectDataByDate(self.finish_data)
         self._close_data()
 
