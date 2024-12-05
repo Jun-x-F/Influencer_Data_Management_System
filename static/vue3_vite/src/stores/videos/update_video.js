@@ -18,6 +18,25 @@ export const updateVideoData = defineStore("updateVideoData", () => {
   const parametricIndicatorsId = ref();
   const influencerTableName = ref();
 
+  const influencerTable = ref();
+
+  const initializeInfluencer = async () => {
+    await dbHelper.openDatabase();
+    // 初始化表单
+    await initVideo.initialize();
+    // 获取 parametricIndicators 表的数据
+    influencerTable.value = await dbHelper.getAllData("influencerTable");
+    influencerTable.value.forEach((row) => {
+      if (row.平均参与率) {
+        row.平均参与率 = row.平均参与率.toLocaleString('zh-CN', {
+          style: 'percent',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+    });
+  }
+
   /**
    * 初始化下拉框的数据
    * */
@@ -383,6 +402,7 @@ export const updateVideoData = defineStore("updateVideoData", () => {
     parentAndChildrenMapping,
     parametricIndicatorsId,
     influencerTableName,
+    influencerTable,
 
     initializeDropdownsData,
     selectDataById,
@@ -390,5 +410,6 @@ export const updateVideoData = defineStore("updateVideoData", () => {
     checkLink,
     checkLogisticsNumber,
     gotMeirtcsData,
+    initializeInfluencer
   };
 });

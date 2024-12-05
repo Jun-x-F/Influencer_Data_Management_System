@@ -1,7 +1,7 @@
 // src/router/index.js
 import {createRouter, createWebHistory} from 'vue-router';
 import Home from '@/components/HelloWorld.vue'; // 确保路径正确
-import VideoIndex from '@/components/videos/video_index.vue'; // 我们稍后会创建这个组件
+import VideoIndex from '@/components/videos/video_index.vue';
 
 const routes = [
   {
@@ -15,7 +15,7 @@ const routes = [
     component: VideoIndex
     // 如果需要懒加载，可以使用以下方式：
     // component: () => import('@/views/VideoIndex.vue')
-  },
+  }
   // 你可以在这里添加更多的路由
 ];
 

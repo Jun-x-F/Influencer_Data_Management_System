@@ -56,23 +56,6 @@ export const initVideoData = defineStore("initVideoData", () => {
   const loading = ref(false);
   const error = ref(null);
 
-  // // 通用的获取和缓存数据函数
-  // const fetchAndCache = async (endpoint, storeName, _method='GET') => {
-  //     try {
-  //         const response = await fetch(endpoint, { method: _method });
-  //         if (!response.ok) {
-  //             throw new Error(`请求失败: ${response.status}`);
-  //         }
-  //         const data = await response.json();
-  //         await dbHelper.clearStore(storeName);
-  //         await dbHelper.addOrUpdateDataBatch(storeName, data);
-  //         return data;
-  //     } catch (err) {
-  //         console.error(`获取和缓存 ${storeName} 数据时出错:`, err);
-  //         throw err;
-  //     }
-  // };
-
   // 通用的获取和缓存数据函数
   const fetchAndCache = async (
     endpoint,
