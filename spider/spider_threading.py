@@ -13,7 +13,8 @@ from sqlalchemy import and_
 
 from log.logger import global_log
 from spider import run_spider
-from spider.config.config import order_links, submitted_influencer_links, submitted_video_links, message_queue
+from spider.config.config import order_links, message_queue
+from spider.config.request_config import RequestConfig, TaskStatus
 from spider.sql.data_inner_db import select_video_urls, \
     sync_logistics_information
 from spider.template.class_dict_template import FIFODict
@@ -123,25 +124,109 @@ def process_links(_queue: FIFODict, flag: int) -> None:
         f"本次执行结果: \n成功链接共有\n{success_links_list}\n成功物流链接共有\n{success_order_list}\n失败链接共有\n{error_links_list}\n失败物流链接共有\n{error_order_list}")
 
 
-def process_video_links():
+def process_task_with_retry(task_id: str, process_func, max_retries: int = 3) -> bool:
+    """
+    使用重试机制处理任务
+    
+    Args:
+        task_id: 任务ID
+        process_func: 处理函数
+        max_retries: 最大重试次数
+        
+    Returns:
+        bool: 任务是否成功
+    """
+    try:
+        # 更新任务状态为运行中
+        RequestConfig.update_task_status(task_id, TaskStatus.RUNNING)
+        
+        retries = 0
+        while retries < max_retries:
+            try:
+                process_func()
+                # 任务成功，更新状态为完成
+                RequestConfig.update_task_status(task_id, TaskStatus.COMPLETED)
+                return True
+            except Exception as e:
+                global_log.error(f"任务执行失败: {str(e)}")
+                retries += 1
+                if retries < max_retries:
+                    time.sleep(3)  # 重试前等待3秒
+                    global_log.info(f"正在进行第{retries}次重试...")
+                
+        # 超过最大重试次数，更新状态为失败
+        RequestConfig.update_task_status(task_id, TaskStatus.FAILED, f"重试{max_retries}次后失败")
+        return False
+        
+    except Exception as e:
+        global_log.error(f"任务状态更新失败: {str(e)}")
+        return False
+
+def process_influencer_tasks():
+    """处理红人任务"""
     while True:
-        process_links(submitted_video_links, 2)
-        time.sleep(5)
+        try:
+            # 获取红人任务
+            tasks = RequestConfig.get_influencer_tasks("红人")
+            task_list = tasks.get("tasks")
+            if task_list and isinstance(task_list, list):
+                for task in task_list:
+                    task_id = task.get('task_id')
+                    task_url = task.get('task_url')
+                    if task_id:
+                        def process_func():
+                            # 这里添加处理红人任务的具体逻辑
+                            message = run_spider.run_spider(task_url, {}, 1, "spider_system")
+                        process_task_with_retry(task_id, process_func)
+        except Exception as e:
+            global_log.error(f"处理红人任务失败: {str(e)}")
+        finally:
+            time.sleep(35)
 
-
-def process_influencer_links():
+def process_video_tasks():
+    """处理视频任务"""
     while True:
-        process_links(submitted_influencer_links, 1)
-        time.sleep(5)
+        try:
+            # 获取视频任务
+            tasks = RequestConfig.get_influencer_tasks("视频")
+            task_list = tasks.get("tasks")
+            if task_list and isinstance(task_list, list):
+                for task in task_list:
+                    task_id = task.get('task_id')
+                    task_url = task.get('task_url')
+                    if task_id:
+                        def process_func():
+                            # 这里添加处理视频任务的具体逻辑
+                            message = run_spider.run_spider(task_url, {}, 2, "spider_system")
+                            
+                        process_task_with_retry(task_id, process_func)
+        except Exception as e:
+            global_log.error(f"处理视频任务失败: {str(e)}")
+        finally:
+            time.sleep(35)
 
-
-# def background_task():
-#     """单独一个线程执行任务"""
-#     while True:
-#         # chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrome-user-data"
-#         process_links(submitted_video_links, 2)
-#         process_links(submitted_influencer_links, 1)
-#         time.sleep(5)
+def process_logistics_tasks():
+    """处理物流任务"""
+    while True:
+        try:
+            # 获取物流任务
+            tasks = RequestConfig.get_influencer_tasks("物流")
+            task_list = tasks.get("tasks")
+            if task_list and isinstance(task_list, list):
+                for task in task_list:
+                    task_id = task.get('task_id')
+                    task_url = task.get('task_url')
+                    if task_id:
+                        def process_func():
+                            # 这里添加处理物流任务的具体逻辑
+                            order_ls = extract_tracking_numbers(task_url.strip())
+                            res, res_message = track_spider(isRequest=True, order_numbers=order_ls)
+                        
+                        process_task_with_retry(task_id, process_func)
+        except Exception as e:
+            global_log.error(f"处理物流任务失败: {str(e)}")
+        finally:
+            time.sleep(35)
 
 def cleanNoneNotice():
     """删除超时的队列信息"""
@@ -217,4 +302,22 @@ def syncLogisticsDataBase():
 
 
 if __name__ == '__main__':
-    syncLogisticsDataBase()
+    # 创建并启动三个任务处理线程
+    influencer_thread = threading.Thread(target=process_influencer_tasks, daemon=True)
+    video_thread = threading.Thread(target=process_video_tasks, daemon=True)
+    logistics_thread = threading.Thread(target=process_logistics_tasks, daemon=True)
+    
+    influencer_thread.start()
+    video_thread.start()
+    logistics_thread.start()
+    
+    # 启动其他必要的线程
+    clean_thread = threading.Thread(target=cleanNoneNotice, daemon=True)
+    clean_thread.start()
+    
+    # 保持主线程运行
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("正在退出程序...")

@@ -14,7 +14,7 @@ import requests
 from playwright.sync_api import sync_playwright, Response, Browser, BrowserContext
 
 from log.logger import global_log
-from spider.config.config import redis_conn
+from spider.config.config import redis_conn, executable_path, return_viewPort, user_agent
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from spider.x.public_function import x_cookies, find_existing_page
 from tool.FileUtils import get_project_path
@@ -167,8 +167,12 @@ class Task:
         response = requests.get(url, headers=self.headers, cookies=self.cookies, params=params)
 
         raw_json = response.json()
+        print(raw_json)
         # 获取rest_id
-        self.response_data["user_id"] = raw_json.get("data").get("user").get("result").get("rest_id")
+        try:
+            self.response_data["user_id"] = raw_json.get("data").get("user").get("result").get("rest_id")
+        except Exception:
+            self.response_data["user_id"] = None
         self.response_data["follower_count"] = \
             dfs_get_all_values_by_path_extended(raw_json, ["data", "user", "legacy", "followers_count"])[0]
         self.response_data["user_name"] = user_name
@@ -239,14 +243,39 @@ class Task:
 
 if __name__ == '__main__':
     with sync_playwright() as playwright:
-        browser = playwright.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0]
-        page = None
-        for _page in context.pages:
-            if "x.com" in _page.url:
-                page = _page
-                break
-        if page is None:
-            page = context.new_page()
+        browser = None
+        browser_context = playwright.chromium.launch_persistent_context(
+            env={
+                "LANG": "zh_CN.UTF-8",
+                "LC_ALL": "zh_CN.UTF-8",
+            },
+            extra_http_headers={
+                "Accept-Language": "zh-CN,zh;q=0.9",
+            },
+            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
+            user_data_dir=rf"C:\chrome-user-data",  # 指定用户数据目录
+            headless=False,  # 确保浏览器不是无头模式
+            viewport=return_viewPort(),
+            user_agent=user_agent,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--enable-automation=false",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+            ]
+        )
+        browser_context.add_init_script(
+            """
+                const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
+                 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                 Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh'] });
+                 Object.defineProperty(navigator, 'language', { get: () => 'zh-CN' });
+                 Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                 Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+           """
+        )
 
-        Task(page).run("https://x.com/__silent_")
+        Task(None, browser_context).run("https://x.com/retro_dodo")

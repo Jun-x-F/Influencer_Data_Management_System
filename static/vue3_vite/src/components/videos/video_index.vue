@@ -25,22 +25,6 @@
                 </template>
                 <template #extra>
                     <el-row :gutter="20">
-                        <!-- <el-col :span="12">
-                            <div class="statistic-card">
-                                <el-statistic :value="98500">
-                                    <template #title>
-                                        <div style="display: inline-flex; align-items: center">
-                                            我的任务 - 所有待执行数
-                                            <el-tooltip effect="dark" content="关于任务执行的顺序以及现有的待执行数" placement="top">
-                                                <el-icon style="margin-left: 4px" :size="12">
-                                                    <Warning />
-                                                </el-icon>
-                                            </el-tooltip>
-                                        </div>
-                                    </template>
-</el-statistic>
-</div>
-</el-col> -->
                         <el-col :span="12">
                             <addMertics />
                         </el-col>
@@ -166,7 +150,7 @@ body{
     height: 20px;
 }
 
-::v-deep .el-statistic {
+::v-deep(.el-statistic)  {
     --el-statistic-content-font-size: 28px;
 }
 
@@ -178,19 +162,19 @@ body{
     /* boxShadow: --el-box-shadow-dark */
 }
 
-::v-deep .el-page-header__header {
+::v-deep(.el-page-header__header) {
     padding-top: 1%;
 }
 
-::v-deep .el-page-header__left {
+::v-deep(.el-page-header__left) {
     margin-left: 5%;
 }
 
-::v-deep .el-page-header__content {
+::v-deep(.el-page-header__content)  {
     font-size: 32px;
 }
 
-::v-deep .el-page-header__extra {
+::v-deep(.el-page-header__extra)  {
     margin-right: 5%;
 }
 </style>

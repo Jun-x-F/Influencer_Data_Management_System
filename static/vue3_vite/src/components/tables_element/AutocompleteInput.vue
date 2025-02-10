@@ -92,7 +92,7 @@ const handleSelect =async (item) => {
 };
 </script>
 <style scoped>
-::v-deep .el-input__inner {
+::v-deep(.el-input__inner)  {
   border: none;
   /* 移除边框 */
   box-shadow: none;

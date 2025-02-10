@@ -1,280 +1,429 @@
-"""
-@ProjectName: DataAnalysis
-@FileName：youtube_spider.py
-@IDE：PyCharm
-@Author：Libre
-@Time：2024/7/30 下午1:37
-"""
-import random
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
-from typing import Optional, List
+import json
+import os
+import re
+from datetime import datetime, date
+from json import JSONEncoder
+from typing import Optional, Dict, Any, List
 
-from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, ElementHandle, Route
+import requests
 
-from log.logger import global_log
-from spider.config.config import headerLess, return_viewPort, user_agent, executable_path
 from spider.sql.data_inner_db import inner_CelebrityProfile
-from spider.template.exception_template import RetryableError
-from spider.template.notFoundData import NotUserData
-from spider.youtube.youtube_public_func import get_view_count, get_like_count, get_comment_count, has_chinese, \
-    clean_and_convert
+from spider.youtube.base_youtube_spider import YouTubeSpider
 from tool.download_file import download_image_file
-from tool.grading_criteria import convert_words_to_numbers, grade_criteria
+from tool.grading_criteria import grade_criteria
+from tool.ua_pool import get_random_user_agent, parse_ua
 
 
-class Task:
-    def __init__(self, _browser: Optional[Browser], _context: BrowserContext):
-        self.browser: Optional[Browser] = _browser
-        self.context = _context
-        self.page: Optional[Page] = None
-        for page in self.context.pages:
-            if "youtube" in page.url:
-                self.page = page
-                break
-        if self.page is None:
-            self.page = _context.new_page()
-        self.human_wait_time = 6000
-        self.response_data = {}
-        self.response_sort_data = []
-        self.finish_data = {}
-        self.all_urls_list = []
-        self.urls_list = Queue()
-        self.close_comment_flag = 10
-        self.max_len = 0
-        self.like = 0
-        self.view = 0
-        self.comment = 0
+class DateTimeEncoder(JSONEncoder):
+    """自定义JSON编码器，处理datetime和date对象的序列化"""
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)
 
-    def _close_data(self):
-        self.response_data = {}
-        self.response_sort_data = []
-        self.finish_data = {}
-        self.all_urls_list = []
-        self.urls_list = Queue()
-        self.close_comment_flag = 10
-        self.max_len = 0
-        self.like = 0
-        self.view = 0
-        self.comment = 0
 
-    def get_country_item(self):
+class YouTubeChannelSpider:
+    """YouTube频道数据爬取类"""
+    
+    # 单位换算表
+    CONVERT_WORDS_TO_NUMBERS = {
+        "万": 10000,
+        "m": 10000,
+        "M": 10000,
+        "k": 1000,
+        "K": 1000,
+        "千": 1000,
+    }
+    
+    def __init__(self, proxy_port: int = 7890, save_raw: bool = True):
+        """
+        初始化YouTube频道爬虫
+        
+        Args:
+            proxy_port: 本地代理端口号，默认7890
+            save_raw: 是否保存原始数据，默认True
+        """
+        self.proxy = {
+            'http': f'http://127.0.0.1:{proxy_port}',
+            'https': f'http://127.0.0.1:{proxy_port}'
+        }
+        self.save_raw = save_raw
+        self.base_spider = YouTubeSpider(proxy_port=proxy_port, save_raw=False)
+        
+        # 禁用SSL警告
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    def _download_avatar(self, avatar_url: str, user_name: str) -> str:
+        """
+        下载头像
+        
+        Args:
+            avatar_url: 头像URL
+            user_name: 用户名
+            
+        Returns:
+            str: 头像在数据库中的URL
+        """
         try:
-            self.page.query_selector('//yt-description-preview-view-model').click()
-            self.page.wait_for_timeout(self.human_wait_time)
-            # //tr[.//*[@icon="person_radar"]]
-            get_person_radar_item = self.page.query_selector('//tr[.//*[@icon="person_radar"]]').text_content()
-            get_person_radar_item = get_person_radar_item.replace("位订阅者", "").strip()
-            get_person_radar_item = get_person_radar_item.replace("人", "").strip()
-            get_person_radar_item = get_person_radar_item.replace(" subscribers", "").strip()
-            follower_count = 1
-            get_person_radar_str = get_person_radar_item[-1]
-            numbers = convert_words_to_numbers.get(get_person_radar_str)
-            if has_chinese(get_person_radar_item) or numbers:
-                # チャンネル登録者数 6.9万人
-                cur = clean_and_convert(get_person_radar_item[:-1])
-                print(cur, get_person_radar_item)
-                follower_count = cur * numbers
+            # 处理用户名，将空格替换为下划线
+            safe_user_name = user_name.replace(' ', '_')
+            return download_image_file(avatar_url, safe_user_name)
+        except Exception as e:
+            print(f"下载头像出错: {e}")
+            return avatar_url
+    
+    @staticmethod
+    def _convert_follower_count(text: str) -> Optional[int]:
+        """
+        转换粉丝数量，处理单位换算
+        
+        Args:
+            text: 粉丝数文本，如"3.34万位订阅者"
+            
+        Returns:
+            int: 换算后的粉丝数
+        """
+        try:
+            # 提取数字部分
+            number = float(''.join([c for c in text if c.isdigit() or c == '.']))
+            
+            # 检查单位并换算
+            for unit, multiplier in YouTubeChannelSpider.CONVERT_WORDS_TO_NUMBERS.items():
+                if unit in text:
+                    return int(number * multiplier)
+            
+            return int(number)
+        except Exception as e:
+            print(f"转换粉丝数量出错: {e}")
+            return None
+    
+    def _get_headers(self) -> Dict[str, str]:
+        """生成随机请求头"""
+        user_agent = get_random_user_agent("Chrome")
+        ua_info = parse_ua(user_agent)
+        
+        return {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "zh-CN,zh;q=0.9",
+            "cache-control": "no-cache",
+            "pragma": "no-cache",
+            "sec-ch-ua": ua_info["sec-ch-ua"],
+            "sec-ch-ua-mobile": ua_info["sec-ch-ua-mobile"],
+            "sec-ch-ua-platform": ua_info["sec-ch-ua-platform"],
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "user-agent": user_agent
+        }
+    
+    def _get_cookies(self) -> Dict[str, str]:
+        """获取YouTube cookies"""
+        return {
+            "YSC": "Rn4dOQv0n90",
+            "VISITOR_INFO1_LIVE": "u9nH2mhD2G0",
+            "VISITOR_PRIVACY_METADATA": "CgJTRxIEGgAgOg%3D%3D",
+            "PREF": "tz=Asia.Shanghai&f6=40000000&f7=100",
+            "GPS": "1"
+        }
+    
+    @staticmethod
+    def _extract_channel_id(url: str) -> Optional[str]:
+        """
+        从YouTube频道URL中提取频道ID或用户名
+        
+        Args:
+            url: YouTube频道URL
+            
+        Returns:
+            str: 频道ID或用户名，如果无法提取则返回None
+        """
+        try:
+            if '@' in url:
+                return url.split('@')[-1].split('/')[0]
+            elif 'channel/' in url:
+                return url.split('channel/')[-1].split('/')[0]
+            elif 'user/' in url:
+                return url.split('user/')[-1].split('/')[0]
+            return None
+        except Exception as e:
+            print(f"提取频道ID出错: {e}")
+            return None
+    
+    def _extract_video_urls(self, data: Dict[str, Any], limit: int = 10) -> List[str]:
+        """
+        从ytInitialData中提取最新的视频URL
+        
+        Args:
+            data: ytInitialData数据
+            limit: 限制获取的视频数量，默认10条
+            
+        Returns:
+            List[str]: 视频URL列表
+        """
+        video_urls = []
+        try:
+            # 使用准确的路径提取视频URL
+            contents = data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])[0]\
+                .get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {}).get('contents', [])
+            
+            # 遍历contents寻找包含视频列表的部分
+            for content in contents:
+                if 'itemSectionRenderer' in content:
+                    items = content.get('itemSectionRenderer', {}).get('contents', [])
+                    for item in items:
+                        if 'shelfRenderer' in item:
+                            videos = item.get('shelfRenderer', {}).get('content', {}).get('horizontalListRenderer', {}).get('items', [])
+                            for video in videos:
+                                try:
+                                    # 提取视频URL
+                                    url = video.get('gridVideoRenderer', {}).get('navigationEndpoint', {}).get('commandMetadata', {}).get('webCommandMetadata', {}).get('url')
+                                    if url:
+                                        video_url = f"https://www.youtube.com{url}"
+                                        video_urls.append(video_url)
+                                        print(f"找到视频URL: {video_url}")
+                                        if len(video_urls) >= limit:
+                                            break
+                                except Exception as e:
+                                    print(f"处理单个视频数据时出错: {e}")
+                                    continue
+                        if len(video_urls) >= limit:
+                            break
+                if len(video_urls) >= limit:
+                    break
+            
+            if not video_urls:
+                print("未找到视频URL")
             else:
-                follower_count = int(get_person_radar_item)
-            get_country_item = self.page.query_selector('//tr[.//*[@icon="privacy_public"]]').text_content()
-            content_metadata = self.page.query_selector('//yt-content-metadata-view-model').text_content()
-            metadata_list = content_metadata.split('•')
-            full_name = self.page.query_selector('//yt-dynamic-text-view-model').text_content()
-
-            self.finish_data["user_name"] = metadata_list[0].strip()
-            self.finish_data["full_name"] = full_name
-            self.finish_data["follower_count"] = follower_count
-            self.finish_data["region"] = get_country_item.strip()
-            global_log.info(self.finish_data["profile_picture_url"])
-            download_image_head_url = download_image_file(self.finish_data["profile_picture_url"],
-                                                          self.finish_data["user_name"])
-            global_log.info(download_image_head_url)
-            self.finish_data["profile_picture_url"] = download_image_head_url
-            self.page.wait_for_timeout(self.human_wait_time)
-            self.page.query_selector('//tp-yt-paper-dialog[@role="dialog"]//div[@id="visibility-button"]').click()
-            self.page.wait_for_timeout(self.human_wait_time)
-        except Exception:
-            global_log.error()
-            raise
-
-    def get_10_video_list(self):
-        video_contents: List[ElementHandle] = self.page.query_selector_all(
-            '//*[@id="primary"]//*[@id="contents"]//ytd-thumbnail[@size="large"]/a')
-        for video in video_contents:
-            video_url = video.get_attribute("href")
-            self.all_urls_list.append("https://www.youtube.com" + video_url)
-        for _ in self.all_urls_list[:10]:
-            self.urls_list.put(_)
-        self.max_len = self.urls_list.qsize()
-
-    def block_media_requests(self, route: Route, request):
-        url = request.url
-        if url.endswith('.jpg') or url.endswith('.png') or 'video' in url:
-            route.abort()  # 拦截并阻止请求
-        else:
-            route.continue_()  # 继续其他请求
-
-    def process_page(self, page_url, threading_event: threading.Event):
-
-        """页面处理"""
-        with (sync_playwright() as _playwright):
-            try:
-                cur_browser = _playwright.chromium.launch(
-                    headless=headerLess,
-                    channel="chrome",
-                    args=["--disable-blink-features=AutomationControlled"],
-                )
-                cur_context = cur_browser.new_context(viewport=return_viewPort(),
-                                                      user_agent=user_agent, )
-
-                cur_context.add_init_script(
-                    "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
-                )
-                page = cur_context.new_page()
-                # 设置拦截器
-                page.route('**/*', self.block_media_requests)
-
-                like_count = None
-                view_count = None
-                comment_count = None
-                try:
-                    page.goto(page_url, wait_until="domcontentloaded")
-                except Exception:
-                    ...
-
-                for _ in range(5):
-                    fold = page.query_selector('//div[@id="above-the-fold"]')
-
-                    if fold is not None:
-                        break
-                    page.wait_for_timeout(self.human_wait_time)
-
-                feedback = page.query_selector('//*[@id="yt-spec-touch-feedback-shape__fill"]')
-
-                if feedback is not None:
-                    feedback.click()
-                page.wait_for_timeout(self.human_wait_time)
-                like_button_view_model = page.query_selector(
-                    '//like-button-view-model//div[@class="yt-spec-button-shape-next__button-text-content"]')
-                if like_button_view_model:
-                    like_count = get_like_count(page, like_button_view_model.text_content())
-                view_info = page.query_selector('//div[@id="info-container"]//yt-formatted-string[@id="info"]')
-                if view_info:
-                    view_count = get_view_count(view_info.text_content())
-                # 滚动到页面底部
-                # while True:
-                page.wait_for_timeout(self.human_wait_time)
-                page.mouse.wheel(0, random.randint(300, 500))
-                page.wait_for_load_state("domcontentloaded")
-                for _ in range(5):
-                    page.wait_for_timeout(self.human_wait_time)
-
-                    if page.query_selector('//*[text()="评论已关闭。"]') is not None:
-                        threading_event.set()
-                        return
-
-                    commend_info = page.query_selector('//div[@id="leading-section"]//span')
-                    if commend_info is not None:
-                        comment_count = get_comment_count(page, commend_info.text_content())
-                        break
-
-                if like_count is None \
-                        or view_count is None \
-                        or comment_count is None:
-                    global_log.warning(f"{page_url} --> like_count:{like_count}, "
-                                       f"view_count:{view_count}, "
-                                       f"comment_count:{comment_count}")
-
-                self.like += like_count if like_count is not None else 0
-                self.view += view_count if view_count is not None else 0
-                self.comment += comment_count if comment_count is not None else 0
-            except Exception:
-                raise
-
-    def work(self, _url):
+                print(f"总共找到 {len(video_urls)} 个视频URL")
+                
+        except Exception as e:
+            print(f"提取视频URL时出错: {e}")
+        
+        return video_urls[:limit]
+    
+    def _calculate_averages(self, video_data_list: List[Dict[str, Any]]) -> Dict[str, float]:
+        """计算平均值"""
+        total_likes = 0
+        total_comments = 0
+        total_views = 0
+        total_engagement_rate = 0.0
+        valid_count = len(video_data_list)
+        
+        for data in video_data_list:
+            total_likes += data.get('likes', 0) or 0
+            total_comments += data.get('comments', 0) or 0
+            total_views += data.get('views', 0) or 0
+            total_engagement_rate += data.get('engagement_rate', 0.0) or 0.0
+        
+        if valid_count > 0:
+            return {
+                'average_likes': round(total_likes / valid_count, 2),
+                'average_comments': round(total_comments / valid_count, 2),
+                'average_views': round(total_views / valid_count, 2),
+                'average_engagement_rate': round(total_engagement_rate / valid_count, 4)
+            }
+        return {
+            'average_likes': 0.0,
+            'average_comments': 0.0,
+            'average_views': 0.0,
+            'average_engagement_rate': 0.0
+        }
+    
+    def fetch_channel(self, url: str, output_dir: str = "output") -> Optional[Dict[str, Any]]:
+        """
+        获取YouTube频道最新10条视频数据并计算平均值
+        
+        Args:
+            url: YouTube频道URL
+            output_dir: 输出目录，默认为output
+            
+        Returns:
+            Dict[str, Any]: 频道数据，格式符合CelebrityProfile，如果失败则返回None
+        """
+        # 提取频道ID或用户名
+        channel_id = self._extract_channel_id(url)
+        if not channel_id:
+            print("无效的YouTube频道URL")
+            return None
+            
+        # 创建频道专属的输出目录
+        channel_output_dir = os.path.join(output_dir, channel_id)
+        if not os.path.exists(channel_output_dir):
+            os.makedirs(channel_output_dir)
+        
         try:
-            if "videos" not in _url:
-                _url = _url.removesuffix('/') + "/videos"
-            global_log.info(f"youTuBe start --> set {_url} ")
-            self.page.goto(_url, wait_until="domcontentloaded")
-            self.page.wait_for_timeout(self.human_wait_time)
-            errorInfo = self.page.query_selector('//iframe[@src="/error?src=404&ifr=1&error="]')
-            if errorInfo:
-                raise NotUserData(f"{_url} 用户查询不到")
-            get_profile_pic_item = self.page.query_selector('//yt-avatar-shape//img').get_attribute("src")
-            self.finish_data["profile_picture_url"] = get_profile_pic_item
-            self.get_country_item()
-            self.page.wait_for_timeout(self.human_wait_time)
-            self.get_10_video_list()
-            # 增加并发速 10 -> 稳定
-            while self.urls_list.empty() is False:
-                with ThreadPoolExecutor(max_workers=10) as executor:
+            # 获取频道页面数据
+            response = requests.get(
+                url,
+                headers=self._get_headers(),
+                cookies=self._get_cookies(),
+                proxies=self.proxy,
+                timeout=30,
+                verify=False
+            )
+            response.raise_for_status()
+            print(f"请求状态码: {response.status_code}")
+            
+            # 保存原始HTML
+            if self.save_raw:
+                html_file = os.path.join(channel_output_dir, "raw.html")
+                with open(html_file, 'w', encoding='utf-8') as f:
+                    f.write(response.text)
+                print(f"原始HTML已保存到: {html_file}")
+            
+            # 提取ytInitialData
+            pattern = r'<script nonce="[^"]*">var ytInitialData = ({.*?});</script>'
+            match = re.search(pattern, response.text, re.DOTALL)
+            
+            if match:
+                yt_data = json.loads(match.group(1))
+                
+                # 保存原始JSON数据
+                if self.save_raw:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    json_file = os.path.join(channel_output_dir, f"youtube_channel_data_{timestamp}.json")
+                    with open(json_file, 'w', encoding='utf-8') as f:
+                        json.dump(yt_data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
+                    print(f"原始JSON数据已保存到: {json_file}")
+                
+                # 提取最新10条视频URL
+                video_urls = self._extract_video_urls(yt_data)
+                if not video_urls:
+                    print("未找到视频URL")
+                    return None
+                
+                # 获取每个视频的详细数据
+                video_data_list = []
+                for video_url in video_urls:
+                    print(video_url)
+                    try:
+                        video_data = self.base_spider.fetch_video(video_url)
+                        if video_data:
+                            video_data_list.append(video_data)
+                    except Exception as e:
+                        print(e)
+                print("获取成功")
+                if not video_data_list:
+                    print("未获取到任何视频数据")
+                    return None
+                
+                # 计算平均值
+                averages = self._calculate_averages(video_data_list)
+                print("平均值 ", averages)
+                # 提取频道基本信息
+                microformat = yt_data.get('microformat', {}).get('microformatDataRenderer', {})
+                user_name = microformat.get('title', '')
+                
+                # 获取粉丝数
+                subscriber_text = None
+                try:
+                    # 主路径：从header中获取粉丝数
+                    header_data = yt_data.get('header', {}).get('pageHeaderRenderer', {})
+                    if header_data:
+                        metadata_rows = header_data.get('content', {}).get('pageHeaderViewModel', {}).get('metadata', {}).get('contentMetadataViewModel', {}).get('metadataRows', [])
+                        if len(metadata_rows) > 1:  # 确保有足够的行
+                            subscriber_text = metadata_rows[1].get('metadataParts', [])[0].get('text', {}).get('content', '')
+                    
+                    # 备用路径：如果主路径失败，尝试其他路径
+                    if not subscriber_text:
+                        metadata_parts = yt_data.get('header', {}).get('c4TabbedHeaderRenderer', {}).get('subscriberCountText', {}).get('simpleText', '')
+                        if metadata_parts:
+                            subscriber_text = metadata_parts
+                    
+                    print(f"获取到的粉丝数文本: {subscriber_text}")
+                except Exception as e:
+                    print(f"获取粉丝数时出错: {e}")
+                
+                follower_count = self._convert_follower_count(subscriber_text) if subscriber_text else None
+                
+                # 获取头像URL并下载
+                try:
+                    # 从header中获取头像信息
+                    header_data = yt_data.get('header', {}).get('pageHeaderRenderer', {})
+                    if header_data:
+                        avatar_sources = header_data.get('content', {}).get('pageHeaderViewModel', {}).get('image', {}).get('decoratedAvatarViewModel', {}).get('avatar', {}).get('avatarViewModel', {}).get('image', {}).get('sources', [])
+                        
+                        # 找到尺寸最大的图片
+                        max_size = 0
+                        avatar_url = None
+                        for source in avatar_sources:
+                            width = source.get('width', 0)
+                            height = source.get('height', 0)
+                            size = width * height
+                            if size > max_size:
+                                max_size = size
+                                avatar_url = source.get('url')
+                        
+                        if avatar_url:
+                            profile_picture_url = self._download_avatar(avatar_url, user_name)
+                        else:
+                            # 备用路径
+                            backup_avatar_url = yt_data.get('header', {}).get('c4TabbedHeaderRenderer', {}).get('avatar', {}).get('thumbnails', [{}])[0].get('url', '')
+                            if backup_avatar_url:
+                                profile_picture_url = self._download_avatar(backup_avatar_url, user_name)
+                            else:
+                                profile_picture_url = None
+                    else:
+                        # 如果header_data不存在，使用备用路径
+                        backup_avatar_url = yt_data.get('header', {}).get('c4TabbedHeaderRenderer', {}).get('avatar', {}).get('thumbnails', [{}])[0].get('url', '')
+                        if backup_avatar_url:
+                            profile_picture_url = self._download_avatar(backup_avatar_url, user_name)
+                        else:
+                            profile_picture_url = None
+                except Exception as e:
+                    print(f"获取头像URL时出错: {e}")
+                    profile_picture_url = None
+                
+                # 构建符合CelebrityProfile格式的数据
+                result = {
+                    'platform': 'youtube',
+                    'user_id': microformat.get('urlCanonical', '').split('/')[-1],
+                    'user_name': user_name,
+                    'full_name': user_name,
+                    'index_url': url,
+                    'profile_picture_url': profile_picture_url,
+                    'follower_count': follower_count,
+                    'average_likes': averages['average_likes'],
+                    'average_comments': averages['average_comments'],
+                    'average_views': averages['average_views'],
+                    'average_engagement_rate': averages['average_engagement_rate'],
+                    'country': microformat.get('country', ''),
+                    'level': grade_criteria('youtube', int(averages['average_views'])),
+                    'updated_at': date.today().isoformat()
+                }
+                
+                return result
+            
+            print("未找到ytInitialData数据")
+            return None
+            
+        except requests.RequestException as e:
+            print(f"请求出错: {e}")
+            return None
+        except json.JSONDecodeError as e:
+            print(f"JSON解析错误: {e}")
+            return None
+        except Exception as e:
+            print(f"发生未知错误: {e}")
+            return None
 
-                    future_to_url = {}
-                    """映射 Future 对象到任务"""
-                    for _ in range(self.urls_list.qsize()):  # 最多提交10个任务
-                        # 每一个线程都有独立的线程任务
-                        threading_event = threading.Event()
-                        url = self.urls_list.get()
-                        future_to_url[executor.submit(self.process_page, url, threading_event)] = url
-
-                    for future in as_completed(future_to_url):
-                        retry_url = future_to_url[future]
-                        try:
-                            # 超时5分钟
-                            future.result(timeout=60 * 5)  # 确保获取任务的结果并处理异常
-                        except RetryableError as re:
-                            global_log.error(f"{retry_url} --> RetryableError {str(re)}")
-                            # 更换一个
-                            self.close_comment_flag = self.close_comment_flag + 1
-                            self.urls_list.put(self.all_urls_list[self.close_comment_flag])
-                        except Exception as e:
-                            raise
-
-                        # 跳过本轮计算 -> 自动归为False
-                        if threading_event.is_set():
-                            self.close_comment_flag = self.close_comment_flag + 1
-                            self.urls_list.put(self.all_urls_list[self.close_comment_flag])
-                            threading_event.clear()
-                            continue
-
-            self.finish_data["index_url"] = _url
-            self.finish_data["platform"] = "youtube"
-            self.finish_data["average_likes"] = self.like / self.max_len if self.like != 0 else 0
-            self.finish_data["average_views"] = self.view / self.max_len if self.view != 0 else 0
-            self.finish_data["average_comments"] = self.comment / self.max_len if self.comment != 0 else 0
-            try:
-                self.finish_data["average_engagement_rate"] = (
-                        (self.finish_data["average_likes"] + self.finish_data["average_comments"])
-                        / self.finish_data["average_views"])
-            except ZeroDivisionError:
-                self.finish_data["average_engagement_rate"] = 0
-
-            self.finish_data["level"] = grade_criteria("youtube", self.finish_data["average_views"])
-            inner_CelebrityProfile(self.finish_data)
-            self._close_data()
-        except Exception:
-            global_log.error()
-            raise
-
-    def run(self, url):
-        global_log.info(f"youTuBe start --> {url}")
-        self.work(url)
+def run_youtube_spider(url:str):
+    spider = YouTubeChannelSpider(proxy_port=7890, save_raw=True)
+    result = spider.fetch_channel(url)
+    inner_CelebrityProfile(result, isByIndexUrl=True)
+    if result:
+        print("频道数据获取成功!")
+        print(json.dumps(result, indent=2, ensure_ascii=False, cls=DateTimeEncoder))
 
 
-if __name__ == '__main__':
-    with sync_playwright() as playwright:
-        # Connect to the running browser instance
-        browser = None
-        browser_context = playwright.chromium.launch_persistent_context(
-            executable_path=executable_path,  # 指定使用谷歌浏览器进行配置
-            user_data_dir=rf"C:\chrome-user-data",  # 指定用户数据目录
-            headless=False,  # 确保浏览器不是无头模式
-            args=["--disable-blink-features=AutomationControlled"]  # 避免自动化检测
-        )
-        browser_context.add_init_script(
-            "const newProto = navigator.__proto__; delete newProto.webdriver; navigator.__proto__ = newProto;"
-        )
-        Task(browser, browser_context).run('https://www.youtube.com/@thelkfamily/videos')
+if __name__ == "__main__":
+    # 使用示例
+    spider = YouTubeChannelSpider(proxy_port=7890, save_raw=True)
+    result = spider.fetch_channel("https://www.youtube.com/@archetype_origins")
+    inner_CelebrityProfile(result, isByIndexUrl=True)
+    if result:
+        print("频道数据获取成功!")
+        print(json.dumps(result, indent=2, ensure_ascii=False, cls=DateTimeEncoder))

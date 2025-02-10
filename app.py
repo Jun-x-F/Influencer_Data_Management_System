@@ -17,8 +17,8 @@ from blueprints.video import video_bp
 from blueprints.watch_log import log_bp
 from log.logger import InterceptHandler
 # from spider.spider_notice import spider_notice_bp
-from spider.spider_threading import cleanNoneNotice, \
-    process_influencer_links, process_video_links, syncLogisticsDataBase
+from spider.spider_threading import cleanNoneNotice, process_influencer_tasks, process_logistics_tasks, \
+    process_video_tasks, syncLogisticsDataBase
 
 app = Flask(__name__)
 CORS(app)  # 允许所有跨域请求
@@ -89,9 +89,12 @@ if __name__ == '__main__':
     # 在后台启动线程
     # 启动所有线程
     threads = [
-        start_thread(process_influencer_links),
-        start_thread(process_video_links),
+        # start_thread(process_influencer_links),
+        # start_thread(process_video_links),
         start_thread(cleanNoneNotice),
         start_thread(syncLogisticsDataBase),
+        start_thread(process_influencer_tasks),
+        start_thread(process_video_tasks),
+        start_thread(process_logistics_tasks),
     ]
     app.run(host='0.0.0.0', port=5000, debug=False)

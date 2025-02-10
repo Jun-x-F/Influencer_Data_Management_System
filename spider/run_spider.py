@@ -162,6 +162,12 @@ def work(url: str, cur: dict, flag, _id, times) -> int:
     elif spider_class == ins_spider:
         global_log.info("进入新的ins红人启动器")
         ins_start_spider(url)
+    elif spider_class == youtube_spider:
+        global_log.info("进入新的Youtube红人启动器")
+        youtube_spider.run_youtube_spider(url=url)
+    elif spider_class == youtube_video_spider:
+        global_log.info("进入新的Youtube视频启动器")
+        youtube_video_spider.youtube_video_spider(url=url)
     else:
         run_task(spider_class, url, platform in ["YouTube", "X"])
     return 200

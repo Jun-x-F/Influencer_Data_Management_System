@@ -4,6 +4,7 @@ import {ref} from "vue";
 
 export const useNotice = defineStore("useNotice", () => {
   const isUpdateData = ref();
+  const isUpdateInfluencer = ref();
   const isResetData = ref();
   const choseProduct = ref();
   const choseManager = ref();
@@ -30,6 +31,10 @@ export const useNotice = defineStore("useNotice", () => {
     isUpdateData.value = value;
   };
 
+  const setIsUpdateInfluencerData = function (value) {
+    isUpdateInfluencer.value = value;
+  };
+
   const setManagerData = function (value) {
     console.log("choseManager", value);
     choseManager.value = value;
@@ -51,6 +56,7 @@ export const useNotice = defineStore("useNotice", () => {
     withToAddData,
     withToAddMetric,
     choseManager,
+    isUpdateInfluencer,
 
     setIsResetData,
     setIsUpdateData,
@@ -59,5 +65,6 @@ export const useNotice = defineStore("useNotice", () => {
     setWithToData,
     setWithToMetric,
     setManagerData,
+    setIsUpdateInfluencerData,
   };
 });

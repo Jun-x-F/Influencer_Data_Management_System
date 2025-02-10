@@ -237,7 +237,7 @@ def delete_InfluencersVideoProjectData(finish_data, isFilters=True, filters=None
         raise
 
 
-def inner_CelebrityProfile(finish_data, isById=False):
+def inner_CelebrityProfile(finish_data, isById=False, isByIndexUrl=False):
     try:
         if db.check_connection() is not True:
             db.reconnect_session()
@@ -247,6 +247,11 @@ def inner_CelebrityProfile(finish_data, isById=False):
             filters = and_(
                 CelebrityProfile.platform == finish_data.get("platform"),
                 CelebrityProfile.user_id == finish_data.get("user_id"),
+            )
+        elif isByIndexUrl is True:
+            filters = and_(
+                CelebrityProfile.platform == finish_data.get("platform"),
+                CelebrityProfile.index_url == finish_data.get("index_url"),
             )
         else:
             filters = and_(

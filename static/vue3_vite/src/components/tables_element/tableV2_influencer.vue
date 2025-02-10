@@ -37,20 +37,20 @@ interface Column {
 
 // 定义固定列
 const fixedColumns: Column[] = [
-  {prop: 'id', label: 'ID', width: '80px', sortable: true, merge: true},
-  {prop: '红人头像地址', label: '红人头像地址', width: 'auto', merge: true, isLink: true},
-  {prop: '红人名称', label: '红人名称', width: '150px', isLink: true, merge: true},
-  {prop: '平台', label: '平台', width: '100px', merge: true},
-  {prop: '粉丝数量', label: '粉丝数量', width: 'auto', merge: true},
-  {prop: '平均播放量', label: '平均播放量', width: 'auto', merge: true},
-  {prop: '平均点赞数量', label: '平均点赞数', width: 'auto', merge: true},
-  {prop: '平均评论数量', label: '平均评论数', width: 'auto', merge: true},
-  {prop: '平均参与率', label: '平均参与率', width: 'auto', merge: true},
-  {prop: '地区', label: '地区', width: '100px', merge: true, isLink: true},
-  {prop: '地址', label: '地址', width: 'auto', merge: true},
-  {prop: '联系方式', label: '联系方式', width: '200px', merge: true},
-  {prop: '标签', label: '标签', width: '200px', merge: true, isTag: true},
-  {prop: '评级', label: '评级', width: '80px', merge: true},
+  { prop: 'id', label: 'ID', width: '80px', sortable: true, merge: true },
+  { prop: '红人头像地址', label: '红人头像地址', width: 'auto', merge: true, isLink: true },
+  { prop: '红人名称', label: '红人名称', width: '150px', isLink: true, merge: true },
+  { prop: '平台', label: '平台', width: '100px', merge: true },
+  { prop: '粉丝数量', label: '粉丝数量', width: 'auto', merge: true },
+  { prop: '平均播放量', label: '平均播放量', width: 'auto', merge: true },
+  { prop: '平均点赞数量', label: '平均点赞数', width: 'auto', merge: true },
+  { prop: '平均评论数量', label: '平均评论数', width: 'auto', merge: true },
+  { prop: '平均参与率', label: '平均参与率', width: 'auto', merge: true },
+  { prop: '地区', label: '地区', width: '100px', merge: true, isLink: true },
+  { prop: '地址', label: '地址', width: 'auto', merge: true },
+  { prop: '联系方式', label: '联系方式', width: '200px', merge: true },
+  { prop: '标签', label: '标签', width: '200px', merge: true, isTag: true },
+  { prop: '评级', label: '评级', width: '80px', merge: true },
 ];
 const isValidURL = (url: string): boolean => {
   try {
@@ -103,26 +103,19 @@ const open = (info: string) => {
 
 <template>
   <div class="table-wrapper">
-    <el-table
-        :data="influencerTable"
-        fixed
-        border
-        :default-sort="{ prop: 'id', order: 'descending' }"
-        max-height="800px"
-    >
+    <el-table :data="influencerTable" fixed border :default-sort="{ prop: 'id', order: 'descending' }"
+      max-height="720px">
       <el-table-column v-for="column in columns" :key="column.prop" :prop="column.prop" :label="column.label"
-                       :width="column.width" :sortable="column.sortable" :filters="column.filters"
-                       :filter-method="column.filterMethod"
-                       :filtered-value="column.filteredValue">
+        :width="column.width" :sortable="column.sortable" :filters="column.filters" :filter-method="column.filterMethod"
+        :filtered-value="column.filteredValue">
         <!-- Custom Cell Content -->
         <!-- Custom Cell Content for Image -->
         <template v-if="column.isLink" #default="scope">
           <el-image v-if="column.prop === '红人头像地址'" :src="scope.row[column.prop]" fit="cover" loading="lazy">
             {{ column.prop }}
           </el-image>
-          <a v-else-if="column.prop === '红人名称' && isValidURL(scope.row['红人主页地址'])"
-             :href="scope.row['红人主页地址']" target="_blank"
-             rel="noopener noreferrer">
+          <a v-else-if="column.prop === '红人名称' && isValidURL(scope.row['红人主页地址'])" :href="scope.row['红人主页地址']"
+            target="_blank" rel="noopener noreferrer">
             {{ scope.row[column.prop] }}
           </a>
           <!-- <span>{{ scope.row[column.prop] }}</span> -->
@@ -133,29 +126,38 @@ const open = (info: string) => {
             <div v-if="scope.row[column.prop]">
               <el-col :span="30">
                 <el-tag v-for="(tag, index) in processTags(scope.row[column.prop])" :key="index" :closable="false"
-                        class="contact_tag">
+                  class="contact_tag">
                   {{ tag }}
                 </el-tag>
               </el-col>
             </div>
           </el-row>
         </template>
-<!--        <template v-else-if="column.prop === '地址'" #default="scope">-->
-<!--          <el-row>-->
-<!--            -->
-<!--          </el-row>-->
-<!--        </template>-->
+        <template v-else-if="column.prop === '地址'" #default="scope">
+          <el-row>
+            <el-col :span="30" v-if="scope.row['地址']">
+              <el-tooltip :content="scope.row['地址']" placement="bottom" effect="dark">
+                <a href="#" @click="open(scope.row['地址'])">
+                  <el-image src="./src/assets/map_logo.png" class="contact_logo"></el-image>
+                </a>
+              </el-tooltip>
+            </el-col>
+          </el-row>
+        </template>
         <template v-else-if="column.prop === '联系方式'" #default="scope">
           <el-row>
             <div v-for="(link, index) in splitLinks(scope.row['联系方式'])" :key="index">
               <el-col :span="30">
-                <a href="#" @click="open(link)">
-                  <el-image v-if="isDiscordLink(link)" src="./src/assets/discord_logo.png" class="contact_logo">
-                  </el-image>
-                  <el-image v-else-if="isEmailLink(link)" src="./src/assets/email.png" class="contact_logo"/>
-                  <el-image v-else-if="validatePhoneNumber(link)" src="./src/assets/chat_logo.png" class="contact_logo"/>
-                </a>
-                <!--          <a v-else></a>-->
+                <el-tooltip :content="link" placement="bottom" effect="dark">
+                  <a href="#" @click="open(link)">
+                    <el-image v-if="isDiscordLink(link)" src="./src/assets/discord_logo.png" class="contact_logo">
+                    </el-image>
+                    <el-image v-else-if="isEmailLink(link)" src="./src/assets/email.png" class="contact_logo" />
+                    <el-image v-else-if="validatePhoneNumber(link)" src="./src/assets/chat_logo.png"
+                      class="contact_logo" />
+                  </a>
+                  <!--          <a v-else></a>-->
+                </el-tooltip>
               </el-col>
             </div>
 
@@ -166,6 +168,23 @@ const open = (info: string) => {
         <template v-else #default="scope">
           {{ scope.row[column.prop] }}
         </template>
+
+      </el-table-column>
+      <el-table-column fixed="right" label="Operations" min-width="120">
+        <template #default="scope">
+          <el-row>
+            <el-col :span="12">
+              <el-tooltip content="更新" placement="top">
+                <el-button type="primary" key="更新" size="small">更新</el-button>
+              </el-tooltip>
+            </el-col>
+            <el-col :span="12">
+              <el-tooltip content="删除" placement="top">
+                <el-button type="danger" key="删除" size="small" >删除</el-button>
+              </el-tooltip>
+            </el-col>
+          </el-row>
+        </template>
       </el-table-column>
     </el-table>
   </div>
@@ -173,7 +192,7 @@ const open = (info: string) => {
 
 <style scoped>
 .table-wrapper {
-  width: 80%;
+  width: 100%;
   margin: 0 auto;
   border-radius: 5px;
 }
@@ -192,20 +211,32 @@ const open = (info: string) => {
   width: 60px;
   height: 40px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* 初始的轻微阴影 */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  /* 初始的轻微阴影 */
 }
 
 .contact_tag:hover {
-  transform: scale(1.1); /* 放大效果 */
-  box-shadow: 0 8px 16px rgba(229, 57, 53, 0.4); /* 发光阴影效果 */
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); /* 发光文字效果 */
+  transform: scale(1.1);
+  /* 放大效果 */
+  box-shadow: 0 8px 16px rgba(229, 57, 53, 0.4);
+  /* 发光阴影效果 */
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  /* 发光文字效果 */
 }
 
 /* 在光标悬停时给tag增加点外发光的动画 */
 @keyframes glowing {
-  0% { box-shadow: 0 0 2px rgba(0, 255, 255, 0.4); }
-  50% { box-shadow: 0 0 2px rgba(0, 255, 255, 0.4); }
-  100% { box-shadow: 0 0 1px rgba(0, 255, 255, 0.4); }
+  0% {
+    box-shadow: 0 0 2px rgba(0, 255, 255, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 2px rgba(0, 255, 255, 0.4);
+  }
+
+  100% {
+    box-shadow: 0 0 1px rgba(0, 255, 255, 0.4);
+  }
 }
 
 .contact_tag:hover {
@@ -215,5 +246,4 @@ const open = (info: string) => {
 .contact_logo:hover {
   transform: scale(1.1);
 }
-
 </style>

@@ -553,7 +553,7 @@ def thread_work():
             put_order_number_in_queue()
     shutdown_event.set()
     global_log.info("任务执行完毕，等待队列同步数据中...")
-    recept_event.wait(timeout=60 * 6)
+    recept_event.wait(timeout=60 * 60)
 
 
 def run(isRequest: bool = False, order_numbers: list = None):
@@ -563,7 +563,7 @@ def run(isRequest: bool = False, order_numbers: list = None):
         if isRequest is False:
             isSavePath = True
             global_log.info("判断为人工手动操作")
-            file_path = r"D:\wzhData\BaiduSyncdisk\project\python\DataAnalysis\物流-4-2024-08-14-1723627893.xlsx"
+            file_path = r"C:\Users\dell\Desktop\打包时间_2024-11-24 00_00至2024-12-12 00_00.xlsx"
             # file_path = input("请输入文件路径(拖拽文件到此命令窗口，并回车即可): \n")
             read_excel(file_path)
             # 启动数据库提交线程
@@ -585,4 +585,4 @@ def run(isRequest: bool = False, order_numbers: list = None):
 
 
 if __name__ == '__main__':
-    run(True, ["UJ734797804YP", "UJ730727516YP", "UJ728598353YP", "UJ728598340YP"])
+    run(False, ["UJ734797804YP", "UJ730727516YP", "UJ728598353YP", "UJ728598340YP"])
