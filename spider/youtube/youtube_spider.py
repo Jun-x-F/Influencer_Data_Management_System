@@ -6,7 +6,7 @@ from json import JSONEncoder
 from typing import Optional, Dict, Any, List
 
 import requests
-
+from log.logger import global_log
 from spider.sql.data_inner_db import inner_CelebrityProfile
 from spider.youtube.base_youtube_spider import YouTubeSpider
 from tool.download_file import download_image_file
@@ -70,7 +70,7 @@ class YouTubeChannelSpider:
             safe_user_name = user_name.replace(' ', '_')
             return download_image_file(avatar_url, safe_user_name)
         except Exception as e:
-            print(f"下载头像出错: {e}")
+            global_log.error(f"下载头像出错: {e}")
             return avatar_url
     
     @staticmethod
@@ -95,7 +95,7 @@ class YouTubeChannelSpider:
             
             return int(number)
         except Exception as e:
-            print(f"转换粉丝数量出错: {e}")
+            global_log.error(f"转换粉丝数量出错: {e}")
             return None
     
     def _get_headers(self) -> Dict[str, str]:
@@ -149,7 +149,7 @@ class YouTubeChannelSpider:
                 return url.split('user/')[-1].split('/')[0]
             return None
         except Exception as e:
-            print(f"提取频道ID出错: {e}")
+            global_log.error(f"提取频道ID出错: {e}")
             return None
     
     def _extract_video_urls(self, data: Dict[str, Any], limit: int = 10) -> List[str]:
@@ -165,42 +165,47 @@ class YouTubeChannelSpider:
         """
         video_urls = []
         try:
-            # 使用准确的路径提取视频URL
-            contents = data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])[0]\
-                .get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {}).get('contents', [])
-            
-            # 遍历contents寻找包含视频列表的部分
-            for content in contents:
-                if 'itemSectionRenderer' in content:
-                    items = content.get('itemSectionRenderer', {}).get('contents', [])
-                    for item in items:
-                        if 'shelfRenderer' in item:
-                            videos = item.get('shelfRenderer', {}).get('content', {}).get('horizontalListRenderer', {}).get('items', [])
-                            for video in videos:
-                                try:
-                                    # 提取视频URL
-                                    url = video.get('gridVideoRenderer', {}).get('navigationEndpoint', {}).get('commandMetadata', {}).get('webCommandMetadata', {}).get('url')
-                                    if url:
-                                        video_url = f"https://www.youtube.com{url}"
-                                        video_urls.append(video_url)
-                                        print(f"找到视频URL: {video_url}")
-                                        if len(video_urls) >= limit:
-                                            break
-                                except Exception as e:
-                                    print(f"处理单个视频数据时出错: {e}")
-                                    continue
+            # 获取tabs列表
+            tabs = data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])
+            # 遍历tabs找到视频标签
+            for tab in tabs:
+                tab_renderer = tab.get('tabRenderer', {})
+                
+                # 检查是否为视频标签
+                if tab_renderer.get('title', '').lower() == 'videos' or tab_renderer.get('title', '').lower() == '视频':
+                    # 获取视频内容列表
+                    contents = tab_renderer.get('content', {}).get('richGridRenderer', {}).get('contents', [])
+                    global_log.info(f"获取到视频内容列表: {contents}")
+                    # 遍历视频内容
+                    for content in contents:
+                        global_log.info(f"当前已获取的视频URL: {video_urls}")
                         if len(video_urls) >= limit:
                             break
-                if len(video_urls) >= limit:
+                            
+                        try:
+                            # 获取视频URL
+                            video_data = content.get('richItemRenderer', {}).get('content', {}).get('videoRenderer', {})
+                            global_log.info(f"获取到视频数据: {video_data}")
+                            url = video_data.get('navigationEndpoint', {}).get('commandMetadata', {}).get('webCommandMetadata', {}).get('url')
+                            global_log.info(f"提取的URL: {url}")
+                            if url:
+                                video_url = f"https://www.youtube.com{url}"
+                                video_urls.append(video_url)
+                                global_log.info(f"找到视频URL: {video_url}")
+                        except Exception as e:
+                            global_log.error(f"处理单个视频数据时出错: {e}")
+                            continue
+                    
+                    # 找到视频标签后就可以退出tabs循环
                     break
             
             if not video_urls:
-                print("未找到视频URL")
+                global_log.info("未找到视频URL")
             else:
-                print(f"总共找到 {len(video_urls)} 个视频URL")
+                global_log.info(f"总共找到 {len(video_urls)} 个视频URL")
                 
         except Exception as e:
-            print(f"提取视频URL时出错: {e}")
+            global_log.error(f"提取视频URL时出错: {e}")
         
         return video_urls[:limit]
     
@@ -246,9 +251,19 @@ class YouTubeChannelSpider:
         # 提取频道ID或用户名
         channel_id = self._extract_channel_id(url)
         if not channel_id:
-            print("无效的YouTube频道URL")
+            global_log.error("无效的YouTube频道URL")
             return None
-            
+        # 检查URL是否包含/videos路径,如果没有则添加
+        # 移除URL中的查询参数
+        url = url.split('?')[0]
+        # 移除URL末尾的斜杠和其他路径，只保留基本频道URL
+        base_url = url.split('/')[0:4]
+        url = '/'.join(base_url)
+        global_log.info(f"修改后的url为 {url}")
+        # 添加/videos路径
+        if not url.endswith('/videos'):
+            url = url.rstrip('/') + '/videos'
+        global_log.info(f"处理YouTube频道URL: {url}")
         # 创建频道专属的输出目录
         channel_output_dir = os.path.join(output_dir, channel_id)
         if not os.path.exists(channel_output_dir):
@@ -265,14 +280,14 @@ class YouTubeChannelSpider:
                 verify=False
             )
             response.raise_for_status()
-            print(f"请求状态码: {response.status_code}")
+            global_log.info(f"请求状态码: {response.status_code}")
             
             # 保存原始HTML
             if self.save_raw:
                 html_file = os.path.join(channel_output_dir, "raw.html")
                 with open(html_file, 'w', encoding='utf-8') as f:
                     f.write(response.text)
-                print(f"原始HTML已保存到: {html_file}")
+                global_log.info(f"原始HTML已保存到: {html_file}")
             
             # 提取ytInitialData
             pattern = r'<script nonce="[^"]*">var ytInitialData = ({.*?});</script>'
@@ -287,32 +302,32 @@ class YouTubeChannelSpider:
                     json_file = os.path.join(channel_output_dir, f"youtube_channel_data_{timestamp}.json")
                     with open(json_file, 'w', encoding='utf-8') as f:
                         json.dump(yt_data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
-                    print(f"原始JSON数据已保存到: {json_file}")
+                    global_log.info(f"原始JSON数据已保存到: {json_file}")
                 
                 # 提取最新10条视频URL
                 video_urls = self._extract_video_urls(yt_data)
                 if not video_urls:
-                    print("未找到视频URL")
+                    global_log.error("未找到视频URL")
                     return None
                 
                 # 获取每个视频的详细数据
                 video_data_list = []
                 for video_url in video_urls:
-                    print(video_url)
+                    global_log.info(f"正在处理视频URL: {video_url}")
                     try:
                         video_data = self.base_spider.fetch_video(video_url)
                         if video_data:
                             video_data_list.append(video_data)
                     except Exception as e:
-                        print(e)
-                print("获取成功")
+                        global_log.error(str(e))
+                global_log.info("视频数据获取成功")
                 if not video_data_list:
-                    print("未获取到任何视频数据")
+                    global_log.error("未获取到任何视频数据")
                     return None
                 
                 # 计算平均值
                 averages = self._calculate_averages(video_data_list)
-                print("平均值 ", averages)
+                global_log.info(f"平均值 {averages}" )
                 # 提取频道基本信息
                 microformat = yt_data.get('microformat', {}).get('microformatDataRenderer', {})
                 user_name = microformat.get('title', '')
@@ -333,9 +348,9 @@ class YouTubeChannelSpider:
                         if metadata_parts:
                             subscriber_text = metadata_parts
                     
-                    print(f"获取到的粉丝数文本: {subscriber_text}")
+                    global_log.info(f"获取到的粉丝数文本: {subscriber_text}")
                 except Exception as e:
-                    print(f"获取粉丝数时出错: {e}")
+                    global_log.error(f"获取粉丝数时出错: {e}")
                 
                 follower_count = self._convert_follower_count(subscriber_text) if subscriber_text else None
                 
@@ -374,7 +389,7 @@ class YouTubeChannelSpider:
                         else:
                             profile_picture_url = None
                 except Exception as e:
-                    print(f"获取头像URL时出错: {e}")
+                    global_log.error(f"获取头像URL时出错: {e}")
                     profile_picture_url = None
                 
                 # 构建符合CelebrityProfile格式的数据
@@ -392,38 +407,35 @@ class YouTubeChannelSpider:
                     'average_engagement_rate': averages['average_engagement_rate'],
                     'country': microformat.get('country', ''),
                     'level': grade_criteria('youtube', int(averages['average_views'])),
-                    'updated_at': date.today().isoformat()
+                    'updated_at': date.today().isoformat(),
+                    'isDelete' : 0
                 }
                 
                 return result
             
-            print("未找到ytInitialData数据")
+            global_log.info("未找到ytInitialData数据")
             return None
             
         except requests.RequestException as e:
-            print(f"请求出错: {e}")
+            global_log.error(f"请求出错: {e}")
             return None
         except json.JSONDecodeError as e:
-            print(f"JSON解析错误: {e}")
+            global_log.error(f"JSON解析错误: {e}")
             return None
         except Exception as e:
-            print(f"发生未知错误: {e}")
+            global_log.error(f"发生未知错误: {e}")
             return None
 
 def run_youtube_spider(url:str):
     spider = YouTubeChannelSpider(proxy_port=7890, save_raw=True)
     result = spider.fetch_channel(url)
+
     inner_CelebrityProfile(result, isByIndexUrl=True)
     if result:
-        print("频道数据获取成功!")
-        print(json.dumps(result, indent=2, ensure_ascii=False, cls=DateTimeEncoder))
+        global_log.info("频道数据获取成功!")
+        global_log.info(json.dumps(result, indent=2, ensure_ascii=False, cls=DateTimeEncoder))
 
 
 if __name__ == "__main__":
     # 使用示例
-    spider = YouTubeChannelSpider(proxy_port=7890, save_raw=True)
-    result = spider.fetch_channel("https://www.youtube.com/@archetype_origins")
-    inner_CelebrityProfile(result, isByIndexUrl=True)
-    if result:
-        print("频道数据获取成功!")
-        print(json.dumps(result, indent=2, ensure_ascii=False, cls=DateTimeEncoder))
+    run_youtube_spider("https://www.youtube.com/@SteamFlow")

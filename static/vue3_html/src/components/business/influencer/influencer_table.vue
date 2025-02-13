@@ -1,15 +1,15 @@
 <script lang="ts" setup>
-import {useInfluencerStore} from '@/store/useInfluencerStore';
-import {computed, nextTick, onMounted, ref, watch} from 'vue';
-import {parsePhoneNumberFromString} from 'libphonenumber-js';
-import {Loading, Picture, Plus, Search} from '@element-plus/icons-vue'
-import {ElMessage, ElMessageBox} from "element-plus";
+import { useInfluencerStore } from '@/store/useInfluencerStore';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { Loading, Picture, Plus, Search } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from "element-plus";
 import useClipboard from 'vue-clipboard3'
 import addInfluencer from './addInfluencer.vue'
 import updateInfluencer from './updateInfluencer.vue'
 // @/components/common/icons
 import EmailIcon from '@/components/common/icons/EmailIcon.vue'
-import {useI18n} from 'vue-i18n'
+import { useI18n } from 'vue-i18n'
 import MapIcon from '@/components/common/icons/MapIcon.vue'
 import WechatIcon from '@/components/common/icons/WechatIcon.vue'
 import DiscordIcon from '@/components/common/icons/DiscordIcon.vue'
@@ -72,23 +72,8 @@ watch(() => influencerStore.isInfluencerLoading, (newValue) => {
 
 
 const loadInitialData = async () => {
-    // 如果有保存的状态，恢复它
-    if (currentState.value.keywords.length > 0) {
-        activeKeywords.value = [...currentState.value.keywords];
-        const results = influencerStore.influencerList.filter((row: any) => {
-            return currentState.value.keywords.every(keyword => {
-                if (!keyword) return true;
-                const searchText = keyword.toLowerCase();
-                return ['红人名称', '平台', '标签', '地区'].some(field => {
-                    const fieldValue = String(row[field] || '').toLowerCase();
-                    return fieldValue.includes(searchText);
-                });
-            });
-        });
-        displayData.value = results;
-    } else {
-        displayData.value = filteredTableData.value.slice(0, pageSize.value);
-    }
+    // 使用过滤后的数据而不是原始数据
+    displayData.value = filteredTableData.value;
 
     // 恢复滚动位置
     nextTick(() => {
@@ -98,6 +83,12 @@ const loadInitialData = async () => {
         }
     });
 }
+
+// 添加对搜索关键词的监听
+watch([activeKeywords], () => {
+    // 当搜索关键词变化时，重新加载数据
+    loadInitialData();
+}, { deep: true });
 
 // 定义列数据类型
 interface Column {
@@ -356,9 +347,21 @@ const handleSortChange = ({ prop, order }: { prop: string; order: 'ascending' | 
     }
 }
 
-// 移除单个关键词
-const removeKeyword = (keyword: string) => {
-    activeKeywords.value = activeKeywords.value.filter(k => k !== keyword)
+// 搜索处理：按回车保存关键词
+const handleSearch = () => {
+    const keyword = searchKeyword.value.trim()
+    if (!keyword) return
+
+    // 如果关键词已存在，不重复添加
+    if (!activeKeywords.value.includes(keyword)) {
+        // 直接添加完整关键词
+        activeKeywords.value = [...activeKeywords.value, keyword]
+        // 更新显示数据
+        displayData.value = filteredTableData.value
+    }
+
+    // 清空输入框，方便继续输入新关键词
+    searchKeyword.value = ''
 }
 
 // 清空输入框时只清空输入框内容，不影响已保存的关键词
@@ -366,30 +369,24 @@ const handleInputClear = () => {
     searchKeyword.value = ''
 }
 
-// 搜索处理：按回车保存关键词
-const handleSearch = () => {
-    if (!searchKeyword.value.trim()) return
-
-    const newKeywords = processKeywords(searchKeyword.value)
-
-    // 过滤出不在当前活动关键词中的新关键词
-    const uniqueNewKeywords = newKeywords.filter(
-        keyword => !activeKeywords.value.includes(keyword)
-    )
-
-    if (uniqueNewKeywords.length > 0) {
-        // 追加新的关键词
-        activeKeywords.value = [...activeKeywords.value, ...uniqueNewKeywords]
-    }
-
-    // 清空输入框，方便继续输入新关键词
-    searchKeyword.value = ''
+// 移除单个关键词
+const removeKeyword = (keyword: string) => {
+    // 只更新关键词数组，过滤器会自动重新计算
+    activeKeywords.value = activeKeywords.value.filter(k => k !== keyword)
+    // 直接更新显示数据，不重新加载
+    displayData.value = filteredTableData.value
 }
 
-// 监听筛选条件变化
+// 处理回车事件
+const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+        handleSearch()
+    }
+}
+
+// 移除对filteredTableData的直接监听，避免重复触发
 watch(filteredTableData, () => {
     currentPage.value = 1
-    loadInitialData()
 }, { deep: true })
 
 // 处理新增按钮点击
@@ -595,12 +592,13 @@ const tableRef = ref();
 
 <template>
     <div class="influencer-table table_color">
-        <el-card class="influencer_card">
+        <el-card class="influencer_card" v-loading="isLoading" element-loading-text="加载中..."
+            element-loading-background="rgba(255, 255, 255, 0.8)" element-loading-spinner="el-icon-loading">
             <div class="table-header">
                 <div class="search-area">
                     <el-tooltip :content="t('influencer.searchTip')" placement="top">
                         <el-input v-model="searchKeyword" :placeholder="t('influencer.searchPlaceholder')"
-                            class="search-input" clearable @change="handleSearch" @clear="handleInputClear">
+                            class="search-input" clearable @clear="handleInputClear" @keydown.enter="handleSearch">
                             <template #prefix>
                                 <el-icon>
                                     <Search />
@@ -621,7 +619,7 @@ const tableRef = ref();
 
                 <!-- 右侧新增按钮 -->
                 <div class="button-area">
-                    <el-button type="primary" @click="isAdd = true">
+                    <el-button type="primary" @click="isAdd = true" :loading="isLoading">
                         <el-icon>
                             <Plus />
                         </el-icon>
@@ -634,9 +632,10 @@ const tableRef = ref();
             <addInfluencer :drawer="isAdd" @update:drawer="isAdd = $event" @close="handleDrawerClose" />
 
             <el-table ref="tableRef" :data="displayData" :loading="isLoading"
-                :searchable-fields="['红人名称', '平台', '标签', '地区']" :default-sort="{ prop: 'id', order: 'descending' }"
-                v-el-table-infinite-scroll="handleTableScroll" @search="handleSearch" @sort-change="handleSortChange"
-                height="650" border>
+                :element-loading-text="t('common.loading')" element-loading-spinner="el-icon-loading"
+                element-loading-background="rgba(255, 255, 255, 0.8)" :searchable-fields="['红人名称', '平台', '标签', '地区']"
+                :default-sort="{ prop: 'id', order: 'descending' }" v-el-table-infinite-scroll="handleTableScroll"
+                @search="handleSearch" @sort-change="handleSortChange" height="650" border>
                 <template #buttons>
                     <el-button type="primary" @click="handleTableAdd">
                         <el-icon>
@@ -1005,7 +1004,9 @@ const tableRef = ref();
 }
 
 :deep(.el-loading-mask) {
-    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(2px);
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
 }
 
 .influencer_card {
@@ -1378,6 +1379,72 @@ html.dark {
 
     to {
         text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+}
+
+/* 添加loading相关样式 */
+:deep(.el-loading-mask) {
+    backdrop-filter: blur(2px);
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+}
+
+:deep(.el-loading-spinner) {
+    .circular {
+        animation: loading-rotate 2s linear infinite;
+    }
+
+    .path {
+        stroke: #409EFF;
+        stroke-width: 2;
+        stroke-linecap: round;
+        animation: loading-dash 1.5s ease-in-out infinite;
+    }
+}
+
+:deep(.el-loading-text) {
+    color: #409EFF;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+@keyframes loading-rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes loading-dash {
+    0% {
+        stroke-dasharray: 1, 200;
+        stroke-dashoffset: 0;
+    }
+
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -40px;
+    }
+
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -120px;
+    }
+}
+
+/* 暗黑模式适配 */
+html.dark {
+    :deep(.el-loading-mask) {
+        background-color: rgba(0, 0, 0, 0.9);
+    }
+
+    :deep(.el-loading-spinner) {
+        .path {
+            stroke: #79bbff;
+        }
+    }
+
+    :deep(.el-loading-text) {
+        color: #79bbff;
     }
 }
 </style>

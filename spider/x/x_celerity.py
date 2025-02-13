@@ -205,6 +205,7 @@ class Task:
     def work(self, url):
         global_log.info(f"x --> {url}")
         self.response_data["index_url"] = url
+        self.response_data["isDelete"] = 0
         user_name = self.get_username_by_url(url)
         global_log.info(f"X --> 获取红人视频，解析出来的姓名是{user_name}")
         self.get_user_info(user_name)

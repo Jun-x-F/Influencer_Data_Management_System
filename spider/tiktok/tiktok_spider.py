@@ -113,6 +113,7 @@ class Task:
 
             self.finish_data["index_url"] = _url
             self.finish_data["platform"] = "tiktok"
+            self.finish_data["isDelete"] = 0
             self.finish_data["follower_count"] = self._get_page_elements()
 
             for item in range(30):

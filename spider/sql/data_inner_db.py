@@ -238,36 +238,55 @@ def delete_InfluencersVideoProjectData(finish_data, isFilters=True, filters=None
 
 
 def inner_CelebrityProfile(finish_data, isById=False, isByIndexUrl=False):
+    """
+    插入或更新红人信息到数据库
+    
+    Args:
+        finish_data: 要插入或更新的数据
+        isById: 是否通过user_id查找
+        isByIndexUrl: 是否通过index_url查找
+    """
     try:
         if db.check_connection() is not True:
             db.reconnect_session()
 
-        # 提取查询条件
-        if isById is True:
-            filters = and_(
-                CelebrityProfile.platform == finish_data.get("platform"),
-                CelebrityProfile.user_id == finish_data.get("user_id"),
-            )
-        elif isByIndexUrl is True:
-            filters = and_(
-                CelebrityProfile.platform == finish_data.get("platform"),
-                CelebrityProfile.index_url == finish_data.get("index_url"),
-            )
+        # 构建查询条件
+        filters = []
+        filters.append(CelebrityProfile.platform == finish_data.get("platform"))
+        
+        if isById:
+            filters.append(CelebrityProfile.user_id == finish_data.get("user_id"))
+        elif isByIndexUrl:
+            filters.append(CelebrityProfile.index_url == finish_data.get("index_url"))
         else:
-            filters = and_(
-                CelebrityProfile.platform == finish_data.get("platform"),
-                CelebrityProfile.user_name == finish_data.get("user_name"),
-            )
+            filters.append(CelebrityProfile.user_name == finish_data.get("user_name"))
 
-        db_history_data = (db.session.query(CelebrityProfile).filter(filters).first())
-        if db_history_data:
-            db.session.execute(update(CelebrityProfile).where(filters).values(finish_data))
-        else:
-            instagram_profile = CelebrityProfile(
-                **finish_data
-            )
-            db.session.add(instagram_profile)
-        db.session.commit()
+        try:
+            # 查找现有记录
+            existing = db.session.query(CelebrityProfile).filter(and_(*filters)).first()
+            
+            if existing:
+                # 如果记录存在，直接更新所有字段
+                db.session.execute(
+                    update(CelebrityProfile)
+                    .where(and_(*filters))
+                    .values(**finish_data)
+                )
+                global_log.info(f"Successfully updated celebrity profile for {finish_data.get('user_name')}")
+            else:
+                # 如果记录不存在，创建新记录
+                new_record = CelebrityProfile(**finish_data)
+                db.session.add(new_record)
+                global_log.info(f"Successfully inserted celebrity profile for {finish_data.get('user_name')}")
+            
+            # 提交事务
+            db.session.commit()
+            
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            global_log.error(f"Failed to merge record: {e}")
+            raise
+                
     except SQLAlchemyError as e:
         global_log.error(f"Failed to log to database: {e}")
         db.session.rollback()

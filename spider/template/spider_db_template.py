@@ -45,7 +45,7 @@ class CelebrityProfile(Base):
     address3 = Column('地址信息3', Text, nullable=True, comment='地址信息3')
     tag_function3 = Column('标签功能3', VARCHAR(255), nullable=True, comment='标签功能3')
     updated_at = Column('更新日期', Date, default=date.today, onupdate=date.today)
-
+    isDelete = Column('isDelete', Integer, default=0)
 
 # 视频表
 class InfluencersVideoProjectData(Base):

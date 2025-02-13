@@ -1,18 +1,49 @@
-import {defineStore} from 'pinia'
-import {ref} from 'vue'
-import {useRequestStore} from '@/config/request'
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { useRequestStore } from '@/config/request'
+
+// 定义类型
+interface TrackingStatus {
+    number: string;
+    status: string;
+}
+
+interface TaskDetail {
+    id: string;
+    url: string;
+    status: string;
+    createTime: string;
+    updateTime: string;
+    info: string;
+    type: string;
+    format: string;
+}
+
+interface TaskStats {
+    total: number;
+    created: number;
+    processing: number;
+    finish: number;
+    error: number;
+    taskDetails: {
+        created: TaskDetail[];
+        processing: TaskDetail[];
+        finish: TaskDetail[];
+        error: TaskDetail[];
+    };
+}
 
 export const useInfluencerStore = defineStore('influencer', () => {
     // 状态
-    const influencerList = ref([])
+    const influencerList = ref<any[]>([])
     const isInfluencerLoading = ref(false)
-    const videoList = ref([])
-    const projectDefinitions = ref([])
-    const projectDefinitionsNoFomat = ref([])
-    const managerList = ref([])  // 添加管理员列表状态
+    const videoList = ref<any[]>([])
+    const projectDefinitions = ref<any[]>([])
+    const projectDefinitionsNoFomat = ref<any[]>([])
+    const managerList = ref<any[]>([])
     const isVideoLoading = ref(false)
     const error = ref(null)
-    const taskStats = ref({
+    const taskStats = ref<TaskStats>({
         total: 0,
         created: 0,
         processing: 0,
@@ -25,7 +56,7 @@ export const useInfluencerStore = defineStore('influencer', () => {
             error: []
         }
     })
-    const tagsList = ref<string[]>([]) // 添加标签列表状态
+    const tagsList = ref<string[]>([])
 
     // 添加物流状态缓存
     const trackingCache = ref(new Map<string, any>())
@@ -34,34 +65,8 @@ export const useInfluencerStore = defineStore('influencer', () => {
     const requestStore = useRequestStore()
 
     // 添加永久缓存存储
-    const TRACKING_CACHE_KEY = 'tracking_cache_permanent'
+    const TRACKING_CACHE_KEY = 'tracking_cache_permanent';
 
-    // 初始化时从 localStorage 加载永久缓存
-    const loadPermanentCache = () => {
-        try {
-            const savedCache = localStorage.getItem(TRACKING_CACHE_KEY)
-            if (savedCache) {
-                const parsedCache = JSON.parse(savedCache)
-                for (const [key, value] of Object.entries(parsedCache)) {
-                    trackingCache.value.set(key, value)
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load permanent tracking cache:', error)
-        }
-    }
-
-    // 保存永久缓存到 localStorage
-    const savePermanentCache = (cacheKey: string, data: any) => {
-        try {
-            const savedCache = localStorage.getItem(TRACKING_CACHE_KEY)
-            const cacheData = savedCache ? JSON.parse(savedCache) : {}
-            cacheData[cacheKey] = data
-            localStorage.setItem(TRACKING_CACHE_KEY, JSON.stringify(cacheData))
-        } catch (error) {
-            console.error('Failed to save permanent tracking cache:', error)
-        }
-    }
 
     // 获取KOL列表
     const getInfluencerList = async () => {
@@ -82,122 +87,34 @@ export const useInfluencerStore = defineStore('influencer', () => {
         isVideoLoading.value = false
     }
 
-    // 解析物流单号
-    const parseTrackingNumbers = (trackingUrl: string): string[] => {
+    const queryTrackingStatus = async (trackingNumbers: any) => {
         try {
-            const url = new URL(trackingUrl)
-            const nums = url.hash.split('nums=')[1]
-            if (!nums) return []
-            return nums.split(',').map(num => num.trim())
-        } catch {
-            return []
-        }
-    }
-
-    // 定义物流状态接口
-    interface TrackingStatus {
-        number: string;
-        status: string;
-    }
-
-    interface TrackingResponse {
-        data: TrackingStatus[];
-    }
-
-    // 修改查询物流状态方法
-    const queryTrackingStatus = async (trackingUrl: string) => {
-        try {
-            if (!trackingUrl || !trackingUrl.includes('17track.net')) {
-                return null
-            }
-
-            const trackingNumbers = parseTrackingNumbers(trackingUrl)
-            if (trackingNumbers.length === 0) {
-                return null
-            }
-
-            // 检查缓存
-            const cacheKey = trackingNumbers.sort().join(',')
-            if (trackingCache.value.has(cacheKey)) {
-                const cachedData = trackingCache.value.get(cacheKey)
-                // 如果是所有单号都成功签收，直接返回缓存数据
-                if (cachedData.data.every((status: TrackingStatus) => status.status === '成功签收')) {
-                    return cachedData.data
-                }
-                // 非成功签收状态检查缓存时间
-                if (Date.now() - cachedData.timestamp < 3600000) {
-                    return cachedData.data
-                }
-            }
-
-            // 发送请求到后端
-            const response = await requestStore.post<TrackingResponse>('/api/influencerSystem/query_tracking', {
+            const response = await requestStore.post('/api/influencerSystem/query_tracking', {
                 tracking_numbers: trackingNumbers
-            })
-
-            if (response.result === true && response.data?.data) {
-                const trackingData = {
-                    data: response.data.data,
-                    timestamp: Date.now()
-                }
-
-                // 如果所有物流状态都是成功签收，则永久缓存
-                if (response.data.data.every(status => status.status === '成功签收')) {
-                    savePermanentCache(cacheKey, trackingData)
-                }
-
-                // 更新内存缓存
-                trackingCache.value.set(cacheKey, trackingData)
-                return response.data.data
-            }
-            return null
+            });
+            return response.data.data
         } catch (error) {
-            console.error('Failed to query tracking status:', error)
-            return null
+            console.error('Failed to query tracking status:', error);
+            return null;
         }
-    }
-
-    // 格式化物流状态显示
-    const formatTrackingStatus = (statuses: TrackingStatus[] | null): string => {
-        if (!statuses || statuses.length === 0) return '成功签收'
-
-        // 按物流单号排序
-        const sortedStatuses = [...statuses].sort((a, b) => a.number.localeCompare(b.number))
-
-        return sortedStatuses.map(status =>
-            `${status.number}: ${status.status}`
-        ).join('\n')
-    }
+    };
 
     // 修改获取视频列表方法
     const getVideoList = async () => {
         try {
-            isVideoLoading.value = true
-            const response = await requestStore.get('/api/influencerSystem/get_video_list')
+            isVideoLoading.value = true;
+            const response = await requestStore.get('/api/influencerSystem/get_video_list');
 
-            // 处理每个视频的物流状态
-            const videos = response.data.data
-            const trackingPromises = videos.map(async (video: any) => {
-                if (video.物流单号) {
-                    const trackingStatus = await queryTrackingStatus(video.物流单号)
-                    video.物流进度 = formatTrackingStatus(trackingStatus)
-                } else {
-                    video.物流进度 = '成功签收'
-                }
-                return video
-            })
-
-            // 并行处理所有物流状态查询
-            videoList.value = await Promise.all(trackingPromises)
+            videoList.value = response.data.data;
         } catch (err) {
-            console.error('Failed to fetch video list:', err)
+            console.error('Failed to fetch video list:', err);
         } finally {
-            isVideoLoading.value = false
+            isVideoLoading.value = false;
         }
-    }
+    };
 
     // 格式化任务信息
-    const formatTaskInfo = (task: any) => {
+    const formatTaskInfo = (task: TaskDetail) => {
         switch (task.status) {
             case 'created':
                 return `新建任务: ${task.url}`;
@@ -244,7 +161,6 @@ export const useInfluencerStore = defineStore('influencer', () => {
     // 获取任务统计
     const findInfluencerList = async () => {
         try {
-            // 获取用户id
             const userId = localStorage.getItem('userId');
             if (!userId) {
                 throw new Error('User ID not found');
@@ -256,7 +172,6 @@ export const useInfluencerStore = defineStore('influencer', () => {
                 taskList = JSON.parse(response.value);
             }
 
-            // 根据status统计数量和分类任务
             const statusCounts = {
                 created: 0,
                 processing: 0,
@@ -264,23 +179,26 @@ export const useInfluencerStore = defineStore('influencer', () => {
                 error: 0
             };
 
-            const taskDetails = {
+            const taskDetails: {
+                created: TaskDetail[];
+                processing: TaskDetail[];
+                finish: TaskDetail[];
+                error: TaskDetail[];
+            } = {
                 created: [],
                 processing: [],
                 finish: [],
                 error: []
             };
 
-            // 状态映射
-            const statusMapping = {
-                0: 'created',     // PENDING -> created (待执行)
-                1: 'processing',  // RUNNING -> processing (正在执行)
-                2: 'finish',      // COMPLETED -> finish (完成任务)
-                [-1]: 'error'     // FAILED -> error (任务执行失败/重复提交任务)
+            const statusMapping: { [key: number]: 'created' | 'processing' | 'finish' | 'error' } = {
+                0: 'created',
+                1: 'processing',
+                2: 'finish',
+                [-1]: 'error'
             };
 
-            // 遍历任务列表统计各状态数量并分类
-            taskList.forEach(task => {
+            taskList.forEach((task: any) => {
                 const mappedStatus = statusMapping[task.任务执行状态] || 'error';
 
                 if (mappedStatus in statusCounts) {
@@ -298,7 +216,6 @@ export const useInfluencerStore = defineStore('influencer', () => {
                 }
             });
 
-            // 更新状态
             taskStats.value = {
                 total: taskList.length,
                 ...statusCounts,
@@ -306,7 +223,6 @@ export const useInfluencerStore = defineStore('influencer', () => {
             };
 
             return taskStats.value;
-
         } catch (err) {
             console.error('Failed to get task counts:', err);
             throw err;
@@ -354,61 +270,85 @@ export const useInfluencerStore = defineStore('influencer', () => {
         }
     }
 
-    async function transformProductData(data) {
-        // 用 Map 分组（第一层：品牌；第二层：项目）
-        const brandMap = new Map()
+    // 修改 transformProductData 方法
+    const transformProductData = (data: any[]) => {
+        const brandMap = new Map();
 
         data.forEach(item => {
-            const brand = item.品牌
-            const project = item.项目
-            const product = item.产品
+            const brand = item.品牌;
+            const project = item.项目;
+            const product = item.产品;
 
-            // 如果 Map 中还没有该品牌，则先添加
             if (!brandMap.has(brand)) {
-                brandMap.set(brand, new Map())
+                brandMap.set(brand, new Map());
             }
-            const projectMap = brandMap.get(brand)
+            const projectMap = brandMap.get(brand);
 
-            // 如果 Map 中还没有该项目，则先添加
             if (!projectMap.has(project)) {
-                projectMap.set(project, [])
+                projectMap.set(project, []);
             }
-            // 将产品加入到对应项目的数组中
             projectMap.get(project).push({
                 label: product,
                 value: product
-            })
-        })
+            });
+        });
 
-        // 转换 Map 为 cascader 组件需要的数组格式
-        const result = []
+        const result = [];
         for (const [brand, projectMap] of brandMap.entries()) {
-            const children = []
+            const children = [];
             for (const [project, products] of projectMap.entries()) {
                 children.push({
                     label: project,
                     value: project,
                     children: products
-                })
+                });
             }
             result.push({
                 label: brand,
                 value: brand,
                 children: children
-            })
+            });
         }
-        return result
-    }
+        return result;
+    };
 
-
+    // 修改获取项目定义方法
     const getProjectDefinitions = async () => {
         try {
             const response = await requestStore.get('/api/influencerSystem/get_project_definitions');
-            projectDefinitions.value = await transformProductData(response.data.data)
-            projectDefinitionsNoFomat.value = response.data.data
+            projectDefinitions.value = await transformProductData(response.data.data);
+            projectDefinitionsNoFomat.value = response.data.data;
         } catch (err) {
             console.error('Failed to get influencer info:', err);
             throw err;
+        }
+    };
+
+    // 修改查询项目定义方法
+    const queryProjectDefinitions = async () => {
+        try {
+            const response = await requestStore.get('/api/influencerSystem/query_project_definitions');
+            projectDefinitions.value = await transformProductData(response.data.data);
+            projectDefinitionsNoFomat.value = response.data.data;
+            return response.data.data;
+        } catch (err) {
+            console.error('Failed to query project definitions:', err);
+            throw err;
+        }
+    };
+
+    // 获取所有标签列表
+    const getAllTags = async () => {
+        try {
+            const response = await requestStore.get('/api/influencerSystem/get_all_tags')
+            if (response.result === true) {
+                tagsList.value = response.data.data || []
+                return tagsList.value
+            }
+            throw new Error(response.message || '获取标签列表失败')
+        } catch (error) {
+            console.error('Failed to fetch tags list:', error)
+            throw error
         }
     }
 
@@ -416,14 +356,6 @@ export const useInfluencerStore = defineStore('influencer', () => {
     const updateVideoInfo = async (data: any) => {
         try {
             isVideoLoading.value = true
-
-            // 处理物流状态
-            if (data.物流单号) {
-                const trackingStatus = await queryTrackingStatus(data.物流单号)
-                data.物流进度 = formatTrackingStatus(trackingStatus)
-            } else {
-                data.物流进度 = '成功签收'
-            }
 
             const response = await requestStore.post('/api/influencerSystem/update_video_info', data)
             return response
@@ -497,75 +429,44 @@ export const useInfluencerStore = defineStore('influencer', () => {
     // 更新指标定义
     const updateProjectDefinition = async (data: any) => {
         try {
-            const response = await requestStore.post('/api/influencerSystem/update_project_definition', { 'data': data })
+            const response = await requestStore.post('/api/influencerSystem/update_project_definition', { 'data': data });
             if (response.result === true) {
-                return "更新指标成功"
+                return "更新指标成功";
             }
-            throw new Error(response.message || '更新失败')
+            throw new Error(response.message || '更新失败');
         } catch (error) {
-            console.error('Failed to update project definition:', error)
-            throw error
+            console.error('Failed to update project definition:', error);
+            throw error;
         }
     }
 
     // 删除指标定义
     const deleteProjectDefinition = async (id: number) => {
         try {
-            const response = await requestStore.post('/api/influencerSystem/delete_project_definition', { 'id': id })
+            const response = await requestStore.post('/api/influencerSystem/delete_project_definition', { 'id': id });
             if (response.result === true) {
-                return "删除指标成功"
+                return "删除指标成功";
             }
-            throw new Error(response.message || '删除失败')
+            throw new Error(response.message || '删除失败');
         } catch (error) {
-            console.error('Failed to delete project definition:', error)
-            throw error
+            console.error('Failed to delete project definition:', error);
+            throw error;
         }
     }
 
     // 新增指标定义
     const addProjectDefinition = async (data: any) => {
         try {
-            const response = await requestStore.post('/api/influencerSystem/add_project_definition', { 'data': data })
+            const response = await requestStore.post('/api/influencerSystem/add_project_definition', { 'data': data });
             if (response.result === true) {
-                return "新增指标成功"
+                return "新增指标成功";
             }
-            throw new Error(response.message || '新增失败')
+            throw new Error(response.message || '新增失败');
         } catch (error) {
-            console.error('Failed to add project definition:', error)
-            throw error
+            console.error('Failed to add project definition:', error);
+            throw error;
         }
     }
-
-    // 查询指标定义列表
-    const queryProjectDefinitions = async () => {
-        try {
-            const response = await requestStore.get('/api/influencerSystem/query_project_definitions')
-            projectDefinitions.value = await transformProductData(response.data.data)
-            projectDefinitionsNoFomat.value = response.data.data
-            return response.data.data
-        } catch (err) {
-            console.error('Failed to query project definitions:', err)
-            throw err
-        }
-    }
-
-    // 获取所有标签列表
-    const getAllTags = async () => {
-        try {
-            const response = await requestStore.get('/api/influencerSystem/get_all_tags')
-            if (response.result === true) {
-                tagsList.value = response.data.data || []
-                return tagsList.value
-            }
-            throw new Error(response.message || '获取标签列表失败')
-        } catch (error) {
-            console.error('Failed to fetch tags list:', error)
-            throw error
-        }
-    }
-
-    // 在 store 初始化时加载永久缓存
-    loadPermanentCache()
 
     return {
         influencerList,
@@ -575,10 +476,10 @@ export const useInfluencerStore = defineStore('influencer', () => {
         isVideoLoading,
         videoList,
         projectDefinitions,
-        managerList,  // 导出管理员列表
-        tagsList,  // 导出标签列表
+        managerList,
+        tagsList,
         projectDefinitionsNoFomat,
-        getAllTags,  // 导出获取标签方法
+        getAllTags,
         getInfluencerList,
         addInfluencerList,
         findInfluencerList,
@@ -589,20 +490,17 @@ export const useInfluencerStore = defineStore('influencer', () => {
         getVideoList,
         resetVideoList,
         getProjectDefinitions,
-        queryProjectDefinitions,  // 导出新方法
+        queryProjectDefinitions,
         updateVideoInfo,
         deleteVideo,
-        getManagerList,  // 导出获取管理员列表方法
+        getManagerList,
         addManager,
         addVideo,
         queryTrackingStatus,
         trackingCache,
-        loadPermanentCache,  // 如果需要在其他地方重新加载缓存
-        formatTrackingStatus,  // 导出格式化方法以供组件使用
         updateProjectDefinition,
         deleteProjectDefinition,
-        addProjectDefinition,  // 导出新增的方法
+        addProjectDefinition,
         transformProductData,
-        
     }
 })

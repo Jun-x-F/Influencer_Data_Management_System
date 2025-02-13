@@ -130,7 +130,7 @@ def process_task_with_retry(task_id: str, process_func, max_retries: int = 3) ->
     
     Args:
         task_id: 任务ID
-        process_func: 处理函数
+        process_func: 处理函数，返回格式为 {"code": int, "message": str}
         max_retries: 最大重试次数
         
     Returns:
@@ -143,23 +143,42 @@ def process_task_with_retry(task_id: str, process_func, max_retries: int = 3) ->
         retries = 0
         while retries < max_retries:
             try:
-                process_func()
-                # 任务成功，更新状态为完成
-                RequestConfig.update_task_status(task_id, TaskStatus.COMPLETED)
-                return True
+                # 执行任务并获取结果
+                result = process_func()
+                
+                # 解析返回结果
+                if isinstance(result, dict) and "code" in result:
+                    if result["code"] == 200:
+                        # 任务成功，更新状态为完成
+                        RequestConfig.update_task_status(task_id, TaskStatus.COMPLETED)
+                        return True
+                    else:
+                        # 任务失败，记录错误信息
+                        error_message = result.get("message", "未知错误")
+                        global_log.error(f"任务执行失败: {error_message}")
+                        retries += 1
+                        if retries < max_retries:
+                            time.sleep(3)  # 重试前等待3秒
+                            global_log.info(f"正在进行第{retries}次重试...")
+                        continue
+                else:
+                    raise ValueError("处理函数返回格式不正确")
+                
             except Exception as e:
                 global_log.error(f"任务执行失败: {str(e)}")
                 retries += 1
                 if retries < max_retries:
                     time.sleep(3)  # 重试前等待3秒
                     global_log.info(f"正在进行第{retries}次重试...")
-                
+        
         # 超过最大重试次数，更新状态为失败
-        RequestConfig.update_task_status(task_id, TaskStatus.FAILED, f"重试{max_retries}次后失败")
+        error_message = result.get("message", f"重试{max_retries}次后失败") if isinstance(result, dict) else f"重试{max_retries}次后失败"
+        RequestConfig.update_task_status(task_id, TaskStatus.FAILED, error_message)
         return False
         
     except Exception as e:
         global_log.error(f"任务状态更新失败: {str(e)}")
+        RequestConfig.update_task_status(task_id, TaskStatus.FAILED, str(e))
         return False
 
 def process_influencer_tasks():
@@ -177,6 +196,7 @@ def process_influencer_tasks():
                         def process_func():
                             # 这里添加处理红人任务的具体逻辑
                             message = run_spider.run_spider(task_url, {}, 1, "spider_system")
+                            return message
                         process_task_with_retry(task_id, process_func)
         except Exception as e:
             global_log.error(f"处理红人任务失败: {str(e)}")
@@ -198,7 +218,7 @@ def process_video_tasks():
                         def process_func():
                             # 这里添加处理视频任务的具体逻辑
                             message = run_spider.run_spider(task_url, {}, 2, "spider_system")
-                            
+                            return message
                         process_task_with_retry(task_id, process_func)
         except Exception as e:
             global_log.error(f"处理视频任务失败: {str(e)}")
@@ -221,7 +241,7 @@ def process_logistics_tasks():
                             # 这里添加处理物流任务的具体逻辑
                             order_ls = extract_tracking_numbers(task_url.strip())
                             res, res_message = track_spider(isRequest=True, order_numbers=order_ls)
-                        
+                            return {"code": 200 if res is True else 500, "message": res_message}
                         process_task_with_retry(task_id, process_func)
         except Exception as e:
             global_log.error(f"处理物流任务失败: {str(e)}")

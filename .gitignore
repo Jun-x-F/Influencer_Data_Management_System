@@ -21,3 +21,6 @@ venv/
 node_modules/
 output.txt
 *.tsbuildinfo
+.history/
+output/
+*.json

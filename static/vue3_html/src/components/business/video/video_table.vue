@@ -97,15 +97,16 @@
                                     <el-tooltip placement="top" :show-after="200" :effect="isDark ? 'dark' : 'light'"
                                         :popper-class="[isDark ? 'dark-tooltip' : 'light-tooltip']">
                                         <template #content>
-                                            <div class="logistics-details">
-                                                <template v-if="scope.row.物流进度">
-                                                    <div v-for="(status, index) in formatLogisticsDetails(scope.row.物流进度)"
-                                                        :key="index" class="logistics-item">
+                                            <div v-loading="logisticsLoading[scope.row.id]" class="logistics-details">
+                                                <template v-if="scope.row.物流单号">
+                                                    <div v-for="(status, index) in trackingInfo" :key="index"
+                                                        class="logistics-item">
                                                         <div class="logistics-item-content">
                                                             <span class="logistics-number">{{ status.number }}</span>
                                                             <el-tag size="small"
                                                                 :type="getLogisticsTagType(status.status)"
                                                                 effect="light">
+                                                                {{ getLogisticsIcon(status.status) }}
                                                                 {{ status.status }}
                                                             </el-tag>
                                                         </div>
@@ -114,12 +115,13 @@
                                                 <div v-else class="no-logistics">暂无物流信息</div>
                                             </div>
                                         </template>
-                                        <div class="logistics-display">
+                                        <div class="logistics-display"
+                                            @mouseenter="handleLogisticsHover(parseTrackingNumbers(scope.row.物流单号), scope.row.id)">
                                             <el-tag effect="light" class="logistics-tag">
                                                 <span class="logistics-icon">📦</span>
-                                                <span v-if="getLogisticsCount(scope.row.物流进度) > 0"
+                                                <span v-if="getTrackingNumbersCount(scope.row.物流单号) > 0"
                                                     class="logistics-badge">
-                                                    {{ getLogisticsCount(scope.row.物流进度) }}
+                                                    {{ getTrackingNumbersCount(scope.row.物流单号) }}
                                                 </span>
                                             </el-tag>
                                         </div>
@@ -186,21 +188,22 @@
 </template>
 
 <script setup lang="ts">
-import {useInfluencerStore} from '@/store/useInfluencerStore'
-import {computed, nextTick, onBeforeUnmount, onMounted, ref} from 'vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { useInfluencerStore } from '@/store/useInfluencerStore'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import UpdateVideo from './updateVideo.vue'
-import {DataLine, Operation, Plus, Search} from '@element-plus/icons-vue'
+import { DataLine, Operation, Plus, Search } from '@element-plus/icons-vue'
 import AddVideo from './addVideo.vue'
-import {useI18n} from 'vue-i18n'
+import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
 import MetricsList from '@/components/business/influencer/metrics_list.vue'
-import {useDark} from '@vueuse/core'
+import { useDark } from '@vueuse/core'
 
 // 定义物流项接口
 interface LogisticsItem {
-    status: string;
     number: string;
+    status: string;
+
 }
 
 // 扩展 VideoData 接口
@@ -255,6 +258,8 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const displayData = ref<VideoData[]>([])
 const isDark = useDark()
+const trackingInfo = ref<LogisticsItem[]>([])
+
 
 // influencerStore.isInfluencerLoading.value
 // 定义表格列配置
@@ -669,6 +674,24 @@ const initSortable = () => {
     tryInit();
 };
 
+
+// 添加物流状态标签类型获取函数
+const getLogisticsTagType = (status: string): string => {
+    switch (status) {
+        case '成功签收':
+            return 'success';
+        case '运输途中':
+            return 'warning';
+        case '待发货':
+            return 'info';
+        case '异常':
+            return 'danger';
+        default:
+            return 'info';
+    }
+}
+
+
 // 在组件挂载时恢复保存的列顺序
 onMounted(() => {
     const savedOrder = localStorage.getItem('tableColumnsOrder');
@@ -896,21 +919,7 @@ const getLogisticsIcon = (status: string): string => {
         default:
             return '📋';
     }
-}
-
-// 添加物流状态标签类型获取函数
-const getLogisticsTagType = (status: string): string => {
-    switch (status) {
-        case '待发货':
-            return 'warning';
-        case '成功签收':
-            return 'success';
-        case '交付':
-            return 'info';
-        default:
-            return 'info';
-    }
-}
+};
 
 // 获取主要显示的物流状态
 const getMainLogisticsStatus = (row: VideoData): string => {
@@ -931,15 +940,6 @@ const getMainLogisticsStatus = (row: VideoData): string => {
     return row.物流链接[row.物流链接.length - 1].status;
 }
 
-// 获取未完成的物流数量（待发货或交付状态）
-const getPendingLogisticsCount = (row: VideoData): number => {
-    if (!row.物流链接 || row.物流链接.length === 0) {
-        return 0;
-    }
-    return row.物流链接.filter((item: LogisticsItem) =>
-        item.status === '待发货' || item.status === '交付'
-    ).length;
-}
 
 // 获取主要物流状态的标签类型
 const getMainLogisticsTagType = (row: VideoData): string => {
@@ -948,20 +948,12 @@ const getMainLogisticsTagType = (row: VideoData): string => {
 }
 
 // 格式化物流详情
-const formatLogisticsDetails = (logisticsStr: string): Array<LogisticsItem> => {
-    if (!logisticsStr) return [];
-    return logisticsStr.split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-            const [number, status] = line.split(': ');
-            return { number, status };
-        });
-}
-
-// 获取物流单号数量
-const getLogisticsCount = (logisticsStr: string): number => {
-    if (!logisticsStr) return 0;
-    return logisticsStr.split('\n').filter(line => line.trim()).length;
+const formatLogisticsDetails = (logisticsList: Array<LogisticsItem>): Array<LogisticsItem> => {
+    if (!logisticsList) return [];
+    return logisticsList.map(line => {
+        const [number, status] = line.split(': ').map(s => s.trim());
+        return { number, status };
+    });
 }
 
 // 添加指标相关的状态
@@ -1031,6 +1023,60 @@ const handleDelete = async (row: VideoData) => {
         }
     }
 };
+
+const logisticsLoading = ref<{ [key: number]: boolean }>({})
+
+// 获取物流单号数量
+const getTrackingNumbersCount = (trackingUrl: string): number => {
+    if (!trackingUrl) return 0;
+    const numbers = parseTrackingNumbers(trackingUrl);
+    return numbers.length;
+}
+
+// 解析物流单号
+const parseTrackingNumbers = (trackingUrl: string): string[] => {
+    if (!trackingUrl) return [];
+
+    try {
+        // 处理17track的链接格式
+        if (trackingUrl.includes('17track.net')) {
+            const numsMatch = trackingUrl.match(/nums=([^#&]+)/);
+            if (numsMatch && numsMatch[1]) {
+                return numsMatch[1].split(',').map(num => num.trim());
+            }
+        }
+
+        // 处理其他可能的格式
+        if (trackingUrl.includes(',')) {
+            return trackingUrl.split(',').map(num => num.trim());
+        }
+
+        // 如果只有单个单号
+        return [trackingUrl.trim()];
+    } catch (error) {
+        console.error('解析物流单号失败:', error);
+        return [];
+    }
+}
+
+// 处理物流信息悬停
+const handleLogisticsHover = async (numbers: any, id: any) => {
+    console.log(numbers);
+    if (numbers === null) {
+        return
+    }
+    try {
+        logisticsLoading[id] = true
+        const tracking = await influencerStore.queryTrackingStatus(numbers);
+        console.log(tracking);
+        trackingInfo.value = tracking;
+        console.log(trackingInfo.value);
+    } catch (error) {
+        console.error('处理物流信息悬停 ', error);
+    } finally {
+        logisticsLoading[id] = false
+    }
+}
 
 </script>
 

@@ -262,14 +262,14 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
-import {useInfluencerStore} from '@/store/useInfluencerStore'
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage} from 'element-plus'
-import {useI18n} from 'vue-i18n'
-import {useDark} from '@vueuse/core'
-import {Check, CircleCheckFilled, CircleCloseFilled, Loading, QuestionFilled, Refresh} from '@element-plus/icons-vue'
-import {debounce} from 'lodash-es'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useInfluencerStore } from '@/store/useInfluencerStore'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+import { useDark } from '@vueuse/core'
+import { Check, CircleCheckFilled, CircleCloseFilled, Loading, QuestionFilled, Refresh } from '@element-plus/icons-vue'
+import { debounce } from 'lodash-es'
 import AddManager from '@/components/business/manager/addManager.vue'
 
 const { t } = useI18n()
@@ -341,7 +341,8 @@ const validateUrl = (rule: any, value: string, callback: any) => {
         const excludedSubstrings = [
             '/reel/', '/video/', '/watch/',
             '/video?', '/watch?', '/reel?',
-            '/p/', '/p?', '/shorts/', '/shorts?'
+            '/p/', '/p?', '/shorts/', '/shorts?',
+            '/status'
         ]
 
         // 获取完整的URL路径（包括pathname和search）

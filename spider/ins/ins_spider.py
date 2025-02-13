@@ -232,6 +232,7 @@ class Task:
             self.finish_data["average_engagement_rate"] = 0
         global_log.info(
             f"ins -->self.finish_data  {self.finish_data}")
+        self.finish_data["isDelete"] = 0
         inner_CelebrityProfile(self.finish_data, isById=True)
 
     def run(self, url):
@@ -288,7 +289,7 @@ def ins_start_spider(url):
 
 
 if __name__ == '__main__':
-    ins_start_spider("https://www.instagram.com/raybeau_moves/")
+    ins_start_spider("https://www.instagram.com/oleks.mov/")
 
     # def extract_username(self, url: str) -> Optional[str]:
     #     # 使用正则表达式匹配用户名部分
